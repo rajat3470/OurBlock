@@ -1,0 +1,33 @@
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+
+const WelcomeScreen: React.FC = () => {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Welcome to OurBlock</Text>
+      <Text style={styles.subtitle}>
+        Your Society's Marketplace
+      </Text>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#666",
+  },
+});
+
+export default WelcomeScreen;

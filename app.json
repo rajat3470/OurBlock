@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "OurBlock",
+    "slug": "ourblock",
+    "scheme": "ourblock", 
+    "version": "1.0.0",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTabletMode": true,
+      "bundleIdentifier": "com.yourname.ourblock"
+    },
+    "android": {
+      "package": "com.yourname.ourblock",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-image",
+      "expo-router"
+    ]
+  }
+}

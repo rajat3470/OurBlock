@@ -1,0 +1,44 @@
+import { UserRole } from "@types/index";
+
+export type AppTarget = UserRole | undefined;
+
+export const getHomeRouteByRole = (role?: UserRole) => {
+  switch (role) {
+    case "superAdmin":
+      return "/(super-admin)/dashboard";
+    case "businessOwner":
+      return "/(business-owner)/dashboard";
+    case "user":
+      return "/(user)/home";
+    default:
+      return "/(auth)/role-selection";
+  }
+};
+
+export const getDefaultRoute = (
+  isAuthenticated: boolean,
+  role?: UserRole,
+  appTarget?: AppTarget
+) => {
+  if (appTarget === "superAdmin") {
+    return isAuthenticated
+      ? "/(super-admin)/dashboard"
+      : "/(auth)/super-admin-login";
+  }
+
+  if (appTarget === "businessOwner") {
+    return isAuthenticated
+      ? "/(business-owner)/dashboard"
+      : "/(auth)/business-owner-login";
+  }
+
+  if (appTarget === "user") {
+    return isAuthenticated ? "/(user)/home" : "/(auth)/user-login";
+  }
+
+  if (!isAuthenticated || !role) {
+    return "/(auth)/role-selection";
+  }
+
+  return getHomeRouteByRole(role);
+};
