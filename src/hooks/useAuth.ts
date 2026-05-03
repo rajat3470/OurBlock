@@ -3,7 +3,90 @@ import { authService } from "@services/authService";
 import { useAppDispatch } from "./useRedux";
 import { setAuth, setError, logout, setLoading } from "@store/slices/authSlice";
 import { apiClient } from "@services/apiClient";
-import { AuthCredentials, User } from "@types/index";
+import { AuthCredentials, AuthResponse, User } from "@types/index";
+
+// ---------------------------------------------------------------------------
+// Mock credentials — used while the backend is not yet available.
+// Remove this block (and the mockLogin call below) once the real API is ready.
+// ---------------------------------------------------------------------------
+const MOCK_USERS: Record<string, AuthResponse> = {
+  "admin@ourblock.com": {
+    user: {
+      id: "mock-super-admin-1",
+      firstName: "Super",
+      lastName: "Admin",
+      email: "admin@ourblock.com",
+      phone: "9000000001",
+      role: "superAdmin",
+      isEmailVerified: true,
+      isPhoneVerified: true,
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    tokens: {
+      accessToken: "mock-access-token-superadmin",
+      refreshToken: "mock-refresh-token-superadmin",
+      expiresIn: 900,
+    },
+  },
+  "business@ourblock.com": {
+    user: {
+      id: "mock-business-owner-1",
+      firstName: "Business",
+      lastName: "Owner",
+      email: "business@ourblock.com",
+      phone: "9000000002",
+      role: "businessOwner",
+      societyId: "mock-society-1",
+      isEmailVerified: true,
+      isPhoneVerified: true,
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    tokens: {
+      accessToken: "mock-access-token-businessowner",
+      refreshToken: "mock-refresh-token-businessowner",
+      expiresIn: 900,
+    },
+  },
+  "user@ourblock.com": {
+    user: {
+      id: "mock-user-1",
+      firstName: "Test",
+      lastName: "User",
+      email: "user@ourblock.com",
+      phone: "9000000003",
+      role: "user",
+      societyId: "mock-society-1",
+      isEmailVerified: true,
+      isPhoneVerified: true,
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    tokens: {
+      accessToken: "mock-access-token-user",
+      refreshToken: "mock-refresh-token-user",
+      expiresIn: 900,
+    },
+  },
+};
+
+const MOCK_PASSWORD = "Test@1234";
+
+function mockLogin(
+  credentials: AuthCredentials,
+  role: "superAdmin" | "businessOwner" | "user"
+): AuthResponse | null {
+  const mockUser = MOCK_USERS[credentials.email.toLowerCase()];
+  if (mockUser && credentials.password === MOCK_PASSWORD && mockUser.user.role === role) {
+    return mockUser;
+  }
+  return null;
+}
+// ---------------------------------------------------------------------------
 
 export const useAuth = () => {
   const dispatch = useAppDispatch();
@@ -14,6 +97,14 @@ export const useAuth = () => {
   ) => {
     dispatch(setLoading(true));
     try {
+      // Try mock login first (remove once real backend is ready)
+      const mock = mockLogin(credentials, role);
+      if (mock) {
+        await apiClient.saveTokens(mock.tokens);
+        dispatch(setAuth(mock));
+        return;
+      }
+
       let response;
       switch (role) {
         case "superAdmin":
@@ -76,15 +167,14 @@ export const useAuth = () => {
   };
 
   const logoutUser = async () => {
-    dispatch(setLoading(true));
+    // Clear local state and tokens immediately so the UI reflects logout at once.
+    // The API call is best-effort — a network/backend failure should never block logout.
+    dispatch(logout());
+    await apiClient.clearTokens();
     try {
       await authService.logout();
-      dispatch(logout());
-    } catch (error: any) {
-      dispatch(setError("Logout failed"));
-      throw error;
-    } finally {
-      dispatch(setLoading(false));
+    } catch {
+      // Ignore — server-side session invalidation is non-critical
     }
   };
 

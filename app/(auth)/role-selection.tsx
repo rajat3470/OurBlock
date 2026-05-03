@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -50,20 +50,30 @@ const ROLES: RoleOption[] = [
 export default function RoleSelectionScreen() {
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
 
+  // If the app was launched with a specific target, skip role selection entirely.
+  useEffect(() => {
+    const target = process.env.EXPO_PUBLIC_APP_TARGET;
+    if (target === "superAdmin") {
+      router.replace("/(auth)/super-admin-login");
+    } else if (target === "businessOwner") {
+      router.replace("/(auth)/business-owner-login");
+    } else if (target === "user") {
+      router.replace("/(auth)/user-login");
+    }
+  }, []);
+
   const handleContinue = () => {
     if (!selectedRole) return;
     switch (selectedRole) {
       case "superAdmin":
-        router.push("/(auth)/super-admin-login");
+        router.replace("/(auth)/super-admin-login");
         break;
       case "businessOwner":
-        router.push("/(auth)/business-owner-login");
+        router.replace("/(auth)/business-owner-login");
         break;
       case "user":
-        router.push("/(auth)/user-login");
+        router.replace("/(auth)/user-login");
         break;
-      default:
-        router.push("/(auth)/role-selection");
     }
   };
 

@@ -35,7 +35,7 @@ export default function SuperAdminProfileScreen() {
         style: "destructive",
         onPress: async () => {
           await logoutUser();
-          router.replace("/(auth)/role-selection");
+          router.replace("/(auth)/super-admin-login");
         },
       },
     ]);
