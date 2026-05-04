@@ -19,7 +19,6 @@
   },
   "main": "lib/index.js",
   "dependencies": {
-    "@dataconnect/admin-generated": "file:src/dataconnect-admin-generated",
     "@ourblock/shared": "*",
     "cors": "^2.8.5",
     "express": "^4.19.0",
