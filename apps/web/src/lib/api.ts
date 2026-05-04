@@ -3,6 +3,8 @@
  * Connects to Firebase Cloud Functions production API
  */
 
+import { auth } from './firebase';
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   'https://us-central1-our-block-app.cloudfunctions.net/api';
@@ -11,6 +13,13 @@ interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const user = auth.currentUser;
+  if (!user) return {};
+  const token = await user.getIdToken();
+  return { Authorization: `Bearer ${token}` };
 }
 
 /**
@@ -23,10 +32,12 @@ async function apiRequest<T = any>(
   const url = `${API_BASE_URL}${endpoint}`;
 
   try {
+    const authHeaders = await getAuthHeaders();
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
         ...options.headers,
       },
     });
@@ -54,11 +65,9 @@ async function apiRequest<T = any>(
  * API client methods
  */
 export const api = {
-  // GET request
   get: <T = any>(endpoint: string, options?: RequestInit) =>
     apiRequest<T>(endpoint, { ...options, method: 'GET' }),
 
-  // POST request
   post: <T = any>(endpoint: string, body?: any, options?: RequestInit) =>
     apiRequest<T>(endpoint, {
       ...options,
@@ -66,7 +75,6 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  // PUT request
   put: <T = any>(endpoint: string, body?: any, options?: RequestInit) =>
     apiRequest<T>(endpoint, {
       ...options,
@@ -74,7 +82,6 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
-  // DELETE request
   delete: <T = any>(endpoint: string, options?: RequestInit) =>
     apiRequest<T>(endpoint, { ...options, method: 'DELETE' }),
 };

@@ -1,9 +1,7 @@
-/**
- * Firebase Client Configuration for Web Admin
- * Used for client-side authentication
- */
+import { getApps, initializeApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
 
-export const firebaseConfig = {
+const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
@@ -12,9 +10,6 @@ export const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// You can initialize Firebase here if needed
-// import { initializeApp } from 'firebase/app';
-// import { getAuth } from 'firebase/auth';
-// 
-// const app = initializeApp(firebaseConfig);
-// export const auth = getAuth(app);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+export const auth = getAuth(app);
+export default app;
