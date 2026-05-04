@@ -9,19 +9,22 @@
     ],
     "ios": {
       "supportsTabletMode": true,
-      "bundleIdentifier": "com.ourblock.app"
+      "bundleIdentifier": "com.ourblock.app",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "package": "com.ourblock.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "@react-native-firebase/app",
       "expo-font",
       "expo-image",
       "expo-router"
