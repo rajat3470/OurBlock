@@ -7,7 +7,8 @@ import axios, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AuthToken, ApiError } from "@types/index";
 
-const BASE_URL = "https://api.ourblock.com/v1"; // Replace with your backend URL
+// Production API URL - deployed Firebase Functions
+const BASE_URL = "https://us-central1-our-block-app.cloudfunctions.net/api";
 
 class ApiClient {
   private axiosInstance: AxiosInstance;

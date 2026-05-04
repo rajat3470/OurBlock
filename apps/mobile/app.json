@@ -9,10 +9,10 @@
     ],
     "ios": {
       "supportsTabletMode": true,
-      "bundleIdentifier": "com.yourname.ourblock"
+      "bundleIdentifier": "com.ourblock.app"
     },
     "android": {
-      "package": "com.yourname.ourblock",
+      "package": "com.ourblock.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

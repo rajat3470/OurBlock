@@ -1,186 +1,357 @@
-# OurBlock
+# OurBlock - Local Society Marketplace Platform
 
-A React Native (Expo) mobile application for society-wise marketplace operations. The repo contains three independent, role-based apps — **SuperAdmin**, **BusinessOwner**, and **User** — sharing a single codebase.
+A hyperlocal marketplace platform connecting residents within residential societies with local businesses and service providers.
+
+![Phase 1 - MVP](https://img.shields.io/badge/Phase-1%20MVP-blue)
+![Status](https://img.shields.io/badge/Status-In%20Development-yellow)
+![API Status](https://img.shields.io/badge/API-Deployed%20🚀-success)
 
 ---
 
-## Tech Stack
+## 🚀 Production API - LIVE!
+
+**Your team can now use the deployed API:**
+```
+https://us-central1-our-block-app.cloudfunctions.net/api
+```
+
+📖 **Complete API Reference:** [PRODUCTION_API.md](./PRODUCTION_API.md)  
+🔧 **Environment Setup:** [ENV_TEMPLATES.md](./ENV_TEMPLATES.md)
+
+---
+
+## 🚀 Quick Start
+
+**For New Team Members:**
+1. ✅ Complete [TEAM_CHECKLIST.md](./TEAM_CHECKLIST.md) to verify your setup
+2. 📖 Read [SETUP_GUIDE.md](./SETUP_GUIDE.md) for detailed environment setup
+3. 🔥 API is already deployed - see [PRODUCTION_API.md](./PRODUCTION_API.md)
+4. 📝 Check API usage examples in `apps/mobile/API_USAGE_EXAMPLES.ts`
+
+**For Development:**
+```bash
+# Install dependencies
+yarn install
+
+# Build shared package
+cd packages/shared && yarn build && cd ../..
+
+# Start Firebase emulators (optional - for backend development)
+yarn firebase:serve
+
+# In a new terminal: Start mobile app
+yarn mobile:customer
+```
+
+**Production API is live and ready to use:**
+```
+https://us-central1-our-block-app.cloudfunctions.net/api
+```
+
+---
+
+## 🏗️ Architecture
+
+OurBlock is built as a **monorepo** with three main applications and shared packages:
+
+```
+OurBlock/
+├── apps/
+│   ├── mobile/          # React Native (Expo) - Customer & Business Owner
+│   ├── web/             # Next.js - Super Admin Dashboard
+│   └── firebase/        # Firebase Cloud Functions - Backend API
+├── packages/
+│   ├── shared/          # Shared types, utilities, and validation schemas
+│   └── ui/              # Shared UI components (future)
+└── docs/                # Documentation
+```
+
+### Tech Stack
 
 | Layer | Technology |
-|---|---|
-| Framework | React Native + Expo (v55) |
-| Routing | Expo Router (file-based) |
-| Language | TypeScript |
-| State | Redux Toolkit |
-| Forms | React Hook Form + Zod |
-| HTTP | Axios |
-| Auth | Firebase Authentication |
-| Push | Firebase Cloud Messaging |
-| Real-time | Socket.io |
+|-------|-----------|
+| **Mobile** | React Native (Expo v55), TypeScript, Redux Toolkit, Expo Router |
+| **Web** | Next.js 14, TypeScript, React, Tailwind CSS |
+| **Backend** | Firebase (Firestore, Auth, Storage, Cloud Functions) |
+| **Shared** | TypeScript, Zod (validation) |
+| **Monorepo** | Yarn Workspaces |
 
 ---
 
-## Running the Apps
+## 🚀 Quick Start
 
-Each app is launched independently via its own npm script. No code changes needed between runs.
+### Prerequisites
+
+- **Node.js:** v18 or higher
+- **Yarn:** v1.22 or higher
+- **Firebase CLI:** `npm install -g firebase-tools`
+- **Expo CLI:** Included in project dependencies
+- **iOS/Android:** iOS Simulator or Android Emulator
+
+### Installation
 
 ```bash
-npm install
+cd OurBlock
+yarn install
 ```
 
-### SuperAdmin App
+### Running the Apps
+
+#### Mobile App (Customer & Business Owner)
 ```bash
-npm run start:super-admin
-npm run start:super-admin:ios
-npm run start:super-admin:android
+# Start for Customer
+yarn mobile:customer
+
+# Start for Business Owner
+yarn mobile:business
+
+# Or run on specific platform
+yarn mobile:ios
+yarn mobile:android
 ```
 
-### Business Owner App
+#### Web Admin (Super Admin)
 ```bash
-npm run start:business-owner
-npm run start:business-owner:ios
-npm run start:business-owner:android
+yarn web          # Development server at http://localhost:3000
 ```
 
-### User App
+#### Firebase Backend
 ```bash
-npm run start:user
-npm run start:user:ios
-npm run start:user:android
-```
+# Local emulators
+yarn firebase:serve
 
-The `EXPO_PUBLIC_APP_TARGET` environment variable (`superAdmin` | `businessOwner` | `user`) controls which app launches. `app/index.tsx` reads this and redirects to the correct login or dashboard.
-
----
-
-## Project Structure
-
-```
-app/
-├── index.tsx                  # Root router — redirects by app target + auth state
-├── (auth)/
-│   ├── _layout.tsx            # Stack layout (no header)
-│   ├── role-selection.tsx     # Role picker (generic launch only)
-│   ├── super-admin-login.tsx
-│   ├── business-owner-login.tsx
-│   └── user-login.tsx
-├── (super-admin)/
-│   ├── _layout.tsx            # Tab layout — RoleGate("superAdmin")
-│   ├── dashboard.tsx
-│   ├── societies.tsx
-│   ├── businesses.tsx
-│   ├── users.tsx
-│   ├── profile.tsx
-│   └── create-society.tsx
-├── (business-owner)/
-│   ├── _layout.tsx            # Tab layout — RoleGate("businessOwner")
-│   ├── dashboard.tsx
-│   ├── products.tsx
-│   ├── orders.tsx
-│   └── profile.tsx
-└── (user)/
-    ├── _layout.tsx            # Tab layout — RoleGate("user")
-    ├── home.tsx
-    ├── businesses.tsx
-    ├── orders.tsx
-    └── profile.tsx
-
-src/
-├── components/
-│   ├── RoleLoginForm.tsx      # Shared login form (used by all 3 login screens)
-│   ├── RoleGate.tsx           # Auth + role guard for tab layouts
-│   ├── AppTabIcon.tsx         # Shared tab bar icon
-│   └── AppSectionHeader.tsx   # Shared section header
-├── constants/
-│   └── theme.ts               # Colors, spacing, typography, per-role themes
-├── hooks/
-│   ├── useAuth.ts
-│   ├── useRedux.ts
-│   ├── useSociety.ts
-│   ├── useSuperAdmin.ts
-│   ├── useBusinessOwner.ts
-│   └── useUserApp.ts
-├── services/
-│   ├── apiClient.ts           # Axios instance with JWT interceptors
-│   ├── authService.ts
-│   ├── societyService.ts
-│   ├── businessService.ts
-│   ├── productService.ts
-│   ├── superAdminService.ts
-│   ├── businessOwnerService.ts
-│   └── userAppService.ts
-├── store/
-│   ├── index.ts
-│   └── slices/
-│       ├── authSlice.ts
-│       ├── societySlice.ts
-│       ├── superAdminSlice.ts
-│       ├── businessOwnerSlice.ts
-│       └── userAppSlice.ts
-├── types/
-│   └── index.ts               # All TypeScript interfaces & enums
-└── utils/
-    ├── helpers.ts
-    └── appRouting.ts          # getDefaultRoute(), getHomeRouteByRole()
+# Deploy to production
+yarn firebase:deploy
 ```
 
 ---
 
-## Role Features
+## 📱 Applications Overview
 
-### SuperAdmin
-- Manage societies (create, edit, delete)
-- Verify and manage business owners
-- View platform analytics and user management
+### 1. Mobile App (`apps/mobile`)
+**Platforms:** iOS, Android  
+**Users:** Customers & Business Owners
 
-### Business Owner
-- Manage product inventory (add, edit, delete)
-- View and manage incoming orders
-- Track business performance metrics
-
-### User
-- Browse businesses by society and category
-- Search products and add to cart
+**Customer Features:**
+- Society selection (GPS or manual)
+- Browse products by category
 - Place and track orders
 - Rate and review businesses
 
+**Business Owner Features:**
+- Product catalog management
+- Order management (accept/reject/update status)
+- Inventory management
+- Analytics dashboard
+
+### 2. Web Admin (`apps/web`)
+**Platform:** Web  
+**Users:** Super Admin
+
+- Society management (CRUD)
+- Business owner account creation
+- User management  
+- Platform analytics
+
+### 3. Firebase Backend (`apps/firebase`)
+**Platform:** Cloud Functions  
+**Purpose:** API & Background Jobs
+
+- RESTful API endpoints
+- Authentication & authorization
+- Database triggers (notifications)
+- Scheduled tasks
+
 ---
 
-## Authentication & Security
+## 📁 Project Structure
 
-- Firebase Auth for identity management
-- JWT access tokens (short-lived) + refresh tokens (7 days)
-- Automatic token refresh via Axios interceptor
-- Route-level guards via `RoleGate` — wrong-role users are redirected instantly
-- Login screens have no back button — each app is independent
+### Mobile App (`apps/mobile/`)
+```
+app/                          # Expo Router pages
+  ├── _layout.tsx
+  ├── index.tsx
+  ├── (auth)/                 # Auth screens
+  │   ├── business-owner-login.tsx
+  │   ├── role-selection.tsx
+  │   └── user-login.tsx
+  ├── (business-owner)/       # Business owner screens
+  │   ├── dashboard.tsx
+  │   ├── orders.tsx
+  │   ├── products.tsx
+  │   └── profile.tsx
+  └── (user)/                 # Customer screens
+      ├── home.tsx
+      ├── businesses.tsx
+      ├── orders.tsx
+      └── profile.tsx
+src/
+  ├── components/             # Reusable components
+  ├── hooks/                  # Custom hooks
+  ├── services/               # API clients
+  ├── store/slices/           # Redux store
+  └── utils/                  # Helper functions
+```
+
+### Web Admin (`apps/web/`)
+```
+src/
+  ├── app/                    # Next.js App Router
+  │   ├── login/
+  │   └── dashboard/
+  │       ├── societies/
+  │       ├── businesses/
+  │       ├── users/
+  │       └── settings/
+  ├── components/
+  ├── lib/
+  └── services/
+```
+
+### Firebase Backend (`apps/firebase/`)
+```
+functions/src/
+  ├── index.ts                # Entry point
+  ├── api/                    # API routes
+  │   ├── auth.ts
+  │   ├── societies.ts
+  │   ├── businesses.ts
+  │   ├── products.ts
+  │   ├── orders.ts
+  │   └── users.ts
+  └── triggers/               # Firestore triggers
+      ├── onUserCreate.ts
+      ├── onOrderCreate.ts
+      └── onOrderUpdate.ts
+```
+
+### Shared Package (`packages/shared/`)
+```
+src/
+  ├── types.ts                # TypeScript interfaces
+  ├── constants.ts            # App constants
+  ├── utils.ts                # Utility functions
+  └── validation.ts           # Zod schemas
+```
 
 ---
 
-## Other Scripts
+## 🔥 Firebase Collections
+
+| Collection | Description |
+|-----------|-------------|
+| `users` | User accounts (all roles) |
+| `societies` | Residential societies |
+| `businesses` | Business profiles |
+| `products` | Product catalog |
+| `orders` | Customer orders |
+| `reviews` | Product/business reviews |
+| `addresses` | User delivery addresses |
+| `notifications` | Push notifications |
+
+---
+
+## 🔐 Security
+
+- **Firestore Rules:** Role-based access control (RBAC)
+- **Storage Rules:** Secure file uploads with size/type validation
+- **Authentication:** Firebase Auth with custom claims
+- **API:** JWT token validation on all endpoints
+
+---
+
+## 🎯 Phase 1 Status
+
+✅ **Completed:**
+- ✅ Monorepo structure with Yarn Workspaces
+- ✅ Shared package with types, utilities, validation schemas
+- ✅ Firebase backend with Cloud Functions
+- ✅ API routes (Auth, Societies, Businesses, Products, Orders, Users)
+- ✅ Firestore security rules with RBAC
+- ✅ Database triggers (notifications)
+- ✅ Firebase emulators running locally
+- ✅ TypeScript compilation working across all packages
+
+🚧 **In Progress:**
+- Mobile app UI screens
+- Web admin UI pages
+- Authentication flow integration
+- Product catalog implementation
+- Order management workflow
+
+❌ **Excluded from Phase 1:**
+- Chat/messaging system
+- Digital wallet
+- Subscription orders
+
+---
+
+## 📚 Documentation
+
+- **[SETUP_GUIDE.md](./SETUP_GUIDE.md)** - ⚡ **START HERE** - Quick environment setup for new developers
+- **[PRODUCTION_API.md](./PRODUCTION_API.md)** - 🔥 Production API reference for your team
+- **[ENV_TEMPLATES.md](./ENV_TEMPLATES.md)** - Environment variable templates and usage
+- **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Complete development setup guide
+- **[STATUS.md](./STATUS.md)** - Current implementation status & next steps
+- **[FIREBASE_SETUP.md](./FIREBASE_SETUP.md)** - Firebase configuration guide
+- **[PROJECT_DETAILS.md](./PROJECT_DETAILS.md)** - Technical specifications
+- **[BUSINESS_DOCUMENTATION.md](./BUSINESS_DOCUMENTATION.md)** - Business model
+
+---
+
+## 🛠️ All Commands
 
 ```bash
-npm run type-check     # TypeScript compiler check
-npm run lint           # ESLint
-npm run format         # Prettier
-npm run test:smoke     # Smoke tests for all 3 app targets
+# Mobile
+yarn mobile                 # Start Expo dev server
+yarn mobile:customer        # Customer app mode
+yarn mobile:business        # Business owner app mode  
+yarn mobile:ios             # iOS simulator
+yarn mobile:android         # Android emulator
+
+# Web
+yarn web                    # Next.js dev server
+
+# Firebase
+yarn firebase:serve         # Start local emulators
+yarn firebase:deploy        # Deploy functions
+
+# Development
+yarn lint                   # Lint all workspaces
+yarn type-check             # TypeScript check all workspaces
+yarn clean                  # Clean all node_modules
 ```
 
 ---
 
-## Environment Variables
+## 🐛 Troubleshooting
 
-| Variable | Values | Description |
-|---|---|---|
-| `EXPO_PUBLIC_APP_TARGET` | `superAdmin` \| `businessOwner` \| `user` | Which app to launch |
+### Firebase emulator not starting:
+```bash
+lsof -ti:5001 | xargs kill -9
+lsof -ti:8080 | xargs kill -9
+cd apps/firebase && firebase emulators:start
+```
 
-For API and Firebase config, create a `.env` file:
-```env
-EXPO_PUBLIC_API_URL=https://api.ourblock.com/v1
-EXPO_PUBLIC_FIREBASE_API_KEY=your_key
+### Expo build errors:
+```bash
+cd apps/mobile
+rm -rf .expo node_modules
+yarn install
+yarn start --clear
+```
+
+### Type errors in shared package:
+```bash
+cd packages/shared && yarn build
 ```
 
 ---
 
-## License
+## 📄 License
 
-Proprietary and confidential.
+Proprietary - All rights reserved
+
+---
+
+**Built with ❤️ for building stronger local communities**
