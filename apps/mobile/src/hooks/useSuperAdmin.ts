@@ -14,7 +14,7 @@ import {
   setError,
 } from "@store/slices/superAdminSlice";
 import { superAdminService, CreateBusinessOwnerPayload } from "@services/superAdminService";
-import { Society } from "@types/index";
+import { Society } from "@/types";
 
 export const useSuperAdmin = () => {
   const dispatch = useAppDispatch();

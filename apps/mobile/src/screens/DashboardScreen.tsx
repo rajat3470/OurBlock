@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from "react-native";
-import { Business } from "@types/index";
+import { Business } from "@/types";
 import { businessService } from "@services/businessService";
 import { useAppSelector } from "@hooks/useRedux";
 

@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Society } from "@types/index";
+import { Society } from "@/types";
 
 interface SocietyState {
   selectedSociety: Society | null;

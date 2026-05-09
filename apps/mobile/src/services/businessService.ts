@@ -1,5 +1,5 @@
 import { apiClient } from "./apiClient";
-import { Business, BusinessCategory, PaginatedResponse } from "@types/index";
+import { Business, BusinessCategory, PaginatedResponse } from "@/types";
 
 export const businessService = {
   async getBusinesses(

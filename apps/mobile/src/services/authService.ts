@@ -1,12 +1,11 @@
 import { apiClient } from "./apiClient";
 import {
-  User,
   AuthResponse,
   AuthCredentials,
   SuperAdmin,
   BusinessOwner,
   AppUser,
-} from "@types/index";
+} from "@/types";
 
 export const authService = {
   async loginSuperAdmin(

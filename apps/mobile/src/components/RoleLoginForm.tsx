@@ -16,7 +16,7 @@ import { router } from "expo-router";
 import { useAuth } from "@hooks/useAuth";
 import { useAppSelector } from "@hooks/useRedux";
 import { validateEmail } from "@utils/helpers";
-import { UserRole } from "@types/index";
+import { UserRole } from "@/types";
 import { colors, spacing, radius, typography } from "../constants/theme";
 
 interface RoleLoginFormProps {

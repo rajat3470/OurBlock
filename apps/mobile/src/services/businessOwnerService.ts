@@ -1,5 +1,5 @@
 import { apiClient } from "./apiClient";
-import { Business, Order, Product, PaginatedResponse } from "@types/index";
+import { Business, Order, Product, PaginatedResponse } from "@/types";
 import { BusinessOwnerStats } from "@store/slices/businessOwnerSlice";
 
 export const businessOwnerService = {

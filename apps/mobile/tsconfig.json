@@ -52,7 +52,8 @@
     }
   },
   "include": [
-    "src"
+    "src",
+    "app"
   ],
   "references": [
     {

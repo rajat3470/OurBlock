@@ -1,5 +1,5 @@
 import { apiClient } from "./apiClient";
-import { Business, Order, Product, Society, PaginatedResponse } from "@types/index";
+import { Business, Order, Product, Society, PaginatedResponse } from "@/types";
 import { UserAppStats } from "@store/slices/userAppSlice";
 
 export const userAppService = {

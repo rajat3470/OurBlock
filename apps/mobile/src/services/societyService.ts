@@ -1,5 +1,5 @@
 import { apiClient } from "./apiClient";
-import { Society, PaginatedResponse } from "@types/index";
+import { Society, PaginatedResponse } from "@/types";
 
 export const societyService = {
   async getSocieties(

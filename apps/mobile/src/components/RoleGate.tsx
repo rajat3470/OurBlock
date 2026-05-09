@@ -1,6 +1,6 @@
 import React from "react";
 import { Redirect } from "expo-router";
-import { UserRole } from "@types/index";
+import { UserRole } from "@/types";
 import { useAppSelector } from "@hooks/useRedux";
 import { getHomeRouteByRole } from "@utils/appRouting";
 

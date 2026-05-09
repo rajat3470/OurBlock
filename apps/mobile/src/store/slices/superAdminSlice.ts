@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Society, Business, User } from "@types/index";
+import { Society, Business, User } from "@/types";
 
 export interface SuperAdminStats {
   totalSocieties: number;

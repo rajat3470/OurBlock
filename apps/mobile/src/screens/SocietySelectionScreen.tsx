@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import { Society } from "@types/index";
+import { Society } from "@/types";
 import { useSociety } from "@hooks/useSociety";
 
 const SocietySelectionScreen: React.FC = () => {

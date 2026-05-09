@@ -15,7 +15,7 @@ import {
   setSelectedProductId,
 } from "@store/slices/businessOwnerSlice";
 import { businessOwnerService } from "@services/businessOwnerService";
-import { Product, Order } from "@types/index";
+import { Product, Order } from "@/types";
 
 export const useBusinessOwner = () => {
   const dispatch = useAppDispatch();

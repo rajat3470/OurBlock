@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Business, Order, Product, Society } from "@types/index";
+import { Business, Order, Product, Society } from "@/types";
 
 export interface UserAppStats {
   totalBusinesses: number;

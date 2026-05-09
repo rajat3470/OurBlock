@@ -1,5 +1,5 @@
 import { apiClient } from "./apiClient";
-import { Society, Business, User, PaginatedResponse } from "@types/index";
+import { Society, Business, User, PaginatedResponse } from "@/types";
 import { SuperAdminStats } from "@store/slices/superAdminSlice";
 
 export interface CreateBusinessOwnerPayload {

@@ -1,4 +1,4 @@
-import { UserRole } from "@types/index";
+import { UserRole } from "@/types";
 
 export type AppTarget = UserRole | undefined;
 

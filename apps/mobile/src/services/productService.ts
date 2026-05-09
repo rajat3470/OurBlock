@@ -1,5 +1,5 @@
 import { apiClient } from "./apiClient";
-import { Product, PaginatedResponse } from "@types/index";
+import { Product, PaginatedResponse } from "@/types";
 
 export const productService = {
   async getProducts(

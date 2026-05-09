@@ -1,4 +1,4 @@
-import React from "react";
+
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert } from "react-native";
 import { router } from "expo-router";
 import AppSectionHeader from "../../src/components/AppSectionHeader";

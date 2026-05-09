@@ -1,9 +1,8 @@
-import { useState } from "react";
 import { authService } from "@services/authService";
 import { useAppDispatch } from "./useRedux";
 import { setAuth, setError, logout, setLoading } from "@store/slices/authSlice";
 import { apiClient } from "@services/apiClient";
-import { AuthCredentials, AuthResponse, User } from "@types/index";
+import { AuthCredentials, AuthResponse } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Mock credentials — used while the backend is not yet available.
