@@ -119,8 +119,34 @@ export default function BusinessOwnerProducts() {
     }
   };
 
+  const toggleAvailableToday = async (item: Product) => {
+    try {
+      await editProduct(item.id, { availableToday: !item.availableToday });
+    } catch {
+      Alert.alert("Error", "Failed to update availability.");
+    }
+  };
+
   const renderItem = ({ item }: { item: Product }) => (
     <View style={styles.card}>
+      {/* Daily availability toggle */}
+      <TouchableOpacity
+        style={[styles.availBanner, item.availableToday ? styles.availOn : styles.availOff]}
+        onPress={() => toggleAvailableToday(item)}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.availIcon}>{item.availableToday ? "\u2705" : "\u23f8\ufe0f"}</Text>
+        <View style={styles.availInfo}>
+          <Text style={[styles.availLabel, { color: item.availableToday ? "#16A34A" : "#64748B" }]}>
+            {item.availableToday ? "Available Today" : "Unavailable Today"}
+          </Text>
+          <Text style={styles.availHint}>Tap to toggle for today</Text>
+        </View>
+        <View style={[styles.availPill, { backgroundColor: item.availableToday ? "#22C55E" : "#CBD5E1" }]}>
+          <Text style={styles.availPillText}>{item.availableToday ? "ON" : "OFF"}</Text>
+        </View>
+      </TouchableOpacity>
+
       <View style={styles.cardTop}>
         <View style={styles.cardLeft}>
           <Text style={styles.productName}>{item.name}</Text>
@@ -371,6 +397,40 @@ const styles = StyleSheet.create({
     color: "#B91C1C",
     fontSize: 12,
     fontWeight: "700",
+  },
+  // Daily availability banner
+  availBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+    gap: 10,
+  },
+  availOn: {
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1,
+    borderColor: "#86EFAC",
+  },
+  availOff: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  availIcon: { fontSize: 18 },
+  availInfo: { flex: 1 },
+  availLabel: { fontSize: 13, fontWeight: "700" },
+  availHint: { fontSize: 10, color: "#94A3B8", marginTop: 1 },
+  availPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  availPillText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "800",
   },
   emptyWrap: {
     alignItems: "center",

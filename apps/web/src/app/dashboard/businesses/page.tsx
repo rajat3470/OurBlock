@@ -16,6 +16,7 @@ interface Business {
   ownerId?: string;
   status: string;
   isVerified: boolean;
+  managementSuspended?: boolean;
   rating: number;
   totalReviews: number;
   createdAt?: any;
@@ -71,6 +72,11 @@ export default function BusinessesPage() {
   const [drawerOwnerSubmitting, setDrawerOwnerSubmitting] = useState(false);
   const [drawerOwnerResult, setDrawerOwnerResult] = useState<OwnerResult | null>(null);
   const [drawerCopied, setDrawerCopied] = useState<'email' | 'password' | ''>('');
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState(emptyDetails);
+  const [editError, setEditError] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [suspending, setSuspending] = useState(false);
 
   // Create modal state
   const [showModal, setShowModal] = useState(false);
@@ -111,6 +117,10 @@ export default function BusinessesPage() {
     setDrawerOwnerForm({ firstName: '', lastName: '', email: '', phone: '' });
     setDrawerOwnerResult(null);
     setDrawerCopied('');
+    setEditMode(false);
+    setEditForm({ name: biz.name, category: biz.category, phone: biz.phone, email: biz.email || '', address: biz.address, description: biz.description || '' });
+    setEditError('');
+    setSuspending(false);
     if (biz.ownerId) {
       setOwnerLoading(true);
       const res = await api.get(`/users/${biz.ownerId}`);
@@ -119,7 +129,7 @@ export default function BusinessesPage() {
     }
   };
 
-  const closeDrawer = () => { setDrawerOpen(false); setSelectedBiz(null); setOwnerData(null); setShowDrawerOwnerForm(false); setDrawerOwnerResult(null); };
+  const closeDrawer = () => { setDrawerOpen(false); setSelectedBiz(null); setOwnerData(null); setShowDrawerOwnerForm(false); setDrawerOwnerResult(null); setEditMode(false); setEditError(''); setSuspending(false); };
 
   const handleDrawerCreateOwner = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,6 +166,41 @@ export default function BusinessesPage() {
       setBusinesses((p) => p.map((b) => b.id === updated.id ? updated : b));
     }
     setVerifying(false);
+  };
+
+  const handleBizEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+    setEditForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+
+  const handleBizEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBiz) return;
+    setEditError(''); setEditSubmitting(true);
+    const res = await api.put(`/businesses/${selectedBiz.id}`, editForm);
+    if (res.success) {
+      const updated = { ...selectedBiz, ...editForm };
+      setSelectedBiz(updated);
+      setBusinesses((p) => p.map((b) => b.id === updated.id ? updated : b));
+      setEditMode(false);
+    } else {
+      setEditError(res.error || 'Failed to update business');
+    }
+    setEditSubmitting(false);
+  };
+
+  const handleSuspendToggle = async () => {
+    if (!selectedBiz) return;
+    setSuspending(true);
+    const nowSuspended = !!selectedBiz.managementSuspended;
+    const res = await api.put(`/businesses/${selectedBiz.id}`, {
+      managementSuspended: !nowSuspended,
+      status: nowSuspended ? 'active' : 'suspended',
+    });
+    if (res.success) {
+      const updated = { ...selectedBiz, managementSuspended: !nowSuspended, status: nowSuspended ? 'active' : 'suspended' } as Business;
+      setSelectedBiz(updated);
+      setBusinesses((p) => p.map((b) => b.id === updated.id ? updated : b));
+    }
+    setSuspending(false);
   };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -323,8 +368,9 @@ export default function BusinessesPage() {
                   <p className="text-xs text-gray-500 mt-0.5">{biz.category} · {biz.phone}</p>
                 </div>
                 <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                  biz.managementSuspended ? 'bg-orange-100 text-orange-700' :
                   biz.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                  {biz.status}
+                  {biz.managementSuspended ? '🚫 Suspended' : biz.status}
                 </span>
               </div>
               <p className="text-xs text-gray-400 line-clamp-1">{biz.address}</p>
@@ -368,14 +414,78 @@ export default function BusinessesPage() {
                   <p className="text-xs text-gray-500">{selectedBiz.category}</p>
                 </div>
               </div>
-              <button onClick={closeDrawer} className="text-gray-400 hover:text-gray-600 transition p-1">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex items-center gap-2">
+                {!editMode && (
+                  <button onClick={() => setEditMode(true)}
+                    className="flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-lg transition">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit
+                  </button>
+                )}
+                <button onClick={closeDrawer} className="text-gray-400 hover:text-gray-600 transition p-1">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 px-6 py-5 space-y-6">
+              {/* Management suspension banner */}
+              {selectedBiz.managementSuspended && (
+                <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 flex items-center gap-2">
+                  <span className="text-lg">🚫</span>
+                  <p className="text-sm font-medium text-orange-800">This business is temporarily suspended by management</p>
+                </div>
+              )}
+
+              {editMode ? (
+                /* ── Edit form ── */
+                <form onSubmit={handleBizEditSubmit} className="space-y-4">
+                  {editError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">{editError}</div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Business Name *</label>
+                    <input name="name" value={editForm.name} onChange={handleBizEditChange} required className="field" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Category *</label>
+                    <select name="category" value={editForm.category} onChange={handleBizEditChange} required className="field text-gray-900 bg-white">
+                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Phone *</label>
+                      <input name="phone" value={editForm.phone} onChange={handleBizEditChange} required className="field" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                      <input name="email" type="email" value={editForm.email} onChange={handleBizEditChange} className="field" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Address *</label>
+                    <input name="address" value={editForm.address} onChange={handleBizEditChange} required className="field" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                    <textarea name="description" value={editForm.description} onChange={handleBizEditChange} rows={2} className="field resize-none" />
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button type="button" onClick={() => setEditMode(false)}
+                      className="flex-1 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Cancel</button>
+                    <button type="submit" disabled={editSubmitting}
+                      className="flex-1 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition">
+                      {editSubmitting ? 'Saving…' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
               {/* Status badges */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
@@ -505,10 +615,13 @@ export default function BusinessesPage() {
                   <p className="text-sm text-red-500">Could not load owner details.</p>
                 )}
               </section>
+              </>
+              )}
             </div>
 
             {/* Footer actions */}
-            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3 sticky bottom-0 bg-white">
+            {!editMode && (
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center gap-2 sticky bottom-0 bg-white">
               <button
                 onClick={handleVerifyToggle}
                 disabled={verifying}
@@ -521,12 +634,24 @@ export default function BusinessesPage() {
                 {verifying ? 'Updating…' : selectedBiz.isVerified ? 'Revoke Verification' : 'Mark as Verified'}
               </button>
               <button
+                onClick={handleSuspendToggle}
+                disabled={suspending}
+                className={`flex-1 py-2 text-sm font-semibold rounded-lg border transition ${
+                  selectedBiz.managementSuspended
+                    ? 'bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100'
+                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                } disabled:opacity-50`}
+              >
+                {suspending ? 'Updating…' : selectedBiz.managementSuspended ? 'Lift Suspension' : 'Suspend'}
+              </button>
+              <button
                 onClick={() => handleDelete(selectedBiz.id)}
                 className="flex-1 py-2 text-sm font-semibold rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition"
               >
-                Delete Business
+                Delete
               </button>
             </div>
+            )}
           </div>
         </div>
       )}

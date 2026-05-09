@@ -131,6 +131,7 @@ export interface Product {
   rating?: number;
   totalReviews?: number;
   status: "active" | "inactive";
+  availableToday?: boolean;
   attributes?: ProductAttribute[];
   createdAt: Date;
   updatedAt: Date;

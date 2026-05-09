@@ -49,6 +49,14 @@ export default function SocietiesPage() {
   const [ownerResult, setOwnerResult] = useState<OwnerResult | null>(null);
   const [copied, setCopied] = useState<'email' | 'password' | null>(null);
 
+  // Society detail / edit drawer
+  const [drawerSociety, setDrawerSociety] = useState<Society | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editForm, setEditForm] = useState(emptyForm);
+  const [editError, setEditError] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
   useEffect(() => { loadSocieties(); }, []);
 
   const loadSocieties = async () => {
@@ -78,6 +86,35 @@ export default function SocietiesPage() {
   };
 
   const closeModal = () => { setShowModal(false); setForm(emptyForm); setFormError(''); };
+
+  const openSocietyDrawer = (society: Society) => {
+    setDrawerSociety(society);
+    setEditMode(false);
+    setEditForm({ name: society.name, address: society.address, city: society.city, state: society.state, pincode: society.pincode, description: society.description || '' });
+    setEditError('');
+    setDrawerOpen(true);
+  };
+
+  const closeSocietyDrawer = () => { setDrawerOpen(false); setDrawerSociety(null); setEditMode(false); };
+
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setEditForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!drawerSociety) return;
+    setEditError(''); setEditSubmitting(true);
+    const res = await api.put(`/societies/${drawerSociety.id}`, editForm);
+    if (res.success) {
+      const updated = { ...drawerSociety, ...editForm };
+      setDrawerSociety(updated);
+      setSocieties((p) => p.map((s) => s.id === updated.id ? updated : s));
+      setEditMode(false);
+    } else {
+      setEditError(res.error || 'Failed to update society');
+    }
+    setEditSubmitting(false);
+  };
 
   const openOwnerModal = (society: Society) => {
     setOwnerSociety({ id: society.id, name: society.name });
@@ -189,6 +226,10 @@ export default function SocietiesPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  <button onClick={() => openSocietyDrawer(society)}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 border border-indigo-200 hover:border-indigo-400 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg transition">
+                    View Details
+                  </button>
                   <button onClick={() => openOwnerModal(society)}
                     className="text-xs font-semibold text-green-600 hover:text-green-800 border border-green-200 hover:border-green-400 bg-green-50 hover:bg-green-100 px-2.5 py-1 rounded-lg transition">
                     + Owner
@@ -201,6 +242,143 @@ export default function SocietiesPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Society Detail / Edit Drawer */}
+      {drawerOpen && drawerSociety && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black/40" onClick={closeSocietyDrawer} />
+          <div className="w-full max-w-md bg-white shadow-2xl flex flex-col overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🏘️</span>
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900 leading-tight">{drawerSociety.name}</h2>
+                  <p className="text-xs text-gray-500">{drawerSociety.city}, {drawerSociety.state}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {!editMode && (
+                  <button onClick={() => setEditMode(true)}
+                    className="flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-200 px-2.5 py-1.5 rounded-lg transition">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit
+                  </button>
+                )}
+                <button onClick={closeSocietyDrawer} className="text-gray-400 hover:text-gray-600 transition p-1">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 px-6 py-5">
+              {editMode ? (
+                <form onSubmit={handleEditSubmit} className="space-y-4">
+                  {editError && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">{editError}</div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Society Name *</label>
+                    <input name="name" value={editForm.name} onChange={handleEditFormChange} required className="field" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Address *</label>
+                    <input name="address" value={editForm.address} onChange={handleEditFormChange} required className="field" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">City *</label>
+                      <input name="city" value={editForm.city} onChange={handleEditFormChange} required className="field" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">State *</label>
+                      <input name="state" value={editForm.state} onChange={handleEditFormChange} required className="field" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">PIN Code *</label>
+                    <input name="pincode" value={editForm.pincode} onChange={handleEditFormChange} required pattern="[1-9][0-9]{5}" className="field" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Description <span className="text-gray-400">(optional)</span></label>
+                    <textarea name="description" value={editForm.description} onChange={handleEditFormChange} rows={2} className="field resize-none" />
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button type="button" onClick={() => setEditMode(false)}
+                      className="flex-1 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Cancel</button>
+                    <button type="submit" disabled={editSubmitting}
+                      className="flex-1 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition">
+                      {editSubmitting ? 'Saving…' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-6">
+                  {/* Status */}
+                  <span className={`inline-flex text-xs font-semibold px-2.5 py-1 rounded-full ${
+                    drawerSociety.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {drawerSociety.status}
+                  </span>
+
+                  {/* Details */}
+                  <section>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Society Details</h3>
+                    <dl className="space-y-2.5">
+                      {([
+                        ['Name', drawerSociety.name],
+                        ['Address', drawerSociety.address],
+                        ['City', drawerSociety.city],
+                        ['State', drawerSociety.state],
+                        ['PIN Code', drawerSociety.pincode],
+                      ] as [string, string][]).map(([label, value]) => (
+                        <div key={label} className="flex gap-3">
+                          <dt className="w-24 shrink-0 text-xs text-gray-400 pt-0.5">{label}</dt>
+                          <dd className="flex-1 text-sm text-gray-800 break-words">{value}</dd>
+                        </div>
+                      ))}
+                      {drawerSociety.description && (
+                        <div className="flex gap-3">
+                          <dt className="w-24 shrink-0 text-xs text-gray-400 pt-0.5">Description</dt>
+                          <dd className="flex-1 text-sm text-gray-800">{drawerSociety.description}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  </section>
+
+                  {/* Stats */}
+                  <section>
+                    <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Statistics</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-indigo-50 rounded-xl px-4 py-3 text-center">
+                        <p className="text-2xl font-bold text-indigo-700">{drawerSociety.totalBusinesses ?? 0}</p>
+                        <p className="text-xs text-indigo-500 mt-0.5">Businesses</p>
+                      </div>
+                      <div className="bg-green-50 rounded-xl px-4 py-3 text-center">
+                        <p className="text-2xl font-bold text-green-700">{drawerSociety.totalUsers ?? 0}</p>
+                        <p className="text-xs text-green-500 mt-0.5">Users</p>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {!editMode && (
+              <div className="px-6 py-4 border-t border-gray-100 sticky bottom-0 bg-white">
+                <button onClick={() => { closeSocietyDrawer(); handleDelete(drawerSociety.id); }}
+                  className="w-full py-2 text-sm font-semibold rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition">
+                  Delete Society
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
