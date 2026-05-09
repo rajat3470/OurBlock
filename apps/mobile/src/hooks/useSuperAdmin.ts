@@ -162,6 +162,60 @@ export const useSuperAdmin = () => {
     [dispatch]
   );
 
+  const suspendBusiness = useCallback(
+    async (id: string) => {
+      dispatch(setLoading(true));
+      try {
+        const business = await superAdminService.suspendBusiness(id);
+        dispatch(updateBusinessItem(business));
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Failed to suspend business";
+        dispatch(setError(message));
+        throw err;
+      } finally {
+        dispatch(setLoading(false));
+      }
+    },
+    [dispatch]
+  );
+
+  const liftSuspensionBusiness = useCallback(
+    async (id: string) => {
+      dispatch(setLoading(true));
+      try {
+        const business = await superAdminService.liftSuspensionBusiness(id);
+        dispatch(updateBusinessItem(business));
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Failed to lift suspension";
+        dispatch(setError(message));
+        throw err;
+      } finally {
+        dispatch(setLoading(false));
+      }
+    },
+    [dispatch]
+  );
+
+  const revokeVerification = useCallback(
+    async (id: string) => {
+      dispatch(setLoading(true));
+      try {
+        const business = await superAdminService.revokeVerification(id);
+        dispatch(updateBusinessItem(business));
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Failed to revoke verification";
+        dispatch(setError(message));
+        throw err;
+      } finally {
+        dispatch(setLoading(false));
+      }
+    },
+    [dispatch]
+  );
+
   const loadUsers = useCallback(async () => {
     dispatch(setLoading(true));
     try {
@@ -254,6 +308,9 @@ export const useSuperAdmin = () => {
     loadBusinesses,
     verifyBusiness,
     rejectBusiness,
+    suspendBusiness,
+    liftSuspensionBusiness,
+    revokeVerification,
     loadUsers,
     suspendUser,
     activateUser,

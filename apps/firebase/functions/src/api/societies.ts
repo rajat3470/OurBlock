@@ -11,14 +11,27 @@ router.get('/', async (req, res) => {
     const { page = 1, limit = 20 } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
     
-    const snapshot = await db
-      .collection('societies')
-      .orderBy('createdAt', 'desc')
-      .limit(Number(limit))
-      .offset(offset)
-      .get();
+    const [snapshot, businessSnap] = await Promise.all([
+      db
+        .collection('societies')
+        .orderBy('createdAt', 'desc')
+        .limit(Number(limit))
+        .offset(offset)
+        .get(),
+      db.collection('businesses').get(),
+    ]);
+
+    const businessCountMap: Record<string, number> = {};
+    businessSnap.docs.forEach((doc) => {
+      const sid = doc.data().societyId as string | undefined;
+      if (sid) businessCountMap[sid] = (businessCountMap[sid] ?? 0) + 1;
+    });
     
-    const societies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const societies = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      totalBusinesses: businessCountMap[doc.id] ?? 0,
+    }));
     
     res.json({
       success: true,

@@ -33,6 +33,9 @@ export default function BusinessesScreen() {
     loadSocieties,
     verifyBusiness,
     rejectBusiness,
+    suspendBusiness,
+    liftSuspensionBusiness,
+    revokeVerification,
     isLoading,
   } = useSuperAdmin();
 
@@ -74,6 +77,27 @@ export default function BusinessesScreen() {
     ]);
   };
 
+  const handleRevokeVerify = (item: Business) => {
+    Alert.alert("Revoke Verification", `Remove verified status from "${item.name}"?`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Revoke", style: "destructive", onPress: () => revokeVerification(item.id) },
+    ]);
+  };
+
+  const handleSuspend = (item: Business) => {
+    Alert.alert("Suspend Business", `Temporarily suspend "${item.name}"? It will be hidden from residents.`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Suspend", style: "destructive", onPress: () => suspendBusiness(item.id) },
+    ]);
+  };
+
+  const handleLiftSuspension = (item: Business) => {
+    Alert.alert("Lift Suspension", `Restore access for "${item.name}"?`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Lift Suspension", onPress: () => liftSuspensionBusiness(item.id) },
+    ]);
+  };
+
   const handleReject = (item: Business) => {
     Alert.alert(
       "Reject Business",
@@ -93,7 +117,14 @@ export default function BusinessesScreen() {
     BUSINESS_CATEGORY_LABELS[cat as keyof typeof BUSINESS_CATEGORY_LABELS] ??
     cat;
 
-  const renderItem = ({ item }: { item: Business }) => (
+  const renderItem = ({ item }: { item: Business }) => {
+    const isSuspended = !!(item as Business & { managementSuspended?: boolean }).managementSuspended;
+    const statusLabel = isSuspended ? "Suspended" : item.isVerified ? "Verified" : "Not Verified";
+    const statusBg = isSuspended ? "#FFF7ED" : item.isVerified ? "#F0FDF4" : "#FFFBEB";
+    const statusColor = isSuspended ? "#C2410C" : item.isVerified ? "#16A34A" : "#D97706";
+    const statusIcon = isSuspended ? "🚫" : item.isVerified ? "✓" : "⏳";
+
+    return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.iconBox}>
@@ -104,19 +135,9 @@ export default function BusinessesScreen() {
           <Text style={styles.categoryText}>{getCategoryLabel(item.category)}</Text>
           <Text style={styles.cardMeta}>{item.address}</Text>
         </View>
-        <View
-          style={[
-            styles.verifyBadge,
-            item.isVerified ? styles.verifiedBg : styles.pendingBg,
-          ]}
-        >
-          <Text
-            style={[
-              styles.verifyBadgeText,
-              item.isVerified ? styles.verifiedColor : styles.pendingColor,
-            ]}
-          >
-            {item.isVerified ? "Verified" : "Pending"}
+        <View style={[styles.verifyBadge, { backgroundColor: statusBg }]}>
+          <Text style={[styles.verifyBadgeText, { color: statusColor }]}>
+            {statusIcon} {statusLabel}
           </Text>
         </View>
       </View>
@@ -128,24 +149,34 @@ export default function BusinessesScreen() {
         ) : null}
       </View>
 
-      {!item.isVerified && (
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.verifyBtn}
-            onPress={() => handleVerify(item)}
-          >
-            <Text style={styles.verifyBtnText}>✓ Verify</Text>
+      <View style={styles.actions}>
+        {isSuspended ? (
+          <TouchableOpacity style={styles.liftBtn} onPress={() => handleLiftSuspension(item)}>
+            <Text style={styles.liftBtnText}>✓ Lift Suspension</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.rejectBtn}
-            onPress={() => handleReject(item)}
-          >
-            <Text style={styles.rejectBtnText}>✗ Reject</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+        ) : item.isVerified ? (
+          <>
+            <TouchableOpacity style={styles.suspendBtn} onPress={() => handleSuspend(item)}>
+              <Text style={styles.suspendBtnText}>🚫 Suspend</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.revokeBtn} onPress={() => handleRevokeVerify(item)}>
+              <Text style={styles.revokeBtnText}>✗ Revoke</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity style={styles.verifyBtn} onPress={() => handleVerify(item)}>
+              <Text style={styles.verifyBtnText}>✓ Verify</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.rejectBtn} onPress={() => handleReject(item)}>
+              <Text style={styles.rejectBtnText}>✗ Reject</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
     </View>
   );
+  };
 
   const tabCount = (tab: FilterTab) => {
     if (tab === "pending") return pendingBusinesses.length;
@@ -373,21 +404,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 20,
   },
-  verifiedBg: {
-    backgroundColor: "#F0FDF4",
-  },
-  pendingBg: {
-    backgroundColor: "#FFFBEB",
-  },
   verifyBadgeText: {
     fontSize: 11,
     fontWeight: "600",
-  },
-  verifiedColor: {
-    color: "#16A34A",
-  },
-  pendingColor: {
-    color: "#D97706",
   },
   contactRow: {
     flexDirection: "row",
@@ -429,6 +448,47 @@ const styles = StyleSheet.create({
   },
   rejectBtnText: {
     color: "#EF4444",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  suspendBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: "#FFF7ED",
+    borderWidth: 1.5,
+    borderColor: "#F97316",
+    alignItems: "center",
+  },
+  suspendBtnText: {
+    color: "#C2410C",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  liftBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1.5,
+    borderColor: "#22C55E",
+    alignItems: "center",
+  },
+  liftBtnText: {
+    color: "#16A34A",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  revokeBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#94A3B8",
+    alignItems: "center",
+  },
+  revokeBtnText: {
+    color: "#475569",
     fontSize: 14,
     fontWeight: "600",
   },

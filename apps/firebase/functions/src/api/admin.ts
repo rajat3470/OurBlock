@@ -40,14 +40,27 @@ router.get('/stats', async (req, res) => {
 router.get('/societies', async (req, res) => {
   try {
     const { page = 1, limit = 50 } = req.query;
-    const snapshot = await db
-      .collection('societies')
-      .orderBy('createdAt', 'desc')
-      .limit(Number(limit))
-      .offset((Number(page) - 1) * Number(limit))
-      .get();
+    const [snapshot, businessSnap] = await Promise.all([
+      db.collection('societies')
+        .orderBy('createdAt', 'desc')
+        .limit(Number(limit))
+        .offset((Number(page) - 1) * Number(limit))
+        .get(),
+      db.collection('businesses').get(),
+    ]);
 
-    const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    // Build live business count per society
+    const businessCountMap: Record<string, number> = {};
+    businessSnap.docs.forEach((doc) => {
+      const sid = doc.data().societyId as string | undefined;
+      if (sid) businessCountMap[sid] = (businessCountMap[sid] ?? 0) + 1;
+    });
+
+    const data = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      totalBusinesses: businessCountMap[doc.id] ?? 0,
+    }));
     res.json({ success: true, data, pagination: { page: Number(page), limit: Number(limit), total: data.length } });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

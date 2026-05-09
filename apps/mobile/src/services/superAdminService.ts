@@ -62,6 +62,27 @@ export const superAdminService = {
     });
   },
 
+  async suspendBusiness(id: string): Promise<Business> {
+    return apiClient.put<Business>(`/businesses/${id}`, {
+      managementSuspended: true,
+      status: "suspended",
+    });
+  },
+
+  async liftSuspensionBusiness(id: string): Promise<Business> {
+    return apiClient.put<Business>(`/businesses/${id}`, {
+      managementSuspended: false,
+      status: "active",
+    });
+  },
+
+  async revokeVerification(id: string): Promise<Business> {
+    return apiClient.put<Business>(`/businesses/${id}`, {
+      isVerified: false,
+      status: "pending",
+    });
+  },
+
   async getAllUsers(page = 1, limit = 50): Promise<PaginatedResponse<User>> {
     return apiClient.get<PaginatedResponse<User>>(
       `/admin/users?page=${page}&limit=${limit}`

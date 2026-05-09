@@ -61,7 +61,7 @@ export default function SocietiesPage() {
 
   const loadSocieties = async () => {
     setLoading(true); setError('');
-    const res = await api.get('/societies');
+    const res = await api.get('/admin/societies');
     if (res.success) setSocieties(res.data || []);
     else setError(res.error || 'Failed to load societies');
     setLoading(false);
