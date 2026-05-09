@@ -194,10 +194,27 @@ export const useAuth = () => {
     }
   };
 
+  const changePassword = async (newPassword: string) => {
+    dispatch(setLoading(true));
+    try {
+      await authService.changePassword(newPassword);
+    } catch (error: any) {
+      dispatch(
+        setError(
+          error.response?.data?.message || "Failed to change password."
+        )
+      );
+      throw error;
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
   return {
     login,
     register,
     logoutUser,
     resetPassword,
+    changePassword,
   };
 };

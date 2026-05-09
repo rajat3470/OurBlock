@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { router } from "expo-router";
 import { User } from "../../src/types/index";
 import { useSuperAdmin } from "../../src/hooks/useSuperAdmin";
 
@@ -181,6 +182,15 @@ export default function UsersScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Users</Text>
+        <TouchableOpacity
+          style={styles.createBtn}
+          onPress={() =>
+            router.push({ pathname: "/(super-admin)/create-business-owner" })
+          }
+          activeOpacity={0.8}
+        >
+          <Text style={styles.createBtnText}>+ Owner</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Tabs */}
@@ -253,6 +263,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: "#FFFFFF",
@@ -263,6 +276,17 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     color: "#0F172A",
+  },
+  createBtn: {
+    backgroundColor: "#22C55E",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  createBtnText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
   },
   tabBar: {
     flexDirection: "row",

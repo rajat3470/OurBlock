@@ -13,7 +13,7 @@ import {
   updateUserItem,
   setError,
 } from "@store/slices/superAdminSlice";
-import { superAdminService } from "@services/superAdminService";
+import { superAdminService, CreateBusinessOwnerPayload } from "@services/superAdminService";
 import { Society } from "@types/index";
 
 export const useSuperAdmin = () => {
@@ -212,6 +212,24 @@ export const useSuperAdmin = () => {
     [dispatch]
   );
 
+  const createBusinessOwner = useCallback(
+    async (data: CreateBusinessOwnerPayload) => {
+      dispatch(setLoading(true));
+      try {
+        const result = await superAdminService.createBusinessOwner(data);
+        return result;
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Failed to create business owner";
+        dispatch(setError(message));
+        throw err;
+      } finally {
+        dispatch(setLoading(false));
+      }
+    },
+    [dispatch]
+  );
+
   const recentSocieties = [...societies]
     .sort(
       (a, b) =>
@@ -239,5 +257,6 @@ export const useSuperAdmin = () => {
     loadUsers,
     suspendUser,
     activateUser,
+    createBusinessOwner,
   };
 };

@@ -16,7 +16,20 @@ interface Society {
   totalUsers?: number;
 }
 
+interface OwnerForm {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}
+
+interface OwnerResult {
+  email: string;
+  temporaryPassword: string;
+}
+
 const emptyForm = { name: '', address: '', city: '', state: '', pincode: '', description: '' };
+const emptyOwnerForm: OwnerForm = { firstName: '', lastName: '', email: '', phone: '' };
 
 export default function SocietiesPage() {
   const [societies, setSocieties] = useState<Society[]>([]);
@@ -26,6 +39,15 @@ export default function SocietiesPage() {
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Create business owner
+  const [showOwnerModal, setShowOwnerModal] = useState(false);
+  const [ownerSociety, setOwnerSociety] = useState<{ id: string; name: string } | null>(null);
+  const [ownerForm, setOwnerForm] = useState<OwnerForm>(emptyOwnerForm);
+  const [ownerFormError, setOwnerFormError] = useState('');
+  const [ownerSubmitting, setOwnerSubmitting] = useState(false);
+  const [ownerResult, setOwnerResult] = useState<OwnerResult | null>(null);
+  const [copied, setCopied] = useState<'email' | 'password' | null>(null);
 
   useEffect(() => { loadSocieties(); }, []);
 
@@ -56,6 +78,49 @@ export default function SocietiesPage() {
   };
 
   const closeModal = () => { setShowModal(false); setForm(emptyForm); setFormError(''); };
+
+  const openOwnerModal = (society: Society) => {
+    setOwnerSociety({ id: society.id, name: society.name });
+    setOwnerForm(emptyOwnerForm);
+    setOwnerFormError('');
+    setOwnerResult(null);
+    setCopied(null);
+    setShowOwnerModal(true);
+  };
+
+  const closeOwnerModal = () => {
+    setShowOwnerModal(false);
+    setOwnerSociety(null);
+    setOwnerResult(null);
+  };
+
+  const handleCreateOwner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOwnerFormError('');
+    if (!ownerSociety) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerForm.email)) {
+      setOwnerFormError('Enter a valid email address');
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(ownerForm.phone)) {
+      setOwnerFormError('Enter a valid 10-digit Indian mobile number');
+      return;
+    }
+    setOwnerSubmitting(true);
+    const res = await api.post('/admin/business-owners', { ...ownerForm, societyId: ownerSociety.id });
+    if (res.success) {
+      setOwnerResult({ email: res.data.email, temporaryPassword: res.data.temporaryPassword });
+    } else {
+      setOwnerFormError(res.error || 'Failed to create account');
+    }
+    setOwnerSubmitting(false);
+  };
+
+  const copyToClipboard = (text: string, field: 'email' | 'password') => {
+    navigator.clipboard.writeText(text);
+    setCopied(field);
+    setTimeout(() => setCopied(null), 2000);
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -123,17 +188,124 @@ export default function SocietiesPage() {
                     <p className="text-[10px] text-gray-400">Users</p>
                   </div>
                 </div>
-                <button onClick={() => handleDelete(society.id)}
-                  className="text-xs text-red-500 hover:text-red-700 font-medium transition">
-                  Delete
-                </button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => openOwnerModal(society)}
+                    className="text-xs font-semibold text-green-600 hover:text-green-800 border border-green-200 hover:border-green-400 bg-green-50 hover:bg-green-100 px-2.5 py-1 rounded-lg transition">
+                    + Owner
+                  </button>
+                  <button onClick={() => handleDelete(society.id)}
+                    className="text-xs text-red-500 hover:text-red-700 font-medium transition">
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Modal */}
+      {/* Create Business Owner Modal */}
+      {showOwnerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">Create Business Owner</h2>
+                {ownerSociety && (
+                  <p className="text-xs text-gray-500 mt-0.5">Society: <span className="font-medium text-gray-700">{ownerSociety.name}</span></p>
+                )}
+              </div>
+              <button onClick={closeOwnerModal} className="text-gray-400 hover:text-gray-600 transition">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {ownerResult ? (
+              /* ── Credentials display ── */
+              <div className="px-6 py-5 space-y-4">
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                  <svg className="w-5 h-5 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <p className="text-sm font-medium text-green-800">Account created successfully!</p>
+                </div>
+                <p className="text-xs text-gray-500">Share these credentials securely with the business owner. They will be prompted to change their password on first login.</p>
+                <div className="space-y-3">
+                  <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Email</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-gray-900 font-mono break-all">{ownerResult.email}</p>
+                      <button onClick={() => copyToClipboard(ownerResult.email, 'email')}
+                        className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition">
+                        {copied === 'email' ? '✓ Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Temporary Password</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-lg font-bold text-gray-900 font-mono tracking-widest">{ownerResult.temporaryPassword}</p>
+                      <button onClick={() => copyToClipboard(ownerResult.temporaryPassword, 'password')}
+                        className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition">
+                        {copied === 'password' ? '✓ Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-1">
+                  <button onClick={closeOwnerModal}
+                    className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* ── Form ── */
+              <form onSubmit={handleCreateOwner} className="px-6 py-5 space-y-4">
+                {ownerFormError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">{ownerFormError}</div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">First Name *</label>
+                    <input value={ownerForm.firstName} onChange={(e) => setOwnerForm((p) => ({ ...p, firstName: e.target.value }))} required
+                      placeholder="Raj" className="field" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Last Name *</label>
+                    <input value={ownerForm.lastName} onChange={(e) => setOwnerForm((p) => ({ ...p, lastName: e.target.value }))} required
+                      placeholder="Sharma" className="field" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Email Address *</label>
+                  <input type="email" value={ownerForm.email} onChange={(e) => setOwnerForm((p) => ({ ...p, email: e.target.value }))} required
+                    placeholder="owner@business.com" className="field" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Mobile Number *</label>
+                  <input type="tel" value={ownerForm.phone} onChange={(e) => setOwnerForm((p) => ({ ...p, phone: e.target.value }))} required
+                    placeholder="10-digit mobile number" maxLength={10} className="field" />
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button type="button" onClick={closeOwnerModal}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={ownerSubmitting}
+                    className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition">
+                    {ownerSubmitting ? 'Creating…' : 'Generate Credentials'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Create Society Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">

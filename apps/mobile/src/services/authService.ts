@@ -60,6 +60,10 @@ export const authService = {
     return apiClient.post("/auth/reset-password", { token, newPassword });
   },
 
+  async changePassword(newPassword: string): Promise<{ success: boolean }> {
+    return apiClient.post("/auth/change-password", { newPassword });
+  },
+
   async logout(): Promise<void> {
     await apiClient.post("/auth/logout", {});
     await apiClient.clearTokens();

@@ -2,6 +2,21 @@ import { apiClient } from "./apiClient";
 import { Society, Business, User, PaginatedResponse } from "@types/index";
 import { SuperAdminStats } from "@store/slices/superAdminSlice";
 
+export interface CreateBusinessOwnerPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  societyId: string;
+}
+
+export interface CreateBusinessOwnerResult {
+  uid: string;
+  email: string;
+  temporaryPassword: string;
+  message: string;
+}
+
 export const superAdminService = {
   async getStats(): Promise<SuperAdminStats> {
     return apiClient.get<SuperAdminStats>("/admin/stats");
@@ -59,5 +74,14 @@ export const superAdminService = {
 
   async activateUser(id: string): Promise<User> {
     return apiClient.post<User>(`/admin/users/${id}/activate`, {});
+  },
+
+  async createBusinessOwner(
+    data: CreateBusinessOwnerPayload
+  ): Promise<CreateBusinessOwnerResult> {
+    return apiClient.post<CreateBusinessOwnerResult>(
+      "/admin/business-owners",
+      data
+    );
   },
 };

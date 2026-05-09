@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { router } from "expo-router";
 import { Business } from "../../src/types/index";
 import { useSuperAdmin } from "../../src/hooks/useSuperAdmin";
 import { BUSINESS_CATEGORY_LABELS } from "../../src/constants/index";
@@ -27,7 +28,9 @@ export default function BusinessesScreen() {
   const {
     pendingBusinesses,
     allBusinesses,
+    societies,
     loadBusinesses,
+    loadSocieties,
     verifyBusiness,
     rejectBusiness,
     isLoading,
@@ -39,7 +42,8 @@ export default function BusinessesScreen() {
 
   useEffect(() => {
     loadBusinesses();
-  }, [loadBusinesses]);
+    loadSocieties();
+  }, [loadBusinesses, loadSocieties]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -207,17 +211,35 @@ export default function BusinessesScreen() {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyEmoji}>🏪</Text>
-              <Text style={styles.emptyTitle}>
-                {activeTab === "pending"
-                  ? "No Pending Businesses"
-                  : "No Businesses Found"}
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                {activeTab === "pending"
-                  ? "All businesses are verified!"
-                  : "Try a different filter or search"}
-              </Text>
+              {societies.length === 0 && !isLoading ? (
+                <>
+                  <Text style={styles.emptyEmoji}>🏘️</Text>
+                  <Text style={styles.emptyTitle}>No Societies Yet</Text>
+                  <Text style={styles.emptySubtitle}>
+                    You need to create at least one society before businesses can be registered.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.createSocietyBtn}
+                    onPress={() => router.push("/(super-admin)/create-society")}
+                  >
+                    <Text style={styles.createSocietyBtnText}>+ Create a Society</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.emptyEmoji}>🏪</Text>
+                  <Text style={styles.emptyTitle}>
+                    {activeTab === "pending"
+                      ? "No Pending Businesses"
+                      : "No Businesses Found"}
+                  </Text>
+                  <Text style={styles.emptySubtitle}>
+                    {activeTab === "pending"
+                      ? "All businesses are verified!"
+                      : "Try a different filter or search"}
+                  </Text>
+                </>
+              )}
             </View>
           }
         />
@@ -429,5 +451,17 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     textAlign: "center",
     paddingHorizontal: 24,
+  },
+  createSocietyBtn: {
+    marginTop: 20,
+    backgroundColor: "#6366F1",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  createSocietyBtnText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

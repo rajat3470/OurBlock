@@ -15,6 +15,25 @@ interface AppUser {
   isEmailVerified?: boolean;
 }
 
+interface Society {
+  id: string;
+  name: string;
+  city: string;
+}
+
+interface OwnerForm {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  societyId: string;
+}
+
+interface OwnerResult {
+  email: string;
+  temporaryPassword: string;
+}
+
 const ROLES = ['user', 'businessOwner', 'superAdmin'];
 
 const roleMeta: Record<string, { label: string; cls: string }> = {
@@ -23,13 +42,30 @@ const roleMeta: Record<string, { label: string; cls: string }> = {
   user:          { label: 'Customer',       cls: 'bg-emerald-100 text-emerald-700' },
 };
 
+const emptyOwnerForm: OwnerForm = { firstName: '', lastName: '', email: '', phone: '', societyId: '' };
+
 export default function UsersPage() {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterRole, setFilterRole] = useState('');
 
+  // Create business owner
+  const [societies, setSocieties] = useState<Society[]>([]);
+  const [showOwnerModal, setShowOwnerModal] = useState(false);
+  const [ownerForm, setOwnerForm] = useState<OwnerForm>(emptyOwnerForm);
+  const [ownerFormError, setOwnerFormError] = useState('');
+  const [ownerSubmitting, setOwnerSubmitting] = useState(false);
+  const [ownerResult, setOwnerResult] = useState<OwnerResult | null>(null);
+  const [copied, setCopied] = useState<'email' | 'password' | null>(null);
+
   useEffect(() => { loadUsers(); }, [filterRole]);
+
+  useEffect(() => {
+    api.get('/societies?limit=100').then((res) => {
+      if (res.success) setSocieties(res.data || []);
+    });
+  }, []);
 
   const loadUsers = async () => {
     setLoading(true); setError('');
@@ -47,6 +83,39 @@ export default function UsersPage() {
     else alert(res.error || 'Failed to delete user');
   };
 
+  const openOwnerModal = () => {
+    setOwnerForm(emptyOwnerForm);
+    setOwnerFormError('');
+    setOwnerResult(null);
+    setCopied(null);
+    setShowOwnerModal(true);
+  };
+
+  const closeOwnerModal = () => { setShowOwnerModal(false); setOwnerResult(null); };
+
+  const handleCreateOwner = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setOwnerFormError('');
+    if (!ownerForm.societyId) { setOwnerFormError('Please select a society'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerForm.email)) { setOwnerFormError('Enter a valid email address'); return; }
+    if (!/^[6-9]\d{9}$/.test(ownerForm.phone)) { setOwnerFormError('Enter a valid 10-digit Indian mobile number'); return; }
+    setOwnerSubmitting(true);
+    const res = await api.post('/admin/business-owners', ownerForm);
+    if (res.success) {
+      setOwnerResult({ email: res.data.email, temporaryPassword: res.data.temporaryPassword });
+      loadUsers();
+    } else {
+      setOwnerFormError(res.error || 'Failed to create account');
+    }
+    setOwnerSubmitting(false);
+  };
+
+  const copyToClipboard = (text: string, field: 'email' | 'password') => {
+    navigator.clipboard.writeText(text);
+    setCopied(field);
+    setTimeout(() => setCopied(null), 2000);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
@@ -55,14 +124,23 @@ export default function UsersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Users</h1>
           <p className="text-sm text-gray-500 mt-0.5">{users.length} user{users.length !== 1 ? 's' : ''} found</p>
         </div>
-        <select
-          value={filterRole}
-          onChange={(e) => setFilterRole(e.target.value)}
+        <div className="flex items-center gap-3">
+          <select
+            value={filterRole}
+            onChange={(e) => setFilterRole(e.target.value)}
           className="field w-auto text-gray-900 bg-white"
-        >
-          <option value="">All Roles</option>
-          {ROLES.map((r) => <option key={r} value={r}>{roleMeta[r]?.label ?? r}</option>)}
-        </select>
+          >
+            <option value="">All Roles</option>
+            {ROLES.map((r) => <option key={r} value={r}>{roleMeta[r]?.label ?? r}</option>)}
+          </select>
+          <button onClick={openOwnerModal}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition shadow-sm">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Create Owner
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -141,6 +219,110 @@ export default function UsersPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Create Business Owner Modal */}
+      {showOwnerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <h2 className="text-base font-semibold text-gray-900">Create Business Owner</h2>
+              <button onClick={closeOwnerModal} className="text-gray-400 hover:text-gray-600 transition">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {ownerResult ? (
+              <div className="px-6 py-5 space-y-4">
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                  <svg className="w-5 h-5 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <p className="text-sm font-medium text-green-800">Account created successfully!</p>
+                </div>
+                <p className="text-xs text-gray-500">Share these credentials securely. The owner will be prompted to change their password on first login.</p>
+                <div className="space-y-3">
+                  <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Email</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-gray-900 font-mono break-all">{ownerResult.email}</p>
+                      <button onClick={() => copyToClipboard(ownerResult.email, 'email')}
+                        className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition">
+                        {copied === 'email' ? '✓ Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Temporary Password</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-lg font-bold text-gray-900 font-mono tracking-widest">{ownerResult.temporaryPassword}</p>
+                      <button onClick={() => copyToClipboard(ownerResult.temporaryPassword, 'password')}
+                        className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition">
+                        {copied === 'password' ? '✓ Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end pt-1">
+                  <button onClick={closeOwnerModal}
+                    className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleCreateOwner} className="px-6 py-5 space-y-4">
+                {ownerFormError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">{ownerFormError}</div>
+                )}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Society *</label>
+                  <select value={ownerForm.societyId} onChange={(e) => setOwnerForm((p) => ({ ...p, societyId: e.target.value }))} required
+                    className="field">
+                    <option value="">Select a society…</option>
+                    {societies.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name} — {s.city}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">First Name *</label>
+                    <input value={ownerForm.firstName} onChange={(e) => setOwnerForm((p) => ({ ...p, firstName: e.target.value }))} required
+                      placeholder="Raj" className="field" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Last Name *</label>
+                    <input value={ownerForm.lastName} onChange={(e) => setOwnerForm((p) => ({ ...p, lastName: e.target.value }))} required
+                      placeholder="Sharma" className="field" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Email Address *</label>
+                  <input type="email" value={ownerForm.email} onChange={(e) => setOwnerForm((p) => ({ ...p, email: e.target.value }))} required
+                    placeholder="owner@business.com" className="field" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Mobile Number *</label>
+                  <input type="tel" value={ownerForm.phone} onChange={(e) => setOwnerForm((p) => ({ ...p, phone: e.target.value }))} required
+                    placeholder="10-digit mobile number" maxLength={10} className="field" />
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button type="button" onClick={closeOwnerModal}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={ownerSubmitting}
+                    className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition">
+                    {ownerSubmitting ? 'Creating…' : 'Generate Credentials'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

@@ -71,6 +71,7 @@ export default function SuperAdminLayout() {
         />
         {/* Hidden screens — not shown in tab bar */}
         <Tabs.Screen name="create-society" options={{ href: null }} />
+        <Tabs.Screen name="create-business-owner" options={{ href: null }} />
       </Tabs>
     </RoleGate>
   );

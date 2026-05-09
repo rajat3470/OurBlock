@@ -98,6 +98,17 @@ export default function SocietiesScreen() {
 
       <View style={styles.actions}>
         <TouchableOpacity
+          style={styles.addOwnerBtn}
+          onPress={() =>
+            router.push({
+              pathname: "/(super-admin)/create-business-owner",
+              params: { societyId: item.id, societyName: item.name },
+            })
+          }
+        >
+          <Text style={styles.addOwnerBtnText}>+ Owner</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           style={styles.editBtn}
           onPress={() =>
             router.push({
@@ -351,6 +362,18 @@ const styles = StyleSheet.create({
     color: "#007AFF",
     fontSize: 14,
     fontWeight: "600",
+  },
+  addOwnerBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: "#22C55E",
+    alignItems: "center",
+  },
+  addOwnerBtnText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
   },
   deleteBtn: {
     flex: 1,
