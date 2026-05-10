@@ -131,6 +131,7 @@ export interface Product {
   rating?: number;
   totalReviews?: number;
   status: "active" | "inactive";
+  isVerified?: boolean;
   approvalStatus: "pending" | "approved" | "rejected";
   approvalNote?: string;
   availableToday?: boolean;

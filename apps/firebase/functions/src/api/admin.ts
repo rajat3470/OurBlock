@@ -199,10 +199,6 @@ router.get('/products', async (req, res) => {
 
     let query: admin.firestore.Query = db.collection('products');
 
-    if (approvalStatus) {
-      query = query.where('approvalStatus', '==', approvalStatus);
-    }
-
     if (businessId) {
       query = query.where('businessId', '==', businessId);
     }
@@ -219,23 +215,40 @@ router.get('/products', async (req, res) => {
     const businessMap: Record<string, string> = {};
     businessDocs.forEach((d) => { if (d.exists) businessMap[d.id] = (d.data() as any).name; });
 
-    const data = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      businessName: businessMap[doc.data().businessId] ?? null,
-    }));
+    const data = snapshot.docs
+      .map((doc) => {
+        const product = doc.data() as any;
+        return {
+          id: doc.id,
+          ...product,
+          approvalStatus: deriveProductApprovalStatus(product),
+          businessName: businessMap[product.businessId] ?? null,
+        };
+      })
+      .filter((product) => !approvalStatus || product.approvalStatus === approvalStatus)
+      .slice((Number(page) - 1) * Number(limit), Number(page) * Number(limit));
 
     res.json({ success: true, data, pagination: { page: Number(page), limit: Number(limit), total: data.length } });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
+function deriveProductApprovalStatus(product: any): 'pending' | 'approved' | 'rejected' {
+  if (product.approvalStatus === 'approved' || product.isVerified === true) {
+    return 'approved';
+  }
+  if (product.approvalStatus === 'rejected') {
+    return 'rejected';
+  }
+  return 'pending';
+}
 
 // POST /admin/products/:id/approve
 router.post('/products/:id/approve', async (req, res) => {
   try {
     await db.collection('products').doc(req.params.id).update({
       approvalStatus: 'approved',
+      isVerified: true,
       approvalNote: null,
       status: 'active',
       approvedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -253,6 +266,7 @@ router.post('/products/:id/reject', async (req, res) => {
   try {
     await db.collection('products').doc(req.params.id).update({
       approvalStatus: 'rejected',
+      isVerified: false,
       approvalNote: req.body.note ?? null,
       status: 'inactive',
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),

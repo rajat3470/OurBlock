@@ -4,14 +4,13 @@ import * as admin from 'firebase-admin';
 const router = Router();
 const db = admin.firestore();
 
-// Get products — only approved products are returned to users
+// Get products — only verified products are returned to users
 router.get('/', async (req, res) => {
   try {
     const { businessId, category, status = 'active' } = req.query;
     
     let query: admin.firestore.Query = db
       .collection('products')
-      .where('approvalStatus', '==', 'approved')
       .where('status', '==', status);
     
     if (businessId) {
@@ -23,7 +22,9 @@ router.get('/', async (req, res) => {
     }
     
     const snapshot = await query.get();
-    const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const products = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter((product: any) => product.isVerified === true || product.approvalStatus === 'approved');
     
     res.json({ success: true, data: products });
   } catch (error: any) {

@@ -11,7 +11,7 @@ const app = express();
 
 // Middleware
 app.use(cors({ origin: true }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Import API routes
 import authRoutes from './api/auth';

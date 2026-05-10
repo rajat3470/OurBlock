@@ -9,6 +9,7 @@ import {
   TextInput,
 } from "react-native";
 import { router } from "expo-router";
+import { Image } from "expo-image";
 import { useToast } from "react-native-toast-notifications";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { useUserApp } from "../../src/hooks/useUserApp";
@@ -55,6 +56,14 @@ function getEpoch(value: any): number {
 
 function matchesQuery(text: string, query: string) {
   return text.toLowerCase().includes(query.trim().toLowerCase());
+}
+
+function getFirstImageUrl(images?: string[]) {
+  return images?.find((url) => typeof url === "string" && url.trim().length > 0) ?? null;
+}
+
+function isVerifiedProduct(product: any) {
+  return Boolean(product?.isVerified) || product?.approvalStatus === "approved";
 }
 
 function HomeSkeleton() {
@@ -144,6 +153,8 @@ export default function UserHome() {
 
   const filteredProducts = useMemo(() => {
     let list = featuredProducts;
+
+    list = list.filter(isVerifiedProduct);
 
     if (selectedCategory !== "all") {
       list = list.filter(
@@ -424,6 +435,7 @@ export default function UserHome() {
             {filteredProducts.map((product) => {
               const store = businessesById.get(product.businessId);
               const discount = Number(product.discount || 0);
+              const imageUrl = getFirstImageUrl(product.imageUrls);
               return (
                 <TouchableOpacity
                   key={product.id}
@@ -434,6 +446,13 @@ export default function UserHome() {
                   }}
                 >
                   <View style={styles.productThumb}>
+                    {imageUrl ? (
+                      <Image source={{ uri: imageUrl }} style={styles.productThumbImage} contentFit="cover" />
+                    ) : (
+                      <View style={styles.productThumbFallback}>
+                        <Text style={styles.fallbackEmoji}>🛍️</Text>
+                      </View>
+                    )}
                     <Text style={discount > 0 ? styles.discountPill : styles.freshPill}>
                       {discount > 0 ? `${discount}% OFF` : "Fresh Pick"}
                     </Text>
@@ -495,9 +514,20 @@ export default function UserHome() {
                 onPress={() => router.push("/(user)/businesses")}
               >
                 <View style={styles.businessImage}>
-                  <Text style={styles.businessBadge}>
-                    {toTitleCase(String(business.category || "shop"))}
-                  </Text>
+                    {business.bannerUrl || business.imageUrl ? (
+                      <Image
+                        source={{ uri: business.bannerUrl || business.imageUrl || "" }}
+                        style={styles.businessImageAsset}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <View style={styles.businessImageFallback}>
+                        <Text style={styles.businessFallbackEmoji}>🏪</Text>
+                      </View>
+                    )}
+                    <Text style={styles.businessBadge}>
+                      {toTitleCase(String(business.category || "shop"))}
+                    </Text>
                 </View>
                 <View style={styles.businessBody}>
                   <View style={styles.businessTitleRow}>
@@ -812,12 +842,30 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   productThumb: {
+    position: "relative",
     height: 104,
     borderRadius: 12,
     backgroundColor: "#DBEAFE",
-    padding: 8,
+    overflow: "hidden",
+  },
+  productThumbImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+  },
+  productThumbFallback: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#DBEAFE",
+  },
+  fallbackEmoji: {
+    fontSize: 28,
   },
   discountPill: {
+    position: "absolute",
+    top: 8,
+    left: 8,
     backgroundColor: "#111827",
     color: "#FFFFFF",
     fontSize: 11,
@@ -829,6 +877,9 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   freshPill: {
+    position: "absolute",
+    top: 8,
+    left: 8,
     backgroundColor: "#1F2937",
     color: "#FFFFFF",
     fontSize: 11,
@@ -915,13 +966,28 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
   },
   businessImage: {
+    position: "relative",
     height: 176,
     backgroundColor: "#FDE68A",
-    padding: 12,
-    justifyContent: "flex-start",
-    alignItems: "flex-start",
+    overflow: "hidden",
+  },
+  businessImageAsset: {
+    width: "100%",
+    height: "100%",
+  },
+  businessImageFallback: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FDE68A",
+  },
+  businessFallbackEmoji: {
+    fontSize: 34,
   },
   businessBadge: {
+    position: "absolute",
+    top: 12,
+    left: 12,
     backgroundColor: "rgba(17,24,39,0.7)",
     color: "#FFFFFF",
     fontSize: 12,

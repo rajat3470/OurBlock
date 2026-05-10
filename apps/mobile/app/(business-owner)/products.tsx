@@ -16,6 +16,7 @@ import {
   Image,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import AppSectionHeader from "../../src/components/AppSectionHeader";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { Product } from "../../src/types";
@@ -29,6 +30,24 @@ interface ProductForm {
   description: string;
   imageUri: string | null;
   additionalImageUris: string[];
+}
+
+function toDataUrl(base64?: string | null, mimeType?: string | null) {
+  if (!base64) return null;
+  return `data:${mimeType || "image/jpeg"};base64,${base64}`;
+}
+
+function extractRequestError(err: unknown, fallback: string) {
+  if (err && typeof err === "object") {
+    const axiosErr = err as any;
+    return (
+      axiosErr?.response?.data?.error ||
+      axiosErr?.response?.data?.message ||
+      axiosErr?.message ||
+      fallback
+    );
+  }
+  return err instanceof Error ? err.message : fallback;
 }
 
 const CATEGORIES = [
@@ -57,6 +76,32 @@ const EMPTY_FORM: ProductForm = {
   imageUri: null,
   additionalImageUris: [],
 };
+
+const MAX_TOTAL_IMAGE_CHARS = 850_000;
+
+async function compressAssetToDataUrl(
+  asset: ImagePicker.ImagePickerAsset,
+  kind: "primary" | "additional"
+): Promise<string | null> {
+  const targetWidth = kind === "primary" ? 720 : 600;
+  const compress = kind === "primary" ? 0.32 : 0.26;
+
+  const manipResult = await ImageManipulator.manipulateAsync(
+    asset.uri,
+    [{ resize: { width: targetWidth } }],
+    {
+      compress,
+      format: ImageManipulator.SaveFormat.JPEG,
+      base64: true,
+    }
+  );
+
+  return toDataUrl(manipResult.base64, "image/jpeg");
+}
+
+function getTotalImageChars(values: string[]) {
+  return values.reduce((sum, value) => sum + value.length, 0);
+}
 
 export default function BusinessOwnerProducts() {
   const {
@@ -102,10 +147,19 @@ export default function BusinessOwnerProducts() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.9,
       });
       if (!result.canceled && result.assets.length > 0) {
-        setForm((prev) => ({ ...prev, imageUri: result.assets[0].uri }));
+        const asset = result.assets[0];
+        const compressedDataUrl = await compressAssetToDataUrl(asset, "primary");
+        if (!compressedDataUrl) {
+          Alert.alert("Image Error", "Could not process this image. Please try another photo.");
+          return;
+        }
+        setForm((prev) => ({
+          ...prev,
+          imageUri: compressedDataUrl,
+        }));
       }
     } catch {
       Alert.alert("Error", "Failed to pick image.");
@@ -122,10 +176,19 @@ export default function BusinessOwnerProducts() {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.9,
       });
       if (!result.canceled && result.assets.length > 0) {
-        setForm((prev) => ({ ...prev, imageUri: result.assets[0].uri }));
+        const asset = result.assets[0];
+        const compressedDataUrl = await compressAssetToDataUrl(asset, "primary");
+        if (!compressedDataUrl) {
+          Alert.alert("Image Error", "Could not process this image. Please try another photo.");
+          return;
+        }
+        setForm((prev) => ({
+          ...prev,
+          imageUri: compressedDataUrl,
+        }));
       }
     } catch {
       Alert.alert("Error", "Failed to take photo.");
@@ -151,13 +214,25 @@ export default function BusinessOwnerProducts() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.9,
       });
       if (!result.canceled && result.assets.length > 0) {
-        setForm((prev) => ({
-          ...prev,
-          additionalImageUris: [...prev.additionalImageUris, result.assets[0].uri].slice(0, 3),
-        }));
+        const asset = result.assets[0];
+        const compressedDataUrl = await compressAssetToDataUrl(asset, "additional");
+        if (!compressedDataUrl) {
+          Alert.alert("Image Error", "Could not process this image. Please try another photo.");
+          return;
+        }
+        setForm((prev) => {
+          const nextImages = [
+            ...prev.additionalImageUris,
+            compressedDataUrl,
+          ].slice(0, 3);
+          return {
+            ...prev,
+            additionalImageUris: nextImages,
+          };
+        });
       }
     } catch {
       Alert.alert("Error", "Failed to pick image.");
@@ -174,13 +249,25 @@ export default function BusinessOwnerProducts() {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.9,
       });
       if (!result.canceled && result.assets.length > 0) {
-        setForm((prev) => ({
-          ...prev,
-          additionalImageUris: [...prev.additionalImageUris, result.assets[0].uri].slice(0, 3),
-        }));
+        const asset = result.assets[0];
+        const compressedDataUrl = await compressAssetToDataUrl(asset, "additional");
+        if (!compressedDataUrl) {
+          Alert.alert("Image Error", "Could not process this image. Please try another photo.");
+          return;
+        }
+        setForm((prev) => {
+          const nextImages = [
+            ...prev.additionalImageUris,
+            compressedDataUrl,
+          ].slice(0, 3);
+          return {
+            ...prev,
+            additionalImageUris: nextImages,
+          };
+        });
       }
     } catch {
       Alert.alert("Error", "Failed to take photo.");
@@ -234,6 +321,17 @@ export default function BusinessOwnerProducts() {
 
     setIsSubmitting(true);
     try {
+      const imageUrls = form.imageUri ? [form.imageUri, ...form.additionalImageUris] : [];
+      const totalImageChars = getTotalImageChars(imageUrls);
+      if (totalImageChars > MAX_TOTAL_IMAGE_CHARS) {
+        Alert.alert(
+          "Image Too Large",
+          "Selected photos are too heavy. Please keep one image or choose lower-resolution photos."
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
       await createProduct({
         name: form.name.trim(),
         category: form.category || "general",
@@ -242,12 +340,12 @@ export default function BusinessOwnerProducts() {
         originalPrice,
         stock: form.stock,
         status: "active",
-        imageUrls: form.imageUri ? [form.imageUri, ...form.additionalImageUris] : [],
+        imageUrls,
       });
       setShowCreateModal(false);
       resetForm();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to create product. Please try again.";
+      const msg = extractRequestError(err, "Failed to create product. Please try again.");
       Alert.alert("Create Failed", msg);
     } finally {
       setIsSubmitting(false);

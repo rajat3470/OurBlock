@@ -141,6 +141,7 @@ router.post('/products', requireAuth, async (req, res) => {
       ...req.body,
       businessId: (business as any).id,
       status: 'inactive',          // not live until approved
+      isVerified: false,
       approvalStatus: 'pending',   // requires admin approval
       approvalNote: null,
       rating: 0,

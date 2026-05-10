@@ -257,13 +257,14 @@ async function getSocietyProducts(businessIds: string[]) {
     chunks.map((chunk) =>
       db
         .collection('products')
-        .where('status', '==', 'active')
         .where('businessId', 'in', chunk)
         .get()
     )
   );
 
-  return snapshots.flatMap((snapshot) => snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+  return snapshots
+    .flatMap((snapshot) => snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })))
+    .filter((product: any) => (product.isVerified === true || product.approvalStatus === 'approved') && product.status === 'active');
 }
 
 // Register user
@@ -922,7 +923,40 @@ async function loginWithRole(
 
   const userData = userDoc.data() as any;
 
-  if (userData.role !== expectedRole) {
+  const normalizeRole = (role: unknown): 'superAdmin' | 'businessOwner' | 'user' | null => {
+    if (typeof role !== 'string') return null;
+    const compact = role.replace(/[-_\s]/g, '').toLowerCase();
+    if (compact === 'superadmin') return 'superAdmin';
+    if (compact === 'businessowner' || compact === 'owner' || compact === 'merchant') return 'businessOwner';
+    if (compact === 'user' || compact === 'resident' || compact === 'customer') return 'user';
+    return null;
+  };
+
+  let normalizedRole = normalizeRole(userData.role);
+
+  // Repair legacy business-owner accounts that were authenticated successfully
+  // but have stale or incorrect role values in Firestore.
+  if (expectedRole === 'businessOwner' && normalizedRole !== 'businessOwner') {
+    const ownedBusinessSnap = await db
+      .collection('businesses')
+      .where('ownerId', '==', authResult.localId)
+      .limit(1)
+      .get();
+
+    if (!ownedBusinessSnap.empty) {
+      normalizedRole = 'businessOwner';
+      await Promise.all([
+        db.collection('users').doc(authResult.localId).update({
+          role: 'businessOwner',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }),
+        auth.setCustomUserClaims(authResult.localId, { role: 'businessOwner' }),
+      ]);
+      userData.role = 'businessOwner';
+    }
+  }
+
+  if (normalizedRole !== expectedRole) {
     return res.status(403).json({
       success: false,
       error: `This login is for ${expectedRole} accounts only`,

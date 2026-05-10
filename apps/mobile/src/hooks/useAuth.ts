@@ -91,6 +91,15 @@ function mockLogin(
 export const useAuth = () => {
   const dispatch = useAppDispatch();
 
+  const extractAuthError = (error: any, fallback: string) => {
+    return (
+      error?.response?.data?.error ||
+      error?.response?.data?.message ||
+      error?.message ||
+      fallback
+    );
+  };
+
   const login = async (
     credentials: AuthCredentials,
     role: "superAdmin" | "businessOwner" | "user"
@@ -125,11 +134,7 @@ export const useAuth = () => {
         dispatch(setAuth(response));
       }
     } catch (error: any) {
-      dispatch(
-        setError(
-          error.response?.data?.message || "Login failed. Please try again."
-        )
-      );
+      dispatch(setError(extractAuthError(error, "Login failed. Please try again.")));
       throw error;
     } finally {
       dispatch(setLoading(false));
@@ -158,11 +163,7 @@ export const useAuth = () => {
         dispatch(setAuth(response));
       }
     } catch (error: any) {
-      dispatch(
-        setError(
-          error.response?.data?.message || "Registration failed. Please try again."
-        )
-      );
+      dispatch(setError(extractAuthError(error, "Registration failed. Please try again.")));
       throw error;
     } finally {
       dispatch(setLoading(false));
