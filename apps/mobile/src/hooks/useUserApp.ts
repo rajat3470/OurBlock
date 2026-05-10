@@ -42,15 +42,11 @@ export const useUserApp = () => {
 
       dispatch(setLoading(true));
       try {
-        const [businesses, featuredProducts, stats] = await Promise.all([
-          userAppService.getBusinessesBySociety(societyId),
-          userAppService.getFeaturedProducts(societyId),
-          userAppService.getStats(societyId),
-        ]);
+        const feed = await userAppService.getHomeFeed(societyId);
 
-        dispatch(setBusinesses(businesses));
-        dispatch(setFeaturedProducts(featuredProducts));
-        dispatch(setStats(stats));
+        dispatch(setBusinesses(feed.businesses));
+        dispatch(setFeaturedProducts(feed.featuredProducts));
+        dispatch(setStats(feed.stats));
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : "Failed to load society data";

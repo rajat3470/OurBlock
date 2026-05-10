@@ -34,6 +34,7 @@
     "axios": "^1.6.5",
     "date-fns": "^2.30.0",
     "expo": "^55.0.19",
+    "expo-blur": "^55.0.14",
     "expo-camera": "~55.0.16",
     "expo-firebase-recaptcha": "^2.3.1",
     "expo-font": "~55.0.6",

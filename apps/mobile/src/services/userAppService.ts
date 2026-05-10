@@ -2,6 +2,21 @@ import { apiClient } from "./apiClient";
 import { Business, Order, Product, Society, PaginatedResponse, Address, AppUser } from "@/types";
 import { UserAppStats } from "@store/slices/userAppSlice";
 
+export interface HomeFeedCategory {
+  key: string;
+  count: number;
+}
+
+export interface HomeFeedResponse {
+  societyId: string;
+  stats: UserAppStats;
+  categories: HomeFeedCategory[];
+  businesses: Business[];
+  featuredProducts: Product[];
+  topRatedBusinesses: Business[];
+  offerProducts: Product[];
+}
+
 export const userAppService = {
   async getSocieties(
     page = 1,
@@ -29,6 +44,10 @@ export const userAppService = {
   async getStats(societyId?: string): Promise<UserAppStats> {
     const query = societyId ? `?societyId=${societyId}` : "";
     return apiClient.get<UserAppStats>(`/user/stats${query}`);
+  },
+
+  async getHomeFeed(societyId: string): Promise<HomeFeedResponse> {
+    return apiClient.get<HomeFeedResponse>(`/auth/home-feed?societyId=${societyId}`);
   },
 
   // Profile Management

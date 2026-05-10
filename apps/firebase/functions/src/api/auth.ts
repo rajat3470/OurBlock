@@ -69,6 +69,203 @@ async function getAuthenticatedUid(req: any): Promise<string> {
   return decodedToken.uid;
 }
 
+const HOME_BUSINESS_SEEDS = [
+  {
+    name: 'DailyFresh Mart',
+    category: 'grocery',
+    description: 'Fresh groceries and daily essentials delivered fast.',
+    addressSuffix: 'Central Plaza, Main Gate',
+    phone: '9876501001',
+    rating: 4.6,
+    totalReviews: 248,
+  },
+  {
+    name: 'Spice Route Kitchen',
+    category: 'restaurant',
+    description: 'North Indian and street food favorites.',
+    addressSuffix: 'Food Court, Block B',
+    phone: '9876501002',
+    rating: 4.4,
+    totalReviews: 196,
+  },
+  {
+    name: 'MediTrust Pharmacy',
+    category: 'pharmacy',
+    description: 'Medicines, wellness, and health essentials.',
+    addressSuffix: 'Wellness Street, Block A',
+    phone: '9876501003',
+    rating: 4.7,
+    totalReviews: 312,
+  },
+  {
+    name: 'BrewBean Cafe',
+    category: 'cafe',
+    description: 'Coffee, snacks, and quick bites.',
+    addressSuffix: 'Clubhouse Corner',
+    phone: '9876501004',
+    rating: 4.5,
+    totalReviews: 154,
+  },
+  {
+    name: 'StyleNest Boutique',
+    category: 'clothing',
+    description: 'Everyday fashion and accessories for all.',
+    addressSuffix: 'Lifestyle Lane, Tower 2',
+    phone: '9876501005',
+    rating: 4.3,
+    totalReviews: 121,
+  },
+];
+
+const HOME_PRODUCT_SEEDS: Record<string, Array<{
+  name: string;
+  category: string;
+  price: number;
+  originalPrice?: number;
+  stock: number;
+  rating: number;
+  totalReviews: number;
+}>> = {
+  grocery: [
+    { name: 'A2 Cow Milk 1L', category: 'Dairy', price: 72, originalPrice: 82, stock: 120, rating: 4.5, totalReviews: 92 },
+    { name: 'Farm Eggs 12 pcs', category: 'Dairy', price: 96, originalPrice: 110, stock: 80, rating: 4.6, totalReviews: 74 },
+    { name: 'Organic Atta 5kg', category: 'Staples', price: 269, originalPrice: 299, stock: 40, rating: 4.7, totalReviews: 65 },
+    { name: 'Seasonal Fruit Box', category: 'Fruits', price: 349, originalPrice: 399, stock: 35, rating: 4.4, totalReviews: 51 },
+  ],
+  restaurant: [
+    { name: 'Paneer Butter Masala', category: 'Main Course', price: 229, originalPrice: 259, stock: 60, rating: 4.4, totalReviews: 119 },
+    { name: 'Veg Biryani Family Pack', category: 'Main Course', price: 299, originalPrice: 349, stock: 45, rating: 4.5, totalReviews: 141 },
+    { name: 'Tandoori Roti (6)', category: 'Breads', price: 79, originalPrice: 99, stock: 90, rating: 4.3, totalReviews: 88 },
+    { name: 'Gulab Jamun', category: 'Desserts', price: 99, originalPrice: 129, stock: 55, rating: 4.6, totalReviews: 97 },
+  ],
+  pharmacy: [
+    { name: 'Vitamin C Tablets', category: 'Supplements', price: 189, originalPrice: 229, stock: 70, rating: 4.6, totalReviews: 77 },
+    { name: 'Digital Thermometer', category: 'Devices', price: 249, originalPrice: 299, stock: 32, rating: 4.5, totalReviews: 43 },
+    { name: 'Pain Relief Spray', category: 'First Aid', price: 139, originalPrice: 159, stock: 66, rating: 4.4, totalReviews: 38 },
+    { name: 'Hand Sanitizer 500ml', category: 'Hygiene', price: 99, originalPrice: 129, stock: 88, rating: 4.3, totalReviews: 52 },
+  ],
+  cafe: [
+    { name: 'Cold Coffee', category: 'Beverages', price: 129, originalPrice: 149, stock: 100, rating: 4.5, totalReviews: 80 },
+    { name: 'Cappuccino', category: 'Beverages', price: 119, originalPrice: 139, stock: 100, rating: 4.6, totalReviews: 97 },
+    { name: 'Veg Sandwich', category: 'Snacks', price: 149, originalPrice: 179, stock: 72, rating: 4.4, totalReviews: 63 },
+    { name: 'Blueberry Muffin', category: 'Bakery', price: 89, originalPrice: 109, stock: 54, rating: 4.2, totalReviews: 44 },
+  ],
+  clothing: [
+    { name: 'Cotton T-Shirt', category: 'Men', price: 599, originalPrice: 799, stock: 40, rating: 4.3, totalReviews: 35 },
+    { name: 'Summer Dress', category: 'Women', price: 1199, originalPrice: 1499, stock: 25, rating: 4.5, totalReviews: 41 },
+    { name: 'Kids Joggers', category: 'Kids', price: 499, originalPrice: 649, stock: 30, rating: 4.4, totalReviews: 28 },
+    { name: 'Classic Backpack', category: 'Accessories', price: 899, originalPrice: 1099, stock: 22, rating: 4.2, totalReviews: 19 },
+  ],
+};
+
+async function ensureSocietyDemoCatalog(societyId: string) {
+  const existingBusinessesSnap = await db
+    .collection('businesses')
+    .where('societyId', '==', societyId)
+    .where('status', '==', 'active')
+    .limit(1)
+    .get();
+
+  if (!existingBusinessesSnap.empty) {
+    return;
+  }
+
+  const societyDoc = await db.collection('societies').doc(societyId).get();
+  const societyName = (societyDoc.data()?.name as string) || 'Your Society';
+  const now = admin.firestore.FieldValue.serverTimestamp();
+
+  const businessesBatch = db.batch();
+  const businessRefs: Array<{ id: string; category: string }> = [];
+
+  HOME_BUSINESS_SEEDS.forEach((seed, index) => {
+    const ref = db.collection('businesses').doc();
+    businessRefs.push({ id: ref.id, category: seed.category });
+
+    businessesBatch.set(ref, {
+      id: ref.id,
+      name: seed.name,
+      category: seed.category,
+      description: seed.description,
+      ownerId: `demo-owner-${index + 1}`,
+      societyId,
+      address: `${societyName}, ${seed.addressSuffix}`,
+      phone: seed.phone,
+      email: `hello+${seed.name.toLowerCase().replace(/\s+/g, '')}@ourblock.in`,
+      rating: seed.rating,
+      totalReviews: seed.totalReviews,
+      isVerified: true,
+      status: 'active',
+      metadata: {
+        isDemo: true,
+        etaMins: 12 + index * 3,
+      },
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+
+  await businessesBatch.commit();
+
+  const productsBatch = db.batch();
+  businessRefs.forEach((business) => {
+    const seeds = HOME_PRODUCT_SEEDS[business.category] ?? [];
+    seeds.forEach((productSeed) => {
+      const productRef = db.collection('products').doc();
+      const discount = productSeed.originalPrice
+        ? Math.round(((productSeed.originalPrice - productSeed.price) / productSeed.originalPrice) * 100)
+        : 0;
+
+      productsBatch.set(productRef, {
+        id: productRef.id,
+        businessId: business.id,
+        name: productSeed.name,
+        description: `${productSeed.name} from trusted local stores`,
+        category: productSeed.category,
+        price: productSeed.price,
+        originalPrice: productSeed.originalPrice ?? null,
+        discount,
+        imageUrls: [],
+        stock: productSeed.stock,
+        rating: productSeed.rating,
+        totalReviews: productSeed.totalReviews,
+        status: 'active',
+        availableToday: true,
+        metadata: {
+          isDemo: true,
+          societyId,
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+  });
+
+  await productsBatch.commit();
+}
+
+async function getSocietyProducts(businessIds: string[]) {
+  if (businessIds.length === 0) {
+    return [] as any[];
+  }
+
+  const chunks: string[][] = [];
+  for (let i = 0; i < businessIds.length; i += 10) {
+    chunks.push(businessIds.slice(i, i + 10));
+  }
+
+  const snapshots = await Promise.all(
+    chunks.map((chunk) =>
+      db
+        .collection('products')
+        .where('status', '==', 'active')
+        .where('businessId', 'in', chunk)
+        .get()
+    )
+  );
+
+  return snapshots.flatMap((snapshot) => snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+}
+
 // Register user
 router.post('/register', async (req, res) => {
   try {
@@ -611,6 +808,88 @@ router.post('/verify-phone', async (req, res) => {
     return res.json({ success: true, message: 'Phone verified successfully' });
   } catch (error: any) {
     return res.status(error.statusCode || 400).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/home-feed', async (req, res) => {
+  try {
+    const uid = await getAuthenticatedUid(req);
+    const userDoc = await db.collection('users').doc(uid).get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const userData = userDoc.data() as any;
+    const requestedSocietyId = typeof req.query.societyId === 'string' ? req.query.societyId : undefined;
+    const societyId = requestedSocietyId || userData.societyId;
+
+    if (!societyId) {
+      return res.status(400).json({ success: false, error: 'Society not selected for user' });
+    }
+
+    await ensureSocietyDemoCatalog(societyId);
+
+    const businessesSnapshot = await db
+      .collection('businesses')
+      .where('societyId', '==', societyId)
+      .where('status', '==', 'active')
+      .get();
+
+    const businesses = businessesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
+    const businessIds = businesses.map((business) => business.id);
+    const products = await getSocietyProducts(businessIds);
+
+    const activeOrderStatuses = new Set(['pending', 'confirmed', 'preparing', 'ready', 'outForDelivery']);
+
+    const ordersSnapshot = await db
+      .collection('orders')
+      .where('userId', '==', uid)
+      .limit(100)
+      .get();
+
+    const orders = ordersSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
+    const activeOrders = orders.filter((order) => activeOrderStatuses.has(order.status)).length;
+
+    const categoryMap = new Map<string, number>();
+    businesses.forEach((business) => {
+      const key = String(business.category || 'other').toLowerCase();
+      categoryMap.set(key, (categoryMap.get(key) ?? 0) + 1);
+    });
+
+    const categories = Array.from(categoryMap.entries())
+      .map(([key, count]) => ({ key, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const featuredProducts = [...products]
+      .sort((a, b) => {
+        const discountDiff = Number(b.discount || 0) - Number(a.discount || 0);
+        if (discountDiff !== 0) return discountDiff;
+        return Number(b.rating || 0) - Number(a.rating || 0);
+      })
+      .slice(0, 20);
+
+    const topRatedBusinesses = [...businesses]
+      .sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0))
+      .slice(0, 10);
+
+    const offerProducts = featuredProducts.filter((product) => Number(product.discount || 0) > 0).slice(0, 10);
+
+    return res.json({
+      societyId,
+      stats: {
+        totalBusinesses: businesses.length,
+        activeOrders,
+        favoriteCount: Array.isArray(userData.favoriteBusinesses) ? userData.favoriteBusinesses.length : 0,
+      },
+      categories,
+      businesses,
+      featuredProducts,
+      topRatedBusinesses,
+      offerProducts,
+    });
+  } catch (error: any) {
+    return res.status(error.statusCode || 500).json({ success: false, error: error.message || 'Failed to load home feed' });
   }
 });
 
