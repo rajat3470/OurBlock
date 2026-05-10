@@ -213,6 +213,90 @@ router.post('/businessowner/register', async (req, res) => {
   }
 });
 
+// User (resident) self-registration
+router.post('/user/register', async (req, res) => {
+  try {
+    const { firstName, lastName, email, password, phone, societyId } = req.body;
+
+    if (!firstName || !lastName || !email || !password || !phone || !societyId) {
+      return res.status(400).json({
+        success: false,
+        error: 'firstName, lastName, email, password, phone and societyId are all required',
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters' });
+    }
+
+    // Confirm society exists
+    const societyDoc = await db.collection('societies').doc(societyId).get();
+    if (!societyDoc.exists) {
+      return res.status(404).json({ success: false, error: 'Society not found' });
+    }
+
+    const userRecord = await auth.createUser({
+      email,
+      password,
+      displayName: `${firstName} ${lastName}`,
+      phoneNumber: `+91${phone}`,
+    });
+
+    await auth.setCustomUserClaims(userRecord.uid, { role: 'user' });
+
+    await db.collection('users').doc(userRecord.uid).set({
+      id: userRecord.uid,
+      firstName,
+      lastName,
+      email,
+      phone,
+      role: 'user',
+      societyId,
+      isEmailVerified: false,
+      isPhoneVerified: false,
+      status: 'active',
+      favoriteBusinesses: [],
+      addresses: [],
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // Sign in immediately after creation to get a real ID token for the client
+    const authResult = await firebaseSignIn(email, password);
+
+    return res.status(201).json({
+      user: {
+        id: userRecord.uid,
+        firstName,
+        lastName,
+        email,
+        phone,
+        role: 'user',
+        societyId,
+        status: 'active',
+        isEmailVerified: false,
+        isPhoneVerified: false,
+        favoriteBusinesses: [],
+        addresses: [],
+      },
+      tokens: {
+        accessToken: authResult.idToken,
+        refreshToken: authResult.refreshToken,
+        expiresIn: parseInt(authResult.expiresIn, 10),
+      },
+    });
+  } catch (error: any) {
+    console.error('User registration error:', error);
+    if (error.code === 'auth/email-already-exists') {
+      return res.status(409).json({ success: false, error: 'An account with this email already exists' });
+    }
+    if (error.code === 'auth/phone-number-already-exists') {
+      return res.status(409).json({ success: false, error: 'This phone number is already registered' });
+    }
+    return res.status(400).json({ success: false, error: error.message || 'Registration failed' });
+  }
+});
+
 // Login (client-side handles Firebase Auth, this is for custom claims)
 router.post('/login', async (req, res) => {
   try {
