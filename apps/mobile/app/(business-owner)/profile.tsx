@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,16 +16,35 @@ import { router } from "expo-router";
 import AppSectionHeader from "../../src/components/AppSectionHeader";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { useAuth } from "../../src/hooks/useAuth";
+import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
+
+function InfoRow({ icon, label, value }: { icon: string; label: string; value?: string | null }) {
+  if (!value) return null;
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoRowIcon}>{icon}</Text>
+      <View style={styles.infoRowContent}>
+        <Text style={styles.infoRowLabel}>{label}</Text>
+        <Text style={styles.infoRowValue}>{value}</Text>
+      </View>
+    </View>
+  );
+}
 
 export default function BusinessOwnerProfile() {
   const { user } = useAppSelector((state) => state.auth);
   const { logoutUser, changePassword } = useAuth();
+  const { businessProfile, loadBusinessProfile } = useBusinessOwner();
 
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    loadBusinessProfile().catch(() => null);
+  }, [loadBusinessProfile]);
 
   const handleLogout = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -76,6 +95,13 @@ export default function BusinessOwnerProfile() {
     }
   };
 
+  const verificationColor =
+    businessProfile?.isVerified ? "#16A34A" : "#D97706";
+  const verificationBg =
+    businessProfile?.isVerified ? "#DCFCE7" : "#FFFBEB";
+  const verificationLabel =
+    businessProfile?.isVerified ? "✓ Verified Business" : "⏳ Pending Verification";
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -84,12 +110,12 @@ export default function BusinessOwnerProfile() {
       >
         <ScrollView showsVerticalScrollIndicator={false}>
           <AppSectionHeader
-            title="Profile"
-            subtitle="Business owner account settings"
+            title="Profile & Settings"
+            subtitle="Account & business details"
           />
 
-          {/* User info */}
-          <View style={styles.infoCard}>
+          {/* ── Owner identity card ─────────────────────────────────────── */}
+          <View style={styles.identityCard}>
             <View style={styles.avatarBox}>
               <Text style={styles.avatarEmoji}>🏪</Text>
             </View>
@@ -97,9 +123,45 @@ export default function BusinessOwnerProfile() {
               {user?.firstName} {user?.lastName}
             </Text>
             <Text style={styles.email}>{user?.email}</Text>
+            {user?.phone ? (
+              <Text style={styles.phone}>📞 {user.phone}</Text>
+            ) : null}
           </View>
 
-          {/* Change Password Section */}
+          {/* ── Business Details card ───────────────────────────────────── */}
+          {businessProfile ? (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderIcon}>🏬</Text>
+                <Text style={styles.sectionHeaderTitle}>My Business</Text>
+                <View style={[styles.verifiedPill, { backgroundColor: verificationBg }]}>
+                  <Text style={[styles.verifiedPillText, { color: verificationColor }]}>
+                    {verificationLabel}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.sectionBody}>
+                <InfoRow icon="🏷️" label="Business Name"  value={businessProfile.name} />
+                <InfoRow icon="🗂️" label="Category"       value={businessProfile.category} />
+                <InfoRow icon="📝" label="Description"    value={businessProfile.description} />
+                <InfoRow icon="📍" label="Address"        value={businessProfile.address} />
+                <InfoRow icon="📞" label="Phone"          value={businessProfile.phone} />
+                <InfoRow icon="✉️"  label="Email"          value={businessProfile.email} />
+                <InfoRow icon="⭐" label="Rating"         value={businessProfile.rating ? `${businessProfile.rating} / 5 (${businessProfile.totalReviews ?? 0} reviews)` : null} />
+                <InfoRow icon="🔖" label="Status"         value={businessProfile.status} />
+              </View>
+            </View>
+          ) : (
+            <View style={styles.section}>
+              <View style={styles.noBusinessWrap}>
+                <Text style={styles.noBusinessEmoji}>🏗️</Text>
+                <Text style={styles.noBusinessText}>No business profile found.</Text>
+                <Text style={styles.noBusinessSub}>Contact an admin to set up your business.</Text>
+              </View>
+            </View>
+          )}
+
+          {/* ── Change Password ─────────────────────────────────────────── */}
           <View style={styles.section}>
             <TouchableOpacity
               style={styles.sectionRow}
@@ -120,10 +182,7 @@ export default function BusinessOwnerProfile() {
                   style={styles.input}
                   placeholder="Minimum 8 characters"
                   value={newPassword}
-                  onChangeText={(v) => {
-                    setNewPassword(v);
-                    setPasswordError("");
-                  }}
+                  onChangeText={(v) => { setNewPassword(v); setPasswordError(""); }}
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -137,10 +196,7 @@ export default function BusinessOwnerProfile() {
                   style={styles.input}
                   placeholder="Re-enter new password"
                   value={confirmPassword}
-                  onChangeText={(v) => {
-                    setConfirmPassword(v);
-                    setPasswordError("");
-                  }}
+                  onChangeText={(v) => { setConfirmPassword(v); setPasswordError(""); }}
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -152,10 +208,7 @@ export default function BusinessOwnerProfile() {
                 ) : null}
 
                 <TouchableOpacity
-                  style={[
-                    styles.savePasswordBtn,
-                    isSaving ? styles.savePasswordBtnDisabled : null,
-                  ]}
+                  style={[styles.savePasswordBtn, isSaving ? styles.savePasswordBtnDisabled : null]}
                   onPress={handleChangePassword}
                   disabled={isSaving}
                   activeOpacity={0.8}
@@ -163,16 +216,14 @@ export default function BusinessOwnerProfile() {
                   {isSaving ? (
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
-                    <Text style={styles.savePasswordBtnText}>
-                      Update Password
-                    </Text>
+                    <Text style={styles.savePasswordBtnText}>Update Password</Text>
                   )}
                 </TouchableOpacity>
               </View>
             )}
           </View>
 
-          {/* Sign out */}
+          {/* ── Sign out ────────────────────────────────────────────────── */}
           <View style={styles.footer}>
             <TouchableOpacity
               style={styles.logoutBtn}
@@ -194,12 +245,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F8FAFC",
   },
-  infoCard: {
+
+  // Identity card
+  identityCard: {
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     marginHorizontal: 16,
     marginTop: 4,
-    marginBottom: 16,
+    marginBottom: 14,
     borderRadius: 16,
     padding: 24,
     shadowColor: "#000",
@@ -217,9 +270,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
-  avatarEmoji: {
-    fontSize: 34,
-  },
+  avatarEmoji: { fontSize: 34 },
   name: {
     fontSize: 20,
     fontWeight: "700",
@@ -230,10 +281,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#64748B",
   },
+  phone: {
+    marginTop: 4,
+    fontSize: 13,
+    color: "#64748B",
+  },
+
+  // Generic section card
   section: {
     backgroundColor: "#FFFFFF",
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 14,
     borderRadius: 16,
     overflow: "hidden",
     shadowColor: "#000",
@@ -242,25 +300,96 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+    gap: 8,
+  },
+  sectionHeaderIcon: { fontSize: 18 },
+  sectionHeaderTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  verifiedPill: {
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  verifiedPillText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  // Business info rows
+  sectionBody: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F8FAFC",
+    gap: 12,
+  },
+  infoRowIcon: { fontSize: 16, marginTop: 1 },
+  infoRowContent: { flex: 1 },
+  infoRowLabel: {
+    fontSize: 11,
+    color: "#94A3B8",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  infoRowValue: {
+    fontSize: 14,
+    color: "#0F172A",
+    fontWeight: "500",
+    textTransform: "capitalize",
+  },
+
+  // No business state
+  noBusinessWrap: {
+    alignItems: "center",
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+  },
+  noBusinessEmoji: { fontSize: 36, marginBottom: 10 },
+  noBusinessText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#334155",
+  },
+  noBusinessSub: {
+    fontSize: 13,
+    color: "#94A3B8",
+    marginTop: 4,
+    textAlign: "center",
+  },
+
+  // Change password toggle row
   sectionRow: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
   },
-  sectionRowIcon: {
-    fontSize: 18,
-    marginRight: 12,
-  },
+  sectionRowIcon: { fontSize: 18, marginRight: 12 },
   sectionRowLabel: {
     flex: 1,
     fontSize: 15,
     fontWeight: "600",
     color: "#0F172A",
   },
-  sectionRowChevron: {
-    fontSize: 12,
-    color: "#94A3B8",
-  },
+  sectionRowChevron: { fontSize: 12, color: "#94A3B8" },
+
   changePasswordForm: {
     paddingHorizontal: 16,
     paddingBottom: 16,
@@ -284,11 +413,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#0F172A",
   },
-  errorText: {
-    fontSize: 12,
-    color: "#EF4444",
-    marginTop: 6,
-  },
+  errorText: { fontSize: 12, color: "#EF4444", marginTop: 6 },
   savePasswordBtn: {
     backgroundColor: "#007AFF",
     borderRadius: 12,
@@ -296,14 +421,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 16,
   },
-  savePasswordBtnDisabled: {
-    opacity: 0.6,
-  },
+  savePasswordBtnDisabled: { opacity: 0.6 },
   savePasswordBtnText: {
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
   },
+
   footer: {
     paddingHorizontal: 16,
     paddingBottom: 40,

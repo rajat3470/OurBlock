@@ -40,13 +40,12 @@ class ApiClient {
       (response) => response,
       async (error: AxiosError) => {
         if (error.response?.status === 401) {
-          // Token expired, attempt refresh
           try {
             const refreshToken = await AsyncStorage.getItem("refreshToken");
-            if (refreshToken) {
-              // Call refresh endpoint
+            // Skip refresh for mock tokens — they never expire
+            if (refreshToken && !refreshToken.startsWith("mock-")) {
               const response = await axios.post(
-                `${this.baseURL}/auth/refresh`,
+                `${this.baseURL}/auth/refresh-token`,
                 { refreshToken }
               );
               const { accessToken, refreshToken: newRefreshToken } =
@@ -61,10 +60,8 @@ class ApiClient {
               }
             }
           } catch (err) {
-            // Refresh failed, logout user
-            await AsyncStorage.removeItem("accessToken");
-            await AsyncStorage.removeItem("refreshToken");
-            // Dispatch logout action
+            // Refresh failed — clear tokens so user is prompted to log in again
+            await AsyncStorage.multiRemove(["accessToken", "refreshToken"]);
           }
         }
         return Promise.reject(error);

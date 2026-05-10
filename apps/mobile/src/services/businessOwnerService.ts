@@ -2,9 +2,13 @@ import { apiClient } from "./apiClient";
 import { Business, Order, Product, PaginatedResponse } from "@/types";
 import { BusinessOwnerStats } from "@store/slices/businessOwnerSlice";
 
+// All API responses are wrapped in { success, data }. This helper unwraps them.
+type ApiEnvelope<T> = { success: boolean; data: T; error?: string };
+
 export const businessOwnerService = {
   async getMyBusiness(): Promise<Business> {
-    return apiClient.get<Business>("/owner/business");
+    const res = await apiClient.get<ApiEnvelope<Business>>("/owner/business");
+    return res.data;
   },
 
   async getMyProducts(
@@ -17,11 +21,13 @@ export const businessOwnerService = {
   },
 
   async createProduct(data: Partial<Product>): Promise<Product> {
-    return apiClient.post<Product>("/owner/products", data);
+    const res = await apiClient.post<ApiEnvelope<Product>>("/owner/products", data);
+    return res.data;
   },
 
   async updateProduct(id: string, data: Partial<Product>): Promise<Product> {
-    return apiClient.put<Product>(`/owner/products/${id}`, data);
+    const res = await apiClient.put<ApiEnvelope<Product>>(`/owner/products/${id}`, data);
+    return res.data;
   },
 
   async deleteProduct(id: string): Promise<{ success: boolean }> {
@@ -41,10 +47,12 @@ export const businessOwnerService = {
     orderId: string,
     status: Order["status"]
   ): Promise<Order> {
-    return apiClient.patch<Order>(`/owner/orders/${orderId}/status`, { status });
+    const res = await apiClient.patch<ApiEnvelope<Order>>(`/owner/orders/${orderId}/status`, { status });
+    return res.data;
   },
 
   async getMyStats(): Promise<BusinessOwnerStats> {
-    return apiClient.get<BusinessOwnerStats>("/owner/stats");
+    const res = await apiClient.get<ApiEnvelope<BusinessOwnerStats>>("/owner/stats");
+    return res.data;
   },
 };

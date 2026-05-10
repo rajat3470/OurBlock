@@ -15,13 +15,6 @@ import { Order, OrderStatus } from "../../src/types";
 
 type FilterKey = "all" | "pending" | "active" | "done";
 
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "pending", label: "Pending" },
-  { key: "active", label: "Active" },
-  { key: "done", label: "Done" },
-];
-
 const ACTIVE_STATUSES: OrderStatus[] = [
   OrderStatus.CONFIRMED,
   OrderStatus.PREPARING,
@@ -29,122 +22,210 @@ const ACTIVE_STATUSES: OrderStatus[] = [
   OrderStatus.OUT_FOR_DELIVERY,
 ];
 
-const DONE_STATUSES: OrderStatus[] = [
-  OrderStatus.DELIVERED,
-  OrderStatus.CANCELLED,
-];
+const DONE_STATUSES: OrderStatus[] = [OrderStatus.DELIVERED, OrderStatus.CANCELLED];
 
-const nextStatus = (status: OrderStatus): OrderStatus | null => {
-  switch (status) {
-    case OrderStatus.PENDING:
-      return OrderStatus.CONFIRMED;
-    case OrderStatus.CONFIRMED:
-      return OrderStatus.PREPARING;
-    case OrderStatus.PREPARING:
-      return OrderStatus.READY;
-    case OrderStatus.READY:
-      return OrderStatus.OUT_FOR_DELIVERY;
-    case OrderStatus.OUT_FOR_DELIVERY:
-      return OrderStatus.DELIVERED;
-    default:
-      return null;
-  }
+const STATUS_META: Record<string, { label: string; color: string; bg: string; emoji: string; border: string }> = {
+  [OrderStatus.PENDING]:          { label: "Pending",          color: "#D97706", bg: "#FFFBEB", emoji: "⏳", border: "#FDE68A" },
+  [OrderStatus.CONFIRMED]:        { label: "Confirmed",        color: "#2563EB", bg: "#EFF6FF", emoji: "✅", border: "#BFDBFE" },
+  [OrderStatus.PREPARING]:        { label: "Preparing",        color: "#7C3AED", bg: "#F5F3FF", emoji: "🍳", border: "#DDD6FE" },
+  [OrderStatus.READY]:            { label: "Ready to Pick",    color: "#059669", bg: "#ECFDF5", emoji: "📦", border: "#A7F3D0" },
+  [OrderStatus.OUT_FOR_DELIVERY]: { label: "Out for Delivery", color: "#0284C7", bg: "#F0F9FF", emoji: "🚚", border: "#BAE6FD" },
+  [OrderStatus.DELIVERED]:        { label: "Delivered",        color: "#16A34A", bg: "#DCFCE7", emoji: "🎉", border: "#86EFAC" },
+  [OrderStatus.CANCELLED]:        { label: "Cancelled",        color: "#DC2626", bg: "#FEF2F2", emoji: "✗",  border: "#FECACA" },
 };
+
+const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
+  [OrderStatus.PENDING]:          OrderStatus.CONFIRMED,
+  [OrderStatus.CONFIRMED]:        OrderStatus.PREPARING,
+  [OrderStatus.PREPARING]:        OrderStatus.READY,
+  [OrderStatus.READY]:            OrderStatus.OUT_FOR_DELIVERY,
+  [OrderStatus.OUT_FOR_DELIVERY]: OrderStatus.DELIVERED,
+};
+
+const NEXT_STATUS_LABEL: Partial<Record<OrderStatus, string>> = {
+  [OrderStatus.PENDING]:          "✅ Confirm Order",
+  [OrderStatus.CONFIRMED]:        "🍳 Start Preparing",
+  [OrderStatus.PREPARING]:        "📦 Mark Ready",
+  [OrderStatus.READY]:            "🚚 Out for Delivery",
+  [OrderStatus.OUT_FOR_DELIVERY]: "🎉 Mark Delivered",
+};
+
+function timeAgo(date: Date | string): string {
+  const d = new Date(date);
+  const diffMs = Date.now() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  return `${Math.floor(diffHr / 24)}d ago`;
+}
 
 export default function BusinessOwnerOrders() {
   const { orders, isLoading, loadOrders, changeOrderStatus } = useBusinessOwner();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+  const [advancing, setAdvancing] = useState<string | null>(null);
 
   useEffect(() => {
     loadOrders().catch(() => null);
   }, [loadOrders]);
 
+  const counts = useMemo(
+    () => ({
+      all: orders.length,
+      pending: orders.filter((o) => o.status === OrderStatus.PENDING).length,
+      active: orders.filter((o) => ACTIVE_STATUSES.includes(o.status)).length,
+      done: orders.filter((o) => DONE_STATUSES.includes(o.status)).length,
+    }),
+    [orders]
+  );
+
   const filteredOrders = useMemo(() => {
-    if (activeFilter === "pending") {
-      return orders.filter((item) => item.status === OrderStatus.PENDING);
-    }
-
-    if (activeFilter === "active") {
-      return orders.filter((item) => ACTIVE_STATUSES.includes(item.status));
-    }
-
-    if (activeFilter === "done") {
-      return orders.filter((item) => DONE_STATUSES.includes(item.status));
-    }
-
+    if (activeFilter === "pending") return orders.filter((o) => o.status === OrderStatus.PENDING);
+    if (activeFilter === "active") return orders.filter((o) => ACTIVE_STATUSES.includes(o.status));
+    if (activeFilter === "done") return orders.filter((o) => DONE_STATUSES.includes(o.status));
     return orders;
   }, [activeFilter, orders]);
 
-  const handleAdvance = async (order: Order) => {
-    const status = nextStatus(order.status);
-    if (!status) {
-      return;
-    }
+  const FILTERS: { key: FilterKey; label: string; count: number }[] = [
+    { key: "all",     label: "All",     count: counts.all     },
+    { key: "pending", label: "Pending", count: counts.pending },
+    { key: "active",  label: "Active",  count: counts.active  },
+    { key: "done",    label: "Done",    count: counts.done    },
+  ];
 
+  const handleAdvance = async (order: Order) => {
+    const next = NEXT_STATUS[order.status];
+    if (!next) return;
+    setAdvancing(order.id);
     try {
-      await changeOrderStatus(order.id, status);
+      await changeOrderStatus(order.id, next);
     } catch {
-      Alert.alert("Error", "Failed to update order status.");
+      Alert.alert("Error", "Failed to update order status. Please try again.");
+    } finally {
+      setAdvancing(null);
     }
   };
 
   const renderItem = ({ item }: { item: Order }) => {
-    const next = nextStatus(item.status);
+    const meta = STATUS_META[item.status];
+    const next = NEXT_STATUS[item.status];
+    const nextLabel = NEXT_STATUS_LABEL[item.status];
+    const addr = item.deliveryAddress;
+    const addressLine = addr
+      ? [addr.street, addr.landmark].filter(Boolean).join(", ")
+      : null;
+    const isAdvancing = advancing === item.id;
+
     return (
       <View style={styles.card}>
-        <View style={styles.rowTop}>
+        {/* Top row: ID + time + amount */}
+        <View style={styles.cardTop}>
           <View>
-            <Text style={styles.orderId}>#{item.id.slice(0, 8)}</Text>
-            <Text style={styles.orderMeta}>
-              {item.items.length} items · {item.paymentMethod.toUpperCase()}
+            <Text style={styles.orderId}>#{item.id.slice(0, 8).toUpperCase()}</Text>
+            <Text style={styles.orderTime}>{timeAgo(item.createdAt)}</Text>
+          </View>
+          <Text style={styles.orderAmount}>₹{item.finalAmount}</Text>
+        </View>
+
+        {/* Status + payment row */}
+        <View style={[styles.statusBar, { backgroundColor: meta?.bg ?? "#F1F5F9", borderColor: meta?.border ?? "#E2E8F0" }]}>
+          <Text style={[styles.statusBarText, { color: meta?.color ?? "#64748B" }]}>
+            {meta?.emoji}  {meta?.label ?? item.status}
+          </Text>
+          <View
+            style={[
+              styles.paymentBadge,
+              item.paymentStatus === "completed" ? styles.paymentBadgePaid : styles.paymentBadgePending,
+            ]}
+          >
+            <Text
+              style={[
+                styles.paymentBadgeText,
+                { color: item.paymentStatus === "completed" ? "#166534" : "#92400E" },
+              ]}
+            >
+              {item.paymentMethod.toUpperCase()} · {item.paymentStatus === "completed" ? "Paid" : "Pending"}
             </Text>
           </View>
-          <Text style={styles.amount}>Rs {item.finalAmount}</Text>
         </View>
 
-        <View style={styles.statusRow}>
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{item.status}</Text>
+        {/* Info rows */}
+        <View style={styles.infoSection}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoIcon}>🛍</Text>
+            <Text style={styles.infoText}>
+              {item.items.length} item{item.items.length !== 1 ? "s" : ""}
+              {item.items.length > 0
+                ? `  ·  ${item.items.map((i) => `×${i.quantity}`).join(", ")}`
+                : ""}
+            </Text>
           </View>
-          <Text style={styles.paymentStatus}>{item.paymentStatus}</Text>
+          {addressLine ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoIcon}>📍</Text>
+              <Text style={styles.infoText} numberOfLines={2}>{addressLine}</Text>
+            </View>
+          ) : null}
+          {item.notes ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoIcon}>💬</Text>
+              <Text style={[styles.infoText, styles.infoNote]} numberOfLines={2}>{item.notes}</Text>
+            </View>
+          ) : null}
         </View>
 
+        {/* Action */}
         {next ? (
           <TouchableOpacity
-            style={styles.advanceBtn}
+            style={[styles.advanceBtn, isAdvancing && styles.advanceBtnDisabled]}
             onPress={() => handleAdvance(item)}
+            disabled={isAdvancing}
+            activeOpacity={0.85}
           >
-            <Text style={styles.advanceText}>Advance to {next}</Text>
+            {isAdvancing ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.advanceBtnText}>{nextLabel}</Text>
+            )}
           </TouchableOpacity>
-        ) : null}
+        ) : (
+          <View style={styles.terminalBanner}>
+            <Text style={styles.terminalBannerText}>
+              {item.status === OrderStatus.DELIVERED ? "🎉 Order completed" : "✗ Order cancelled"}
+            </Text>
+          </View>
+        )}
       </View>
     );
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <AppSectionHeader title="Orders" subtitle="Track and fulfill orders" />
+      <AppSectionHeader title="Orders" subtitle="Track and fulfill customer orders" />
 
-      <View style={styles.filterRow}>
-        {FILTERS.map((filter) => (
-          <TouchableOpacity
-            key={filter.key}
-            style={[
-              styles.filterBtn,
-              activeFilter === filter.key ? styles.filterBtnActive : null,
-            ]}
-            onPress={() => setActiveFilter(filter.key)}
-          >
-            <Text
-              style={[
-                styles.filterLabel,
-                activeFilter === filter.key ? styles.filterLabelActive : null,
-              ]}
+      {/* Filter bar — plain View row so chips stay compact */}
+      <View style={styles.filterBar}>
+        {FILTERS.map((f) => {
+          const active = activeFilter === f.key;
+          return (
+            <TouchableOpacity
+              key={f.key}
+              style={[styles.filterChip, active && styles.filterChipActive]}
+              onPress={() => setActiveFilter(f.key)}
+              activeOpacity={0.75}
             >
-              {filter.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                {f.label}
+              </Text>
+              <View style={[styles.filterBadge, active ? styles.filterBadgeActive : styles.filterBadgeInactive]}>
+                <Text style={[styles.filterBadgeText, active && styles.filterBadgeTextActive]}>
+                  {f.count}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {isLoading && orders.length === 0 ? (
@@ -157,11 +238,15 @@ export default function BusinessOwnerOrders() {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Text style={styles.emptyTitle}>No orders in this view</Text>
+              <Text style={styles.emptyEmoji}>📋</Text>
+              <Text style={styles.emptyTitle}>No orders here</Text>
               <Text style={styles.emptySubtitle}>
-                Orders will appear here once customers place them.
+                {activeFilter === "all"
+                  ? "Customer orders will appear once they start placing them."
+                  : "No orders match this filter right now."}
               </Text>
             </View>
           }
@@ -174,32 +259,66 @@ export default function BusinessOwnerOrders() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F0F4F8",
   },
-  filterRow: {
+
+  // ── Filter bar ────────────────────────────────────────────────────────────
+  filterBar: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
     paddingHorizontal: 14,
-    paddingTop: 14,
+    paddingVertical: 12,
+    gap: 8,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
   },
-  filterBtn: {
-    paddingHorizontal: 12,
+  filterChip: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
     paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#F1F5F9",
+    borderRadius: 10,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
   },
-  filterBtnActive: {
-    backgroundColor: "#16A34A",
+  filterChipActive: {
+    backgroundColor: "#064E3B",
+    borderColor: "#064E3B",
   },
-  filterLabel: {
+  filterChipText: {
     fontSize: 12,
     fontWeight: "700",
     color: "#64748B",
   },
-  filterLabelActive: {
+  filterChipTextActive: {
     color: "#FFFFFF",
   },
+  filterBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterBadgeActive: {
+    backgroundColor: "rgba(255,255,255,0.25)",
+  },
+  filterBadgeInactive: {
+    backgroundColor: "#E2E8F0",
+  },
+  filterBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#475569",
+  },
+  filterBadgeTextActive: {
+    color: "#FFFFFF",
+  },
+
   loaderWrap: {
     flex: 1,
     justifyContent: "center",
@@ -207,86 +326,151 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 14,
-    paddingBottom: 22,
+    paddingBottom: 32,
+    gap: 12,
   },
+
+  // ── Order Card ────────────────────────────────────────────────────────────
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: 18,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  rowTop: {
+  cardTop: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 10,
   },
   orderId: {
     fontSize: 15,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  orderMeta: {
-    marginTop: 2,
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  amount: {
-    fontSize: 15,
     fontWeight: "800",
-    color: "#111827",
+    color: "#0F172A",
+    letterSpacing: 0.3,
   },
-  statusRow: {
+  orderTime: {
+    fontSize: 11,
+    color: "#94A3B8",
+    fontWeight: "500",
+    marginTop: 2,
+  },
+  orderAmount: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#0F172A",
+  },
+
+  // Status strip
+  statusBar: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 10,
-  },
-  statusBadge: {
-    backgroundColor: "#ECFDF5",
+    justifyContent: "space-between",
+    marginHorizontal: 12,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: "#BBF7D0",
+    marginBottom: 10,
+  },
+  statusBarText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  paymentBadge: {
+    borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 999,
   },
-  statusText: {
-    color: "#166534",
+  paymentBadgePaid: { backgroundColor: "#DCFCE7" },
+  paymentBadgePending: { backgroundColor: "#FEF3C7" },
+  paymentBadgeText: {
     fontSize: 11,
     fontWeight: "700",
-    textTransform: "capitalize",
   },
-  paymentStatus: {
+
+  // Info section
+  infoSection: {
+    paddingHorizontal: 16,
+    gap: 6,
+    marginBottom: 10,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  infoIcon: {
+    fontSize: 13,
+    marginTop: 1,
+    width: 18,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    color: "#475569",
+    fontWeight: "500",
+    lineHeight: 19,
+  },
+  infoNote: {
+    fontStyle: "italic",
     color: "#64748B",
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "capitalize",
+    fontSize: 12,
   },
+
+  // Action
   advanceBtn: {
-    marginTop: 10,
-    backgroundColor: "#16A34A",
-    borderRadius: 10,
-    paddingVertical: 8,
+    margin: 12,
+    backgroundColor: "#064E3B",
+    borderRadius: 14,
+    paddingVertical: 14,
     alignItems: "center",
   },
-  advanceText: {
+  advanceBtnDisabled: { opacity: 0.6 },
+  advanceBtnText: {
     color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
-    textTransform: "capitalize",
+    letterSpacing: 0.2,
   },
+  terminalBanner: {
+    margin: 12,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  terminalBannerText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+
+  // Empty state
   emptyWrap: {
     alignItems: "center",
-    paddingVertical: 50,
+    paddingVertical: 60,
+    paddingHorizontal: 32,
   },
+  emptyEmoji: { fontSize: 48, marginBottom: 14 },
   emptyTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
     color: "#334155",
+    marginBottom: 6,
   },
   emptySubtitle: {
-    marginTop: 6,
-    fontSize: 13,
+    fontSize: 14,
     color: "#94A3B8",
     textAlign: "center",
+    lineHeight: 21,
   },
 });

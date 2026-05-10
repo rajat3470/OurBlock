@@ -2,8 +2,14 @@ import { Tabs } from "expo-router";
 import RoleGate from "../../src/components/RoleGate";
 import AppTabIcon from "../../src/components/AppTabIcon";
 import { colors } from "../../src/constants/theme";
+import { useAppSelector } from "../../src/hooks/useRedux";
+import { OrderStatus } from "../../src/types";
 
 export default function BusinessOwnerLayout() {
+  const orders = useAppSelector((state) => state.businessOwner.orders);
+  const activeOrderCount = orders.filter(
+    (o) => o.status !== OrderStatus.DELIVERED && o.status !== OrderStatus.CANCELLED
+  ).length;
   return (
     <RoleGate allowedRole="businessOwner">
       <Tabs
@@ -46,6 +52,8 @@ export default function BusinessOwnerLayout() {
           name="orders"
           options={{
             title: "Orders",
+            tabBarBadge: activeOrderCount > 0 ? activeOrderCount : undefined,
+            tabBarBadgeStyle: { backgroundColor: "#DC2626", fontSize: 10 },
             tabBarIcon: ({ focused }) => (
               <AppTabIcon emoji="🧾" focused={focused} role="businessOwner" />
             ),

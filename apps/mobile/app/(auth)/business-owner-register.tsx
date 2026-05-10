@@ -351,6 +351,7 @@ export default function BusinessOwnerRegisterScreen() {
                 onChangeText={(v) => setField("password", v)}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                autoComplete="off"
                 autoCorrect={false}
                 placeholderTextColor={colors.textMuted}
               />
@@ -384,6 +385,7 @@ export default function BusinessOwnerRegisterScreen() {
                 onChangeText={(v) => setField("confirmPassword", v)}
                 secureTextEntry={!showConfirm}
                 autoCapitalize="none"
+                autoComplete="off"
                 autoCorrect={false}
                 placeholderTextColor={colors.textMuted}
               />

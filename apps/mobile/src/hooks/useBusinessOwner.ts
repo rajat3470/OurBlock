@@ -17,6 +17,21 @@ import {
 import { businessOwnerService } from "@services/businessOwnerService";
 import { Product, Order } from "@/types";
 
+/** Extract a human-readable message from any thrown value (including AxiosError). */
+function extractErrorMessage(err: unknown, fallback: string): string {
+  if (err && typeof err === "object") {
+    // AxiosError: the real message is in response.data.error or response.data.message
+    const axiosErr = err as any;
+    const apiMsg =
+      axiosErr?.response?.data?.error ||
+      axiosErr?.response?.data?.message;
+    if (apiMsg && typeof apiMsg === "string") return apiMsg;
+    if (axiosErr instanceof Error) return axiosErr.message;
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
+}
+
 export const useBusinessOwner = () => {
   const dispatch = useAppDispatch();
   const state = useAppSelector((store) => store.businessOwner);
@@ -27,8 +42,7 @@ export const useBusinessOwner = () => {
       const business = await businessOwnerService.getMyBusiness();
       dispatch(setBusinessProfile(business));
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load business profile";
+      const message = extractErrorMessage(err, "Failed to load business profile");
       dispatch(setError(message));
       throw err;
     } finally {
@@ -42,10 +56,9 @@ export const useBusinessOwner = () => {
       const response = await businessOwnerService.getMyProducts();
       dispatch(setProducts(response.data));
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load products";
+      const message = extractErrorMessage(err, "Failed to load products");
       dispatch(setError(message));
-      throw err;
+      throw new Error(message);
     } finally {
       dispatch(setLoading(false));
     }
@@ -59,8 +72,7 @@ export const useBusinessOwner = () => {
         dispatch(addProduct(product));
         return product;
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Failed to create product";
+        const message = extractErrorMessage(err, "Failed to create product");
         dispatch(setError(message));
         throw err;
       } finally {
@@ -78,10 +90,9 @@ export const useBusinessOwner = () => {
         dispatch(updateProduct(product));
         return product;
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Failed to update product";
+        const message = extractErrorMessage(err, "Failed to update product");
         dispatch(setError(message));
-        throw err;
+        throw new Error(message);
       } finally {
         dispatch(setLoading(false));
       }
@@ -96,10 +107,9 @@ export const useBusinessOwner = () => {
         await businessOwnerService.deleteProduct(id);
         dispatch(removeProduct(id));
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Failed to delete product";
+        const message = extractErrorMessage(err, "Failed to delete product");
         dispatch(setError(message));
-        throw err;
+        throw new Error(message);
       } finally {
         dispatch(setLoading(false));
       }
@@ -113,10 +123,9 @@ export const useBusinessOwner = () => {
       const response = await businessOwnerService.getMyOrders();
       dispatch(setOrders(response.data));
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load orders";
+      const message = extractErrorMessage(err, "Failed to load orders");
       dispatch(setError(message));
-      throw err;
+      throw new Error(message);
     } finally {
       dispatch(setLoading(false));
     }
@@ -130,8 +139,7 @@ export const useBusinessOwner = () => {
         dispatch(updateOrder(order));
         return order;
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : "Failed to update order status";
+        const message = extractErrorMessage(err, "Failed to update order status");
         dispatch(setError(message));
         throw err;
       } finally {
@@ -147,8 +155,7 @@ export const useBusinessOwner = () => {
       const stats = await businessOwnerService.getMyStats();
       dispatch(setStats(stats));
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to load stats";
+      const message = extractErrorMessage(err, "Failed to load stats");
       dispatch(setError(message));
       throw err;
     } finally {
