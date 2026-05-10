@@ -5,6 +5,7 @@ interface AuthState {
   user: User | null;
   tokens: AuthToken | null;
   isAuthenticated: boolean;
+  isHydrated: boolean;
   isLoading: boolean;
   error: string | null;
 }
@@ -13,6 +14,7 @@ const initialState: AuthState = {
   user: null,
   tokens: null,
   isAuthenticated: false,
+  isHydrated: false,
   isLoading: false,
   error: null,
 };
@@ -38,6 +40,9 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.error = null;
     },
+    setHydrated(state, action: PayloadAction<boolean>) {
+      state.isHydrated = action.payload;
+    },
     setError(state, action: PayloadAction<string>) {
       state.error = action.payload;
       state.isLoading = false;
@@ -59,6 +64,7 @@ export const {
   setUser,
   setTokens,
   setAuth,
+  setHydrated,
   setError,
   logout,
   clearError,

@@ -6,16 +6,18 @@ import { AppTarget, getDefaultRoute } from "../src/utils/appRouting";
 import { colors } from "../src/constants/theme";
 
 export default function IndexScreen() {
-  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, isHydrated, user } = useAppSelector((state) => state.auth);
   const appTarget = process.env.EXPO_PUBLIC_APP_TARGET as AppTarget;
 
   useEffect(() => {
+    if (!isHydrated) return;
+
     const timeout = setTimeout(() => {
       router.replace(getDefaultRoute(isAuthenticated, user?.role, appTarget));
     }, 100);
 
     return () => clearTimeout(timeout);
-  }, [appTarget, isAuthenticated, user?.role]);
+  }, [appTarget, isAuthenticated, isHydrated, user?.role]);
 
   return (
     <View style={styles.container}>

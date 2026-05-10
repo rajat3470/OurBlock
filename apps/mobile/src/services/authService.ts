@@ -71,4 +71,8 @@ export const authService = {
   async refreshToken(): Promise<AuthResponse> {
     return apiClient.post<AuthResponse>("/auth/refresh-token", {});
   },
+
+  async getCurrentUser(): Promise<{ success: boolean; data: AppUser }> {
+    return apiClient.get<{ success: boolean; data: AppUser }>("/auth/me");
+  },
 };

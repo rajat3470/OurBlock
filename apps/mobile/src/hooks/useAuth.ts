@@ -2,6 +2,7 @@ import { authService } from "@services/authService";
 import { useAppDispatch } from "./useRedux";
 import { setAuth, setError, logout, setLoading } from "@store/slices/authSlice";
 import { apiClient } from "@services/apiClient";
+import { authStateService } from "@services/authStateService";
 import { AuthCredentials, AuthResponse } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -100,6 +101,7 @@ export const useAuth = () => {
       const mock = mockLogin(credentials, role);
       if (mock) {
         await apiClient.saveTokens(mock.tokens);
+        await authStateService.saveAuth(mock);
         dispatch(setAuth(mock));
         return;
       }
@@ -119,6 +121,7 @@ export const useAuth = () => {
 
       if (response) {
         await apiClient.saveTokens(response.tokens);
+        await authStateService.saveAuth(response);
         dispatch(setAuth(response));
       }
     } catch (error: any) {
@@ -151,6 +154,7 @@ export const useAuth = () => {
 
       if (response) {
         await apiClient.saveTokens(response.tokens);
+        await authStateService.saveAuth(response);
         dispatch(setAuth(response));
       }
     } catch (error: any) {
@@ -170,6 +174,7 @@ export const useAuth = () => {
     // The API call is best-effort — a network/backend failure should never block logout.
     dispatch(logout());
     await apiClient.clearTokens();
+    await authStateService.clearAuth();
     try {
       await authService.logout();
     } catch {

@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
+import { router } from "expo-router";
 import AppSectionHeader from "../../src/components/AppSectionHeader";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { useUserApp } from "../../src/hooks/useUserApp";
@@ -42,6 +43,21 @@ export default function UserHome() {
         </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false}>
+          {!user?.isPhoneVerified ? (
+            <View style={styles.warningCard}>
+              <Text style={styles.warningTitle}>Phone verification pending</Text>
+              <Text style={styles.warningText}>
+                You can browse now, but phone verification is mandatory before placing any order.
+              </Text>
+              <TouchableOpacity
+                style={styles.warningBtn}
+                onPress={() => router.push("/(user)/verify-phone")}
+              >
+                <Text style={styles.warningBtnText}>Verify Phone Number</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           <Text style={styles.sectionTitle}>Select Society</Text>
           <ScrollView
             horizontal
@@ -134,6 +150,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 10,
+  },
+  warningCard: {
+    backgroundColor: "#FFF7ED",
+    borderWidth: 1,
+    borderColor: "#FED7AA",
+    borderRadius: 14,
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 14,
+  },
+  warningTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#9A3412",
+  },
+  warningText: {
+    marginTop: 6,
+    fontSize: 13,
+    lineHeight: 20,
+    color: "#9A3412",
+  },
+  warningBtn: {
+    alignSelf: "flex-start",
+    marginTop: 12,
+    backgroundColor: "#EA580C",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  warningBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
   },
   societyRow: {
     paddingHorizontal: 16,

@@ -10,13 +10,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   Modal,
   FlatList,
+  Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
+import { useToast } from "react-native-toast-notifications";
 import { useAuth } from "../../src/hooks/useAuth";
 import { societyService } from "../../src/services/societyService";
+import { userAppService } from "../../src/services/userAppService";
 import { Society } from "../../src/types/index";
 import { colors } from "../../src/constants/theme";
 
@@ -25,6 +28,10 @@ interface RegisterForm {
   lastName: string;
   email: string;
   phone: string;
+  addressLine: string;
+  city: string;
+  state: string;
+  pincode: string;
   password: string;
   confirmPassword: string;
 }
@@ -34,18 +41,25 @@ const EMPTY_FORM: RegisterForm = {
   lastName: "",
   email: "",
   phone: "",
+  addressLine: "",
+  city: "",
+  state: "",
+  pincode: "",
   password: "",
   confirmPassword: "",
 };
 
 export default function UserRegisterScreen() {
   const { register } = useAuth();
+  const toast = useToast();
 
   const [form, setForm] = useState<RegisterForm>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<RegisterForm> & { societyId?: string }>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [profileImageUri, setProfileImageUri] = useState<string | null>(null);
+  const [profileImageDataUrl, setProfileImageDataUrl] = useState<string | null>(null);
 
   // Society picker
   const [societies, setSocieties] = useState<Society[]>([]);
@@ -92,6 +106,12 @@ export default function UserRegisterScreen() {
     if (!form.phone.trim()) e.phone = "Phone number is required";
     else if (!/^[6-9]\d{9}$/.test(form.phone))
       e.phone = "Enter a valid 10-digit mobile number";
+    if (!form.addressLine.trim()) e.addressLine = "Address is required";
+    if (!form.city.trim()) e.city = "City is required";
+    if (!form.state.trim()) e.state = "State is required";
+    if (!form.pincode.trim()) e.pincode = "Pincode is required";
+    else if (!/^\d{6}$/.test(form.pincode.trim()))
+      e.pincode = "Enter a valid 6-digit pincode";
     if (!form.password) e.password = "Password is required";
     else if (form.password.length < 8) e.password = "Minimum 8 characters";
     if (!form.confirmPassword) e.confirmPassword = "Please confirm your password";
@@ -117,14 +137,78 @@ export default function UserRegisterScreen() {
         },
         "user"
       );
-      router.replace("/(user)/home");
+
+      try {
+        await userAppService.addAddress({
+          type: "home",
+          name: `${form.firstName.trim()} ${form.lastName.trim()}`,
+          street: form.addressLine.trim(),
+          city: form.city.trim(),
+          state: form.state.trim(),
+          pincode: form.pincode.trim(),
+          phone: form.phone.trim(),
+          isDefault: true,
+        });
+      } catch {
+        toast.show(
+          "Address save failed. You can add it from Profile > Manage Addresses.",
+          { type: "danger" }
+        );
+      }
+
+      if (profileImageUri) {
+        try {
+          if (profileImageDataUrl) {
+            await userAppService.updateProfile({ profileImageUrl: profileImageDataUrl });
+          }
+        } catch {
+          toast.show(
+            "Profile photo upload failed. You can upload it later from Profile.",
+            { type: "danger" }
+          );
+        }
+      }
+
+      router.replace({
+        pathname: "/(user)/verify-phone",
+        params: { fromRegistration: "1" },
+      });
     } catch (err: any) {
-      Alert.alert(
-        "Registration Failed",
-        err?.response?.data?.error || err?.message || "Please try again."
+      toast.show(
+        err?.response?.data?.error || err?.message || "Registration failed. Please try again.",
+        { type: "danger" }
       );
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePickProfileImage = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        toast.show("Please allow photo library access.", { type: "warning" });
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        const selected = result.assets[0];
+        setProfileImageUri(selected.uri);
+        if (selected.base64) {
+          const mimeType = selected.mimeType || "image/jpeg";
+          setProfileImageDataUrl(`data:${mimeType};base64,${selected.base64}`);
+        }
+      }
+    } catch {
+      toast.show("Could not open image picker.", { type: "danger" });
     }
   };
 
@@ -144,8 +228,17 @@ export default function UserRegisterScreen() {
           {/* Header */}
           <View style={styles.headerSection}>
             <View style={styles.iconContainer}>
-              <Text style={styles.headerIcon}>👤</Text>
+              {profileImageUri ? (
+                <Image source={{ uri: profileImageUri }} style={styles.headerImage} />
+              ) : (
+                <Text style={styles.headerIcon}>👤</Text>
+              )}
             </View>
+            <TouchableOpacity style={styles.imagePickerBtn} onPress={handlePickProfileImage}>
+              <Text style={styles.imagePickerBtnText}>
+                {profileImageUri ? "Change Photo" : "Add Profile Photo (Optional)"}
+              </Text>
+            </TouchableOpacity>
             <Text style={styles.title}>Create Account</Text>
             <Text style={styles.subtitle}>
               Join your community and discover local businesses
@@ -248,6 +341,70 @@ export default function UserRegisterScreen() {
             />
             {errors.phone ? (
               <Text style={styles.errorText}>{errors.phone}</Text>
+            ) : null}
+          </View>
+
+          {/* Address */}
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Address *</Text>
+            <TextInput
+              style={[styles.input, errors.addressLine ? styles.inputError : null]}
+              placeholder="Flat/House, Street, Landmark"
+              value={form.addressLine}
+              onChangeText={(v) => setField("addressLine", v)}
+              autoCapitalize="words"
+              autoCorrect={false}
+              placeholderTextColor={colors.textMuted}
+            />
+            {errors.addressLine ? (
+              <Text style={styles.errorText}>{errors.addressLine}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.fieldGroup, styles.halfField]}>
+              <Text style={styles.label}>City *</Text>
+              <TextInput
+                style={[styles.input, errors.city ? styles.inputError : null]}
+                placeholder="e.g. Noida"
+                value={form.city}
+                onChangeText={(v) => setField("city", v)}
+                autoCapitalize="words"
+                autoCorrect={false}
+                placeholderTextColor={colors.textMuted}
+              />
+              {errors.city ? <Text style={styles.errorText}>{errors.city}</Text> : null}
+            </View>
+            <View style={[styles.fieldGroup, styles.halfField]}>
+              <Text style={styles.label}>State *</Text>
+              <TextInput
+                style={[styles.input, errors.state ? styles.inputError : null]}
+                placeholder="e.g. UP"
+                value={form.state}
+                onChangeText={(v) => setField("state", v)}
+                autoCapitalize="words"
+                autoCorrect={false}
+                placeholderTextColor={colors.textMuted}
+              />
+              {errors.state ? (
+                <Text style={styles.errorText}>{errors.state}</Text>
+              ) : null}
+            </View>
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Pincode *</Text>
+            <TextInput
+              style={[styles.input, errors.pincode ? styles.inputError : null]}
+              placeholder="6-digit pincode"
+              value={form.pincode}
+              onChangeText={(v) => setField("pincode", v)}
+              keyboardType="number-pad"
+              maxLength={6}
+              placeholderTextColor={colors.textMuted}
+            />
+            {errors.pincode ? (
+              <Text style={styles.errorText}>{errors.pincode}</Text>
             ) : null}
           </View>
 
@@ -460,6 +617,19 @@ const styles = StyleSheet.create({
   },
   headerIcon: {
     fontSize: 40,
+  },
+  headerImage: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+  },
+  imagePickerBtn: {
+    marginBottom: 12,
+  },
+  imagePickerBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#2563EB",
   },
   title: {
     fontSize: 28,
