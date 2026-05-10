@@ -4,12 +4,15 @@ import * as admin from 'firebase-admin';
 const router = Router();
 const db = admin.firestore();
 
-// Get products
+// Get products — only approved products are returned to users
 router.get('/', async (req, res) => {
   try {
     const { businessId, category, status = 'active' } = req.query;
     
-    let query = db.collection('products').where('status', '==', status);
+    let query: admin.firestore.Query = db
+      .collection('products')
+      .where('approvalStatus', '==', 'approved')
+      .where('status', '==', status);
     
     if (businessId) {
       query = query.where('businessId', '==', businessId);

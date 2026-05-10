@@ -129,10 +129,20 @@ router.post('/products', requireAuth, async (req, res) => {
       });
     }
 
+    // Block product creation if business is not verified
+    if (!(business as any).isVerified) {
+      return res.status(403).json({
+        success: false,
+        error: 'Your business must be verified by an admin before you can add products.',
+      });
+    }
+
     const docRef = await db.collection('products').add({
       ...req.body,
       businessId: (business as any).id,
-      status: req.body.status || 'active',
+      status: 'inactive',          // not live until approved
+      approvalStatus: 'pending',   // requires admin approval
+      approvalNote: null,
       rating: 0,
       totalReviews: 0,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),

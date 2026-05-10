@@ -35,6 +35,18 @@ interface Owner {
 
 interface Society { id: string; name: string; city: string; }
 
+interface BizProduct {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  stock: number;
+  description?: string;
+  status: string;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  approvalNote?: string;
+}
+
 type Step = 'society' | 'details' | 'owner' | 'done';
 
 const emptyDetails = { name: '', category: '', phone: '', address: '', description: '', email: '' };
@@ -78,6 +90,17 @@ export default function BusinessesPage() {
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [suspending, setSuspending] = useState(false);
 
+  // Products for the open business
+  const [bizProducts, setBizProducts] = useState<BizProduct[]>([]);
+  const [bizProductsLoading, setBizProductsLoading] = useState(false);
+  const [bizProductsTab, setBizProductsTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
+  const [rejectingProductId, setRejectingProductId] = useState<string | null>(null);
+  const [rejectNote, setRejectNote] = useState('');
+  const [productActionLoading, setProductActionLoading] = useState<string | null>(null);
+
+  // Per-business product counts (for badges & summary bar)
+  const [productCounts, setProductCounts] = useState<Record<string, { pending: number; rejected: number }>>({});
+
   // Create modal state
   const [showModal, setShowModal] = useState(false);
   const [step, setStep] = useState<Step>('society');
@@ -99,6 +122,28 @@ export default function BusinessesPage() {
     if (bizRes.success) setBusinesses(bizRes.data || []); else setError(bizRes.error || 'Failed to load');
     if (socRes.success) setSocieties(socRes.data || []);
     setLoading(false);
+    loadProductCounts();
+  };
+
+  const loadProductCounts = async () => {
+    const [pendingRes, rejectedRes] = await Promise.all([
+      api.get('/admin/products?approvalStatus=pending&limit=500'),
+      api.get('/admin/products?approvalStatus=rejected&limit=500'),
+    ]);
+    const counts: Record<string, { pending: number; rejected: number }> = {};
+    if (pendingRes.success) {
+      (pendingRes.data || []).forEach((p: any) => {
+        if (!counts[p.businessId]) counts[p.businessId] = { pending: 0, rejected: 0 };
+        counts[p.businessId].pending++;
+      });
+    }
+    if (rejectedRes.success) {
+      (rejectedRes.data || []).forEach((p: any) => {
+        if (!counts[p.businessId]) counts[p.businessId] = { pending: 0, rejected: 0 };
+        counts[p.businessId].rejected++;
+      });
+    }
+    setProductCounts(counts);
   };
 
   const loadBusinesses = async () => {
@@ -107,6 +152,36 @@ export default function BusinessesPage() {
     const res = await api.get(endpoint);
     if (res.success) setBusinesses(res.data || []); else setError(res.error || 'Failed to load');
     setLoading(false);
+  };
+
+  const loadBizProducts = async (bizId: string) => {
+    setBizProductsLoading(true);
+    const res = await api.get(`/admin/products?businessId=${bizId}`);
+    if (res.success) setBizProducts(res.data || []);
+    setBizProductsLoading(false);
+  };
+
+  const handleProductApprove = async (productId: string) => {
+    setProductActionLoading(productId);
+    const res = await api.post(`/admin/products/${productId}/approve`, {});
+    if (res.success) {
+      setBizProducts((prev) => prev.map((p) => p.id === productId ? { ...p, approvalStatus: 'approved', status: 'active', approvalNote: undefined } : p));
+      loadProductCounts();
+    }
+    setProductActionLoading(null);
+  };
+
+  const handleProductReject = async () => {
+    if (!rejectingProductId) return;
+    setProductActionLoading(rejectingProductId);
+    const res = await api.post(`/admin/products/${rejectingProductId}/reject`, { note: rejectNote });
+    if (res.success) {
+      setBizProducts((prev) => prev.map((p) => p.id === rejectingProductId ? { ...p, approvalStatus: 'rejected', status: 'inactive', approvalNote: rejectNote || undefined } : p));
+      loadProductCounts();
+    }
+    setProductActionLoading(null);
+    setRejectingProductId(null);
+    setRejectNote('');
   };
 
   const openDrawer = async (biz: Business) => {
@@ -121,6 +196,11 @@ export default function BusinessesPage() {
     setEditForm({ name: biz.name, category: biz.category, phone: biz.phone, email: biz.email || '', address: biz.address, description: biz.description || '' });
     setEditError('');
     setSuspending(false);
+    setBizProducts([]);
+    setBizProductsTab('pending');
+    setRejectingProductId(null);
+    setRejectNote('');
+    loadBizProducts(biz.id);
     if (biz.ownerId) {
       setOwnerLoading(true);
       const res = await api.get(`/users/${biz.ownerId}`);
@@ -129,7 +209,7 @@ export default function BusinessesPage() {
     }
   };
 
-  const closeDrawer = () => { setDrawerOpen(false); setSelectedBiz(null); setOwnerData(null); setShowDrawerOwnerForm(false); setDrawerOwnerResult(null); setEditMode(false); setEditError(''); setSuspending(false); };
+  const closeDrawer = () => { setDrawerOpen(false); setSelectedBiz(null); setOwnerData(null); setShowDrawerOwnerForm(false); setDrawerOwnerResult(null); setEditMode(false); setEditError(''); setSuspending(false); setBizProducts([]); setRejectingProductId(null); };
 
   const handleDrawerCreateOwner = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -310,6 +390,22 @@ export default function BusinessesPage() {
         </div>
       </div>
 
+      {/* Product approval summary bar */}
+      {!loading && (() => {
+        const totalPending = Object.values(productCounts).reduce((sum, c) => sum + c.pending, 0);
+        const bizWithPending = Object.values(productCounts).filter((c) => c.pending > 0).length;
+        if (totalPending === 0) return null;
+        return (
+          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-5 py-3 flex items-center gap-3">
+            <span className="text-lg shrink-0">⏳</span>
+            <p className="text-sm font-semibold text-amber-900">
+              {totalPending} product{totalPending !== 1 ? 's' : ''} awaiting approval
+              {bizWithPending > 1 && ` across ${bizWithPending} businesses`}
+            </p>
+          </div>
+        );
+      })()}
+
       {/* No-society banner */}
       {!loading && !hasSocieties && (
         <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
@@ -375,6 +471,48 @@ export default function BusinessesPage() {
               </div>
               <p className="text-xs text-gray-400 line-clamp-1">{biz.address}</p>
               {society && <p className="text-xs text-indigo-500 font-medium">🏘️ {society.name}</p>}
+              {/* Product notification row — always visible */}
+              {(() => {
+                const counts = productCounts[biz.id];
+                const hasPending = counts && counts.pending > 0;
+                const hasRejected = counts && counts.rejected > 0;
+                const hasAlert = hasPending || hasRejected;
+                return (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const tab = hasPending ? 'pending' : hasRejected ? 'rejected' : 'approved';
+                      router.push(`/dashboard/products?businessId=${biz.id}&businessName=${encodeURIComponent(biz.name)}&societyId=${biz.societyId || ''}&tab=${tab}`);
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition ${
+                      hasPending
+                        ? 'bg-amber-50 border-amber-200 hover:bg-amber-100'
+                        : hasRejected
+                        ? 'bg-red-50 border-red-200 hover:bg-red-100'
+                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="text-sm relative shrink-0">
+                      📦
+                      {hasAlert && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 border border-white" />
+                      )}
+                    </span>
+                    <span className={`flex-1 text-[11px] font-semibold ${
+                      hasPending ? 'text-amber-800' : hasRejected ? 'text-red-700' : 'text-gray-500'
+                    }`}>
+                      {hasPending
+                        ? `${counts.pending} product${counts.pending !== 1 ? 's' : ''} need${counts.pending === 1 ? 's' : ''} approval`
+                        : hasRejected
+                        ? `${counts.rejected} product${counts.rejected !== 1 ? 's' : ''} rejected`
+                        : 'View products'}
+                    </span>
+                    <span className={`text-[10px] font-bold shrink-0 ${
+                      hasPending ? 'text-amber-600' : hasRejected ? 'text-red-500' : 'text-gray-400'
+                    }`}>→</span>
+                  </button>
+                );
+              })()}
               <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                 <div className="flex items-center gap-1 text-xs text-gray-500">
                   <span>⭐</span>
@@ -613,6 +751,51 @@ export default function BusinessesPage() {
                   </dl>
                 ) : (
                   <p className="text-sm text-red-500">Could not load owner details.</p>
+                )}
+              </section>
+
+              {/* ── Products Section ── */}
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Products</h3>
+                  <button
+                    onClick={() => router.push(`/dashboard/products?businessId=${selectedBiz.id}&businessName=${encodeURIComponent(selectedBiz.name)}&societyId=${selectedBiz.societyId || ''}`)}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-lg transition"
+                  >
+                    Manage Products →
+                  </button>
+                </div>
+                {bizProductsLoading ? (
+                  <div className="flex items-center gap-2 py-3 text-sm text-gray-400">
+                    <div className="animate-spin h-4 w-4 rounded-full border-2 border-indigo-400 border-t-transparent" />
+                    Loading…
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['pending', 'approved', 'rejected'] as const).map((tab) => {
+                      const count = bizProducts.filter((p) => p.approvalStatus === tab).length;
+                      return (
+                        <button
+                          key={tab}
+                          onClick={() => router.push(`/dashboard/products?businessId=${selectedBiz.id}&businessName=${encodeURIComponent(selectedBiz.name)}&societyId=${selectedBiz.societyId || ''}&tab=${tab}`)}
+                          className={`flex flex-col items-center py-3 rounded-xl border transition hover:shadow-sm ${
+                            tab === 'pending' ? 'border-amber-200 bg-amber-50 hover:bg-amber-100' :
+                            tab === 'approved' ? 'border-green-200 bg-green-50 hover:bg-green-100' :
+                            'border-red-200 bg-red-50 hover:bg-red-100'
+                          }`}
+                        >
+                          <span className={`text-lg font-bold ${
+                            tab === 'pending' ? 'text-amber-700' :
+                            tab === 'approved' ? 'text-green-700' : 'text-red-700'
+                          }`}>{count}</span>
+                          <span className={`text-[10px] font-semibold capitalize ${
+                            tab === 'pending' ? 'text-amber-600' :
+                            tab === 'approved' ? 'text-green-600' : 'text-red-600'
+                          }`}>{tab}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 )}
               </section>
               </>

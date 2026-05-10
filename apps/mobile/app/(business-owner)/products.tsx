@@ -127,53 +127,89 @@ export default function BusinessOwnerProducts() {
     }
   };
 
-  const renderItem = ({ item }: { item: Product }) => (
-    <View style={styles.card}>
-      {/* Daily availability toggle */}
-      <TouchableOpacity
-        style={[styles.availBanner, item.availableToday ? styles.availOn : styles.availOff]}
-        onPress={() => toggleAvailableToday(item)}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.availIcon}>{item.availableToday ? "\u2705" : "\u23f8\ufe0f"}</Text>
-        <View style={styles.availInfo}>
-          <Text style={[styles.availLabel, { color: item.availableToday ? "#16A34A" : "#64748B" }]}>
-            {item.availableToday ? "Available Today" : "Unavailable Today"}
-          </Text>
-          <Text style={styles.availHint}>Tap to toggle for today</Text>
-        </View>
-        <View style={[styles.availPill, { backgroundColor: item.availableToday ? "#22C55E" : "#CBD5E1" }]}>
-          <Text style={styles.availPillText}>{item.availableToday ? "ON" : "OFF"}</Text>
-        </View>
-      </TouchableOpacity>
+  const renderItem = ({ item }: { item: Product }) => {
+    const approval = item.approvalStatus ?? "pending";
+    const isApproved = approval === "approved";
 
-      <View style={styles.cardTop}>
-        <View style={styles.cardLeft}>
-          <Text style={styles.productName}>{item.name}</Text>
-          <Text style={styles.productMeta}>{item.category}</Text>
-          <Text style={styles.productMeta}>Stock: {item.stock}</Text>
-        </View>
-        <Text style={styles.productPrice}>Rs {item.price}</Text>
-      </View>
+    const approvalBg =
+      approval === "approved" ? "#DCFCE7" :
+      approval === "rejected" ? "#FEE2E2" : "#FEF9C3";
+    const approvalColor =
+      approval === "approved" ? "#16A34A" :
+      approval === "rejected" ? "#DC2626" : "#B45309";
+    const approvalIcon =
+      approval === "approved" ? "✓" :
+      approval === "rejected" ? "✗" : "⏳";
+    const approvalLabel =
+      approval === "approved" ? "Admin Approved" :
+      approval === "rejected" ? "Rejected by Admin" : "Pending Admin Approval";
 
-      <View style={styles.actionsRow}>
-        <TouchableOpacity
-          style={[styles.actionBtn, styles.statusBtn]}
-          onPress={() => toggleStatus(item)}
-        >
-          <Text style={styles.statusBtnText}>
-            {item.status === "active" ? "Set Inactive" : "Set Active"}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionBtn, styles.deleteBtn]}
-          onPress={() => handleDelete(item.id, item.name)}
-        >
-          <Text style={styles.deleteBtnText}>Delete</Text>
-        </TouchableOpacity>
+    return (
+      <View style={styles.card}>
+        {/* Admin approval status banner */}
+        <View style={[styles.approvalBanner, { backgroundColor: approvalBg }]}>
+          <Text style={[styles.approvalIcon, { color: approvalColor }]}>{approvalIcon}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.approvalLabel, { color: approvalColor }]}>{approvalLabel}</Text>
+            {approval === "rejected" && item.approvalNote ? (
+              <Text style={styles.approvalNote}>Reason: {item.approvalNote}</Text>
+            ) : null}
+            {approval === "pending" ? (
+              <Text style={styles.approvalNote}>Waiting for admin review before going live</Text>
+            ) : null}
+          </View>
+        </View>
+
+        {/* Daily availability toggle (only for approved products) */}
+        {isApproved ? (
+          <TouchableOpacity
+            style={[styles.availBanner, item.availableToday ? styles.availOn : styles.availOff]}
+            onPress={() => toggleAvailableToday(item)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.availIcon}>{item.availableToday ? "\u2705" : "\u23f8\ufe0f"}</Text>
+            <View style={styles.availInfo}>
+              <Text style={[styles.availLabel, { color: item.availableToday ? "#16A34A" : "#64748B" }]}>
+                {item.availableToday ? "Available Today" : "Unavailable Today"}
+              </Text>
+              <Text style={styles.availHint}>Tap to toggle for today</Text>
+            </View>
+            <View style={[styles.availPill, { backgroundColor: item.availableToday ? "#22C55E" : "#CBD5E1" }]}>
+              <Text style={styles.availPillText}>{item.availableToday ? "ON" : "OFF"}</Text>
+            </View>
+          </TouchableOpacity>
+        ) : null}
+
+        <View style={styles.cardTop}>
+          <View style={styles.cardLeft}>
+            <Text style={styles.productName}>{item.name}</Text>
+            <Text style={styles.productMeta}>{item.category}</Text>
+            <Text style={styles.productMeta}>Stock: {item.stock}</Text>
+          </View>
+          <Text style={styles.productPrice}>Rs {item.price}</Text>
+        </View>
+
+        <View style={styles.actionsRow}>
+          {isApproved ? (
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.statusBtn]}
+              onPress={() => toggleStatus(item)}
+            >
+              <Text style={styles.statusBtnText}>
+                {item.status === "active" ? "Set Inactive" : "Set Active"}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.deleteBtn]}
+            onPress={() => handleDelete(item.id, item.name)}
+          >
+            <Text style={styles.deleteBtnText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -398,6 +434,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
+  // Admin approval banner
+  approvalBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  approvalIcon: { fontSize: 14, fontWeight: "800", marginTop: 1 },
+  approvalLabel: { fontSize: 12, fontWeight: "700" },
+  approvalNote: { fontSize: 10, color: "#64748B", marginTop: 2 },
   // Daily availability banner
   availBanner: {
     flexDirection: "row",

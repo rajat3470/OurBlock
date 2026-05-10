@@ -190,6 +190,80 @@ router.post('/business-owners', async (req, res) => {
   }
 });
 
+// ─── Products — admin approval queue ─────────────────────────────────────────
+
+// GET /admin/products?approvalStatus=pending|approved|rejected&businessId=...
+router.get('/products', async (req, res) => {
+  try {
+    const { approvalStatus, businessId, page = 1, limit = 50 } = req.query;
+
+    let query: admin.firestore.Query = db.collection('products');
+
+    if (approvalStatus) {
+      query = query.where('approvalStatus', '==', approvalStatus);
+    }
+
+    if (businessId) {
+      query = query.where('businessId', '==', businessId);
+    }
+
+    const snapshot = await query
+      .orderBy('createdAt', 'desc')
+      .limit(Number(limit))
+      .offset((Number(page) - 1) * Number(limit))
+      .get();
+
+    // Enrich each product with its business name
+    const businessIds = [...new Set(snapshot.docs.map((d) => d.data().businessId as string).filter(Boolean))];
+    const businessDocs = await Promise.all(businessIds.map((id) => db.collection('businesses').doc(id).get()));
+    const businessMap: Record<string, string> = {};
+    businessDocs.forEach((d) => { if (d.exists) businessMap[d.id] = (d.data() as any).name; });
+
+    const data = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      businessName: businessMap[doc.data().businessId] ?? null,
+    }));
+
+    res.json({ success: true, data, pagination: { page: Number(page), limit: Number(limit), total: data.length } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /admin/products/:id/approve
+router.post('/products/:id/approve', async (req, res) => {
+  try {
+    await db.collection('products').doc(req.params.id).update({
+      approvalStatus: 'approved',
+      approvalNote: null,
+      status: 'active',
+      approvedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    const doc = await db.collection('products').doc(req.params.id).get();
+    res.json({ success: true, data: { id: doc.id, ...doc.data() } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /admin/products/:id/reject
+router.post('/products/:id/reject', async (req, res) => {
+  try {
+    await db.collection('products').doc(req.params.id).update({
+      approvalStatus: 'rejected',
+      approvalNote: req.body.note ?? null,
+      status: 'inactive',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    const doc = await db.collection('products').doc(req.params.id).get();
+    res.json({ success: true, data: { id: doc.id, ...doc.data() } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ─── Verify / Reject business shortcuts ──────────────────────────────────────
 
 router.post('/businesses/:id/verify', async (req, res) => {
