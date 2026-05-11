@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -12,12 +12,13 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useAuth } from "@hooks/useAuth";
 import { useAppSelector } from "@hooks/useRedux";
 import { validateEmail } from "@utils/helpers";
 import { UserRole } from "@/types";
-import { colors, spacing, radius, typography } from "../constants/theme";
+import { colors, spacing, radius, typography, gradients, roleTheme } from "../constants/theme";
 
 interface RoleLoginFormProps {
   role: UserRole;
@@ -45,6 +46,13 @@ export default function RoleLoginForm({
 
   const { login } = useAuth();
   const { isLoading } = useAppSelector((state) => state.auth);
+  const roleStyle = roleTheme[role];
+  const ctaGradient =
+    role === "superAdmin"
+      ? gradients.ctaBlue
+      : role === "businessOwner"
+      ? gradients.ctaGreen
+      : gradients.ctaAmber;
 
   const validate = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
@@ -78,25 +86,26 @@ export default function RoleLoginForm({
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+    <LinearGradient colors={[...gradients.appBackground]} style={styles.container}>
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <View style={styles.header}>
-            <View style={styles.iconContainer}>
-              <Text style={styles.headerIcon}>{icon}</Text>
-            </View>
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.subtitle}>{subtitle}</Text>
-          </View>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <LinearGradient colors={[...roleStyle.gradient]} style={styles.header}>
+              <View style={styles.iconContainer}>
+                <Text style={styles.headerIcon}>{icon}</Text>
+              </View>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>{subtitle}</Text>
+            </LinearGradient>
 
-          <View style={styles.form}>
+            <View style={styles.form}>
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Email Address</Text>
               <TextInput
@@ -158,16 +167,24 @@ export default function RoleLoginForm({
               disabled={isLoading}
               activeOpacity={0.85}
             >
-              {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.loginBtnText}>Sign In</Text>
-              )}
+              <LinearGradient
+                colors={[...ctaGradient]}
+                style={styles.loginBtnGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.loginBtnText}>Sign In</Text>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
@@ -175,7 +192,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   scrollContent: {
     paddingHorizontal: spacing.xxl,
@@ -183,18 +199,27 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    paddingVertical: 36,
+    paddingVertical: 30,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.xl,
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 14,
+    elevation: 8,
   },
   iconContainer: {
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: colors.blue[100],
+    backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 18,
-    borderWidth: 2,
-    borderColor: colors.blue[300],
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.45)",
   },
   headerIcon: {
     fontSize: 40,
@@ -202,14 +227,21 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: colors.textPrimary,
+    color: "#FFFFFF",
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 15,
-    color: colors.textSecondary,
+    color: "rgba(255,255,255,0.86)",
+    textAlign: "center",
   },
-  form: {},
+  form: {
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.25)",
+    padding: spacing.lg,
+  },
   fieldGroup: {
     marginBottom: 20,
   },
@@ -264,21 +296,24 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   loginBtn: {
-    backgroundColor: colors.blue[500],
     borderRadius: radius.lg,
-    paddingVertical: 17,
-    alignItems: "center",
     marginTop: 10,
-    shadowColor: colors.blue[500],
+    shadowColor: "#1D4ED8",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+    overflow: "hidden",
+  },
+  loginBtnGradient: {
+    paddingVertical: 17,
+    alignItems: "center",
+    borderRadius: radius.lg,
   },
   loginBtnDisabled: {
-    backgroundColor: colors.blue[300],
     shadowOpacity: 0,
     elevation: 0,
+    opacity: 0.7,
   },
   loginBtnText: {
     color: colors.surface,

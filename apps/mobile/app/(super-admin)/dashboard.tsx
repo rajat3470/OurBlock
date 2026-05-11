@@ -3,14 +3,14 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   RefreshControl,
   ActivityIndicator,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { useSuperAdmin } from "../../src/hooks/useSuperAdmin";
-import AppSectionHeader from "../../src/components/AppSectionHeader";
 
 interface StatCardProps {
   emoji: string;
@@ -34,6 +34,7 @@ export default function SuperAdminDashboard() {
   const { user } = useAppSelector((state) => state.auth);
   const { stats, recentSocieties, loadStats, isLoading } = useSuperAdmin();
   const [refreshing, setRefreshing] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     loadStats();
@@ -77,22 +78,27 @@ export default function SuperAdminDashboard() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#007AFF"
+            tintColor="#2563EB"
           />
         }
       >
-        <AppSectionHeader
-          title={`${user?.firstName || "Admin"} 👋`}
-          subtitle="Good day"
-          badge="Super Admin"
-        />
+        <LinearGradient
+          colors={["#2563EB", "#4F46E5"]}
+          style={[styles.hero, { paddingTop: insets.top + 20 }]}
+        >
+          <Text style={styles.heroGreeting}>Good day 👋</Text>
+          <Text style={styles.heroName}>{user?.firstName || "Admin"}</Text>
+          <View style={styles.heroBadge}>
+            <Text style={styles.heroBadgeText}>Super Admin</Text>
+          </View>
+        </LinearGradient>
 
         {/* Stats */}
         <Text style={styles.sectionTitle}>Overview</Text>
@@ -155,15 +161,51 @@ export default function SuperAdminDashboard() {
 
         <View style={styles.bottomPad} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F7F8FA",
   },
+
+  // Hero
+  hero: {
+    paddingHorizontal: 24,
+    paddingBottom: 28,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+  heroGreeting: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "rgba(255,255,255,0.7)",
+    marginBottom: 4,
+  },
+  heroName: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: -0.5,
+    marginBottom: 10,
+  },
+  heroBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+  },
+  heroBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
@@ -186,6 +228,8 @@ const styles = StyleSheet.create({
     width: "46%",
     borderRadius: 18,
     padding: 18,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.18)",
   },
   statEmoji: {
     fontSize: 30,
@@ -281,6 +325,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   bottomPad: {
-    height: 24,
+    height: 130,
   },
 });

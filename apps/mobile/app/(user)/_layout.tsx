@@ -1,7 +1,6 @@
 import { Tabs } from "expo-router";
 import RoleGate from "../../src/components/RoleGate";
-import AppTabIcon from "../../src/components/AppTabIcon";
-import { colors } from "../../src/constants/theme";
+import UserTabIcon from "../../src/components/UserTabIcon";
 import { useOrderNotifications } from "../../src/hooks/useOrderNotifications";
 
 export default function UserLayout() {
@@ -11,14 +10,23 @@ export default function UserLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: colors.amber[600],
-          tabBarInactiveTintColor: colors.textMuted,
+          tabBarActiveTintColor: "#DC2626",
+          tabBarInactiveTintColor: "#9CA3AF",
           tabBarStyle: {
-            backgroundColor: colors.surface,
-            borderTopColor: colors.border,
-            height: 82,
-            paddingBottom: 18,
+            backgroundColor: "#FFFFFF",
+            borderTopWidth: 0,
+            height: 76,
+            paddingBottom: 14,
             paddingTop: 8,
+            marginHorizontal: 16,
+            marginBottom: 28,
+            borderRadius: 24,
+            position: "absolute",
+            shadowColor: "#1F2937",
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.18,
+            shadowRadius: 24,
+            elevation: 16,
           },
           tabBarLabelStyle: {
             fontSize: 11,
@@ -31,7 +39,7 @@ export default function UserLayout() {
           options={{
             title: "Home",
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="🏠" focused={focused} role="user" />
+              <UserTabIcon iconName="home-outline" focused={focused} />
             ),
           }}
         />
@@ -40,7 +48,7 @@ export default function UserLayout() {
           options={{
             title: "Shops",
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="🏪" focused={focused} role="user" />
+              <UserTabIcon iconName="storefront-outline" focused={focused} />
             ),
           }}
         />
@@ -49,7 +57,7 @@ export default function UserLayout() {
           options={{
             title: "Orders",
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="🛍️" focused={focused} role="user" />
+              <UserTabIcon iconName="receipt-outline" focused={focused} />
             ),
           }}
         />
@@ -58,7 +66,7 @@ export default function UserLayout() {
           options={{
             title: "Profile",
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="👤" focused={focused} role="user" />
+              <UserTabIcon iconName="person-outline" focused={focused} />
             ),
           }}
         />

@@ -3,14 +3,15 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import AppSectionHeader from "../../src/components/AppSectionHeader";
 import { useUserApp } from "../../src/hooks/useUserApp";
 import { Order, OrderStatus } from "../../src/types";
 
@@ -57,6 +58,7 @@ function getStatusStyle(status: string) {
 }
 
 export default function UserOrders() {
+  const insets = useSafeAreaInsets();
   const { orders, isLoading, loadMyOrders, cancelOrder } = useUserApp();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
 
@@ -166,8 +168,11 @@ export default function UserOrders() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <AppSectionHeader title="My Orders" subtitle="Track your purchases" />
+    <View style={styles.container}>
+      <LinearGradient colors={["#DC2626", "#991B1B"]} style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <Text style={styles.headerTitle}>My Orders</Text>
+        <Text style={styles.headerSub}>Track your purchases</Text>
+      </LinearGradient>
 
       <View style={styles.filterRow}>
         {FILTERS.map((filter) => (
@@ -193,7 +198,7 @@ export default function UserOrders() {
 
       {isLoading && orders.length === 0 ? (
         <View style={styles.loaderWrap}>
-          <ActivityIndicator size="large" color="#D97706" />
+          <ActivityIndicator size="large" color="#DC2626" />
         </View>
       ) : (
         <FlatList
@@ -205,7 +210,9 @@ export default function UserOrders() {
           refreshing={isLoading}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Text style={styles.emptyEmoji}>🛒</Text>
+              <View style={styles.emptyIconWrap}>
+                <Ionicons name="receipt-outline" size={40} color="#FFFFFF" />
+              </View>
               <Text style={styles.emptyTitle}>No orders yet</Text>
               <Text style={styles.emptySubtitle}>
                 Your placed orders will appear here.
@@ -220,12 +227,29 @@ export default function UserOrders() {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: "#F7F8FA" },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
+  headerTitle: {
+    fontSize: 30,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: -0.5,
+  },
+  headerSub: {
+    marginTop: 4,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.82)",
+    fontWeight: "500",
+  },
   filterRow: {
     flexDirection: "row",
     gap: 8,
@@ -234,18 +258,25 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   filterBtn: {
-    backgroundColor: "#F1F5F9",
+    backgroundColor: "#FFFFFF",
     borderRadius: 999,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  filterBtnActive: { backgroundColor: "#D97706" },
-  filterLabel: { fontSize: 12, fontWeight: "700", color: "#64748B" },
+  filterBtnActive: { backgroundColor: "#DC2626", borderColor: "#DC2626" },
+  filterLabel: { fontSize: 12, fontWeight: "700", color: "#6B7280" },
   filterLabelActive: { color: "#FFFFFF" },
   loaderWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
-  listContent: { paddingHorizontal: 16, paddingBottom: 20 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 130 },
   card: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255,255,255,0.96)",
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
@@ -264,7 +295,7 @@ const styles = StyleSheet.create({
   orderId: { fontSize: 14, fontWeight: "800", color: "#111827" },
   businessName: { fontSize: 12, color: "#6B7280", fontWeight: "600", marginTop: 2 },
   rightCol: { alignItems: "flex-end" },
-  amount: { fontSize: 16, fontWeight: "800", color: "#D97706" },
+  amount: { fontSize: 16, fontWeight: "800", color: "#DC2626" },
   orderMeta: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
   itemRow: {
     flexDirection: "row",
@@ -318,12 +349,19 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: { fontSize: 11, fontWeight: "700", color: "#991B1B" },
   emptyWrap: { alignItems: "center", paddingVertical: 50, gap: 8 },
-  emptyEmoji: { fontSize: 48, marginBottom: 8 },
+  emptyIconWrap: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#DC2626",
+  },
   emptyTitle: { fontSize: 18, fontWeight: "700", color: "#334155" },
   emptySubtitle: { fontSize: 13, color: "#94A3B8", textAlign: "center" },
   browseBtn: {
     marginTop: 8,
-    backgroundColor: "#D97706",
+    backgroundColor: "#DC2626",
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 10,

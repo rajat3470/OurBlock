@@ -13,6 +13,8 @@ import {
   View,
 } from "react-native";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HomeBanner } from "../../src/types";
 import { superAdminService } from "../../src/services/superAdminService";
 
@@ -48,6 +50,7 @@ export default function SuperAdminBannersScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<BannerDraft>(EMPTY_DRAFT);
+  const insets = useSafeAreaInsets();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -156,13 +159,18 @@ export default function SuperAdminBannersScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Home Banners</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
-          <Text style={styles.addBtnText}>+ Add</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={["#2563EB", "#4F46E5"]}
+        style={[styles.header, { paddingTop: insets.top + 16 }]}
+      >
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>Home Banners</Text>
+          <TouchableOpacity style={styles.addBtn} onPress={openCreate}>
+            <Text style={styles.addBtnText}>+ Add</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
       <View style={styles.searchWrap}>
         <TextInput
@@ -289,7 +297,7 @@ export default function SuperAdminBannersScreen() {
           />
         </SafeAreaView>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -298,19 +306,18 @@ function Label({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: "#F7F8FA" },
   header: {
+    paddingHorizontal: 18,
+    paddingBottom: 18,
+  },
+  headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
   },
-  title: { fontSize: 22, fontWeight: "800", color: "#0F172A" },
-  addBtn: { backgroundColor: "#2563EB", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10 },
+  title: { fontSize: 26, fontWeight: "800", color: "#FFFFFF", letterSpacing: -0.5 },
+  addBtn: { backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" },
   addBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 13 },
   searchWrap: { padding: 14 },
   searchInput: {
@@ -323,7 +330,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#0F172A",
   },
-  listContent: { paddingHorizontal: 14, paddingBottom: 30, gap: 12 },
+  listContent: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 130, gap: 12 },
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 14,

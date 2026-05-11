@@ -1,7 +1,6 @@
 import { Tabs } from "expo-router";
 import RoleGate from "../../src/components/RoleGate";
 import AppTabIcon from "../../src/components/AppTabIcon";
-import { colors } from "../../src/constants/theme";
 
 export default function SuperAdminLayout() {
   return (
@@ -9,14 +8,23 @@ export default function SuperAdminLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: colors.blue[500],
-          tabBarInactiveTintColor: colors.textMuted,
+          tabBarActiveTintColor: "#2563EB",
+          tabBarInactiveTintColor: "#9CA3AF",
           tabBarStyle: {
-            backgroundColor: colors.surface,
-            borderTopColor: colors.border,
-            height: 82,
-            paddingBottom: 18,
+            backgroundColor: "#FFFFFF",
+            borderTopWidth: 0,
+            height: 76,
+            paddingBottom: 14,
             paddingTop: 8,
+            marginHorizontal: 16,
+            marginBottom: 28,
+            borderRadius: 24,
+            position: "absolute",
+            shadowColor: "#1F2937",
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.18,
+            shadowRadius: 24,
+            elevation: 16,
           },
           tabBarLabelStyle: {
             fontSize: 11,
@@ -29,7 +37,7 @@ export default function SuperAdminLayout() {
           options={{
             title: "Dashboard",
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="📊" focused={focused} role="superAdmin" />
+              <AppTabIcon iconName="grid-outline" focused={focused} role="superAdmin" />
             ),
           }}
         />
@@ -38,7 +46,7 @@ export default function SuperAdminLayout() {
           options={{
             title: "Societies",
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="🏘️" focused={focused} role="superAdmin" />
+              <AppTabIcon iconName="business-outline" focused={focused} role="superAdmin" />
             ),
           }}
         />
@@ -47,7 +55,7 @@ export default function SuperAdminLayout() {
           options={{
             title: "Businesses",
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="🏪" focused={focused} role="superAdmin" />
+              <AppTabIcon iconName="storefront-outline" focused={focused} role="superAdmin" />
             ),
           }}
         />
@@ -56,7 +64,7 @@ export default function SuperAdminLayout() {
           options={{
             title: "Users",
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="👥" focused={focused} role="superAdmin" />
+              <AppTabIcon iconName="people-outline" focused={focused} role="superAdmin" />
             ),
           }}
         />
@@ -65,7 +73,7 @@ export default function SuperAdminLayout() {
           options={{
             title: "Banners",
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="🖼️" focused={focused} role="superAdmin" />
+              <AppTabIcon iconName="image-outline" focused={focused} role="superAdmin" />
             ),
           }}
         />
@@ -74,7 +82,7 @@ export default function SuperAdminLayout() {
           options={{
             title: "Profile",
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="⚙️" focused={focused} role="superAdmin" />
+              <AppTabIcon iconName="settings-outline" focused={focused} role="superAdmin" />
             ),
           }}
         />

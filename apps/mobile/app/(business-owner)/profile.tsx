@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   Alert,
   TextInput,
@@ -12,8 +11,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import AppSectionHeader from "../../src/components/AppSectionHeader";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { useAuth } from "../../src/hooks/useAuth";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
@@ -102,31 +102,30 @@ export default function BusinessOwnerProfile() {
   const verificationLabel =
     businessProfile?.isVerified ? "✓ Verified Business" : "⏳ Pending Verification";
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView showsVerticalScrollIndicator={false}>
-          <AppSectionHeader
-            title="Profile & Settings"
-            subtitle="Account & business details"
-          />
-
-          {/* ── Owner identity card ─────────────────────────────────────── */}
-          <View style={styles.identityCard}>
+          <LinearGradient
+            colors={["#16A34A", "#0A7D55"]}
+            style={[styles.hero, { paddingTop: insets.top + 28 }]}
+          >
             <View style={styles.avatarBox}>
               <Text style={styles.avatarEmoji}>🏪</Text>
             </View>
-            <Text style={styles.name}>
+            <Text style={styles.heroName}>
               {user?.firstName} {user?.lastName}
             </Text>
-            <Text style={styles.email}>{user?.email}</Text>
+            <Text style={styles.heroEmail}>{user?.email}</Text>
             {user?.phone ? (
-              <Text style={styles.phone}>📞 {user.phone}</Text>
+              <Text style={styles.heroPhone}>{user.phone}</Text>
             ) : null}
-          </View>
+          </LinearGradient>
 
           {/* ── Business Details card ───────────────────────────────────── */}
           {businessProfile ? (
@@ -235,7 +234,7 @@ export default function BusinessOwnerProfile() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -243,55 +242,49 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F7F8FA",
   },
 
-  // Identity card
-  identityCard: {
+  // Hero
+  hero: {
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    marginHorizontal: 16,
-    marginTop: 4,
-    marginBottom: 14,
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
   },
   avatarBox: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "#EFF6FF",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.4)",
   },
-  avatarEmoji: { fontSize: 34 },
-  name: {
+  avatarEmoji: { fontSize: 36 },
+  heroName: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#0F172A",
+    color: "#FFFFFF",
   },
-  email: {
-    marginTop: 4,
-    fontSize: 14,
-    color: "#64748B",
-  },
-  phone: {
+  heroEmail: {
     marginTop: 4,
     fontSize: 13,
-    color: "#64748B",
+    color: "rgba(255,255,255,0.8)",
+  },
+  heroPhone: {
+    marginTop: 2,
+    fontSize: 13,
+    color: "rgba(255,255,255,0.7)",
   },
 
   // Generic section card
   section: {
     backgroundColor: "#FFFFFF",
     marginHorizontal: 16,
-    marginBottom: 14,
+    marginTop: 16,
+    marginBottom: 0,
     borderRadius: 16,
     overflow: "hidden",
     shadowColor: "#000",
@@ -430,7 +423,8 @@ const styles = StyleSheet.create({
 
   footer: {
     paddingHorizontal: 16,
-    paddingBottom: 40,
+    paddingTop: 24,
+    paddingBottom: 130,
   },
   logoutBtn: {
     backgroundColor: "#FEE2E2",

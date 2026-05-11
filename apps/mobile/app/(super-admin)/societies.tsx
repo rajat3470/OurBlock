@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   FlatList,
   TouchableOpacity,
   TextInput,
@@ -11,6 +10,8 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Society } from "../../src/types/index";
 import { useSuperAdmin } from "../../src/hooks/useSuperAdmin";
@@ -20,6 +21,7 @@ export default function SocietiesScreen() {
     useSuperAdmin();
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     loadSocieties();
@@ -130,23 +132,28 @@ export default function SocietiesScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Societies</Text>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() =>
-            router.push({
-              pathname: "/(super-admin)/create-society",
-              params: { mode: "create" },
-            })
-          }
-          activeOpacity={0.8}
-        >
-          <Text style={styles.addBtnText}>+ Add</Text>
-        </TouchableOpacity>
-      </View>
+      <LinearGradient
+        colors={["#2563EB", "#4F46E5"]}
+        style={[styles.header, { paddingTop: insets.top + 16 }]}
+      >
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>Societies</Text>
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() =>
+              router.push({
+                pathname: "/(super-admin)/create-society",
+                params: { mode: "create" },
+              })
+            }
+            activeOpacity={0.8}
+          >
+            <Text style={styles.addBtnText}>+ Add</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
       {/* Search */}
       <View style={styles.searchRow}>
@@ -195,35 +202,37 @@ export default function SocietiesScreen() {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F7F8FA",
   },
   header: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
   },
   title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#0F172A",
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: -0.5,
   },
   addBtn: {
-    backgroundColor: "#007AFF",
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
   },
   addBtnText: {
     color: "#FFFFFF",
@@ -263,7 +272,8 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingTop: 4,
+    paddingBottom: 130,
   },
   card: {
     backgroundColor: "#FFFFFF",

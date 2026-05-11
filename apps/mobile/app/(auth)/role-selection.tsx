@@ -7,7 +7,9 @@ import {
   SafeAreaView,
   ScrollView,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { gradients } from "../../src/constants/theme";
 
 type Role = "superAdmin" | "businessOwner" | "user";
 
@@ -78,84 +80,87 @@ export default function RoleSelectionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.logo}>OurBlock</Text>
-          <Text style={styles.tagline}>Your Society's Marketplace</Text>
-        </View>
+    <LinearGradient colors={[...gradients.appBackground]} style={styles.container}>
+      <SafeAreaView style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <LinearGradient colors={["#0F172A", "#1E3A8A"]} style={styles.header}>
+            <Text style={styles.logo}>OurBlock</Text>
+            <Text style={styles.tagline}>Your Society's Marketplace</Text>
+          </LinearGradient>
 
-        <Text style={styles.title}>Choose Your Role</Text>
-        <Text style={styles.subtitle}>
-          Select how you want to use OurBlock
-        </Text>
+          <Text style={styles.title}>Choose Your Role</Text>
+          <Text style={styles.subtitle}>
+            Select how you want to use OurBlock
+          </Text>
 
-        {/* Role Cards */}
-        {ROLES.map((role) => {
-          const isSelected = selectedRole === role.key;
-          return (
-            <TouchableOpacity
-              key={role.key}
-              style={[
-                styles.roleCard,
-                isSelected && { borderColor: role.color, backgroundColor: role.bgColor },
-              ]}
-              onPress={() => setSelectedRole(role.key)}
-              activeOpacity={0.8}
-            >
-              <View
+          {ROLES.map((role) => {
+            const isSelected = selectedRole === role.key;
+            return (
+              <TouchableOpacity
+                key={role.key}
                 style={[
-                  styles.roleIconContainer,
-                  isSelected && { backgroundColor: role.color + "22" },
+                  styles.roleCard,
+                  isSelected && { borderColor: role.color, backgroundColor: role.bgColor },
                 ]}
+                onPress={() => setSelectedRole(role.key)}
+                activeOpacity={0.88}
               >
-                <Text style={styles.roleIcon}>{role.icon}</Text>
-              </View>
-              <View style={styles.roleInfo}>
-                <Text
+                <View
                   style={[
-                    styles.roleName,
-                    isSelected && { color: role.color },
+                    styles.roleIconContainer,
+                    isSelected && { backgroundColor: role.color + "22" },
                   ]}
                 >
-                  {role.name}
-                </Text>
-                <Text style={styles.roleDesc}>{role.description}</Text>
-              </View>
-              {isSelected && (
-                <View style={[styles.checkCircle, { backgroundColor: role.color }]}>
-                  <Text style={styles.checkIcon}>✓</Text>
+                  <Text style={styles.roleIcon}>{role.icon}</Text>
                 </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
+                <View style={styles.roleInfo}>
+                  <Text
+                    style={[
+                      styles.roleName,
+                      isSelected && { color: role.color },
+                    ]}
+                  >
+                    {role.name}
+                  </Text>
+                  <Text style={styles.roleDesc}>{role.description}</Text>
+                </View>
+                {isSelected && (
+                  <View style={[styles.checkCircle, { backgroundColor: role.color }]}>
+                    <Text style={styles.checkIcon}>✓</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
 
-        {/* Continue Button */}
-        <TouchableOpacity
-          style={[
-            styles.continueBtn,
-            !selectedRole && styles.continueBtnDisabled,
-          ]}
-          onPress={handleContinue}
-          disabled={!selectedRole}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.continueBtnText}>Continue</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+          <TouchableOpacity
+            style={[
+              styles.continueBtn,
+              !selectedRole && styles.continueBtnDisabled,
+            ]}
+            onPress={handleContinue}
+            disabled={!selectedRole}
+            activeOpacity={0.88}
+          >
+            <LinearGradient
+              colors={selectedRole ? ["#1D4ED8", "#2563EB"] : ["#CBD5E1", "#CBD5E1"]}
+              style={styles.continueBtnGradient}
+            >
+              <Text style={styles.continueBtnText}>Continue</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -163,18 +168,21 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    paddingTop: 48,
-    paddingBottom: 36,
+    marginTop: 16,
+    marginBottom: 18,
+    paddingTop: 34,
+    paddingBottom: 34,
+    borderRadius: 24,
   },
   logo: {
     fontSize: 38,
     fontWeight: "800",
-    color: "#007AFF",
+    color: "#FFFFFF",
     letterSpacing: -0.5,
   },
   tagline: {
     fontSize: 14,
-    color: "#64748B",
+    color: "rgba(255,255,255,0.85)",
     marginTop: 6,
   },
   title: {
@@ -191,12 +199,12 @@ const styles = StyleSheet.create({
   roleCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255,255,255,0.92)",
     borderRadius: 16,
     padding: 18,
     marginBottom: 14,
-    borderWidth: 2,
-    borderColor: "#E2E8F0",
+    borderWidth: 1.4,
+    borderColor: "rgba(148,163,184,0.28)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -242,19 +250,21 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   continueBtn: {
-    backgroundColor: "#007AFF",
     borderRadius: 16,
-    paddingVertical: 17,
-    alignItems: "center",
     marginTop: 24,
-    shadowColor: "#007AFF",
+    shadowColor: "#1D4ED8",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+    overflow: "hidden",
+  },
+  continueBtnGradient: {
+    paddingVertical: 17,
+    alignItems: "center",
+    borderRadius: 16,
   },
   continueBtnDisabled: {
-    backgroundColor: "#CBD5E1",
     shadowOpacity: 0,
     elevation: 0,
   },

@@ -5,11 +5,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import { useToast } from "react-native-toast-notifications";
@@ -33,6 +35,7 @@ export default function PhoneVerificationScreen() {
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [loading, setLoading] = useState(false);
   const cameFromRegistration = params.fromRegistration === "1";
+  const insets = useSafeAreaInsets();
 
   const handleSkip = () => {
     router.replace("/(user)/home");
@@ -91,30 +94,32 @@ export default function PhoneVerificationScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <FirebaseRecaptchaVerifierModal
         ref={recaptchaVerifier}
         firebaseConfig={app.options}
         attemptInvisibleVerification
       />
-
+      <LinearGradient
+        colors={["#DC2626", "#991B1B"]}
+        style={[styles.header, { paddingTop: insets.top + 12 }]}
+      >
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Verify Phone Number</Text>
+        {cameFromRegistration ? (
+          <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
+            <Text style={styles.skipBtnText}>Skip</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.backBtn} />
+        )}
+      </LinearGradient>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={styles.backBtnText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Verify Phone Number</Text>
-          {cameFromRegistration ? (
-            <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
-              <Text style={styles.skipBtnText}>Skip</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.backBtn} />
-          )}
-        </View>
 
         <View style={styles.content}>
           <View style={styles.iconContainer}>
@@ -145,7 +150,7 @@ export default function PhoneVerificationScreen() {
                   onChangeText={setPhoneNumber}
                   keyboardType="phone-pad"
                   maxLength={10}
-                  placeholderTextColor={colors.textMuted}
+placeholderTextColor="#9CA3AF"
                   autoFocus
                 />
               </View>
@@ -215,14 +220,14 @@ export default function PhoneVerificationScreen() {
           )}
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "#F7F8FA",
   },
   flex: { flex: 1 },
   header: {
@@ -230,36 +235,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    paddingBottom: 16,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
-  },
-  backBtnText: {
-    fontSize: 24,
-    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
   },
   skipBtn: {
     minWidth: 48,
-    height: 40,
+    height: 36,
     justifyContent: "center",
     alignItems: "flex-end",
   },
   skipBtnText: {
     fontSize: 14,
     fontWeight: "700",
-    color: colors.blue[500],
+    color: "rgba(255,255,255,0.9)",
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
-    color: colors.textPrimary,
+    color: "#FFFFFF",
   },
   content: {
     flex: 1,
@@ -271,10 +273,12 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#FEF2F2",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#FECACA",
   },
   icon: {
     fontSize: 48,
@@ -282,13 +286,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: colors.textPrimary,
+    color: "#111827",
     textAlign: "center",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
-    color: colors.textSecondary,
+    color: "#6B7280",
     textAlign: "center",
     marginBottom: 32,
     lineHeight: 22,
@@ -328,7 +332,7 @@ const styles = StyleSheet.create({
   countryCodeText: {
     fontSize: 16,
     fontWeight: "600",
-    color: colors.textPrimary,
+    color: "#111827",
   },
   phoneInput: {
     flex: 1,
@@ -341,7 +345,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: colors.textPrimary,
+    color: "#111827",
   },
   codeInput: {
     width: "100%",
@@ -355,12 +359,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
     letterSpacing: 8,
-    color: colors.textPrimary,
+    color: "#111827",
     marginBottom: 24,
   },
   sendBtn: {
     width: "100%",
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#DC2626",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
@@ -380,11 +384,11 @@ const styles = StyleSheet.create({
   skipSecondaryText: {
     fontSize: 14,
     fontWeight: "600",
-    color: colors.textSecondary,
+    color: "#6B7280",
   },
   verifyBtn: {
     width: "100%",
-    backgroundColor: "#10B981",
+    backgroundColor: "#DC2626",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
@@ -403,12 +407,12 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: "#6B7280",
   },
   resendLink: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#3B82F6",
+    color: "#DC2626",
   },
   changeNumberBtn: {
     marginTop: 16,
@@ -417,6 +421,6 @@ const styles = StyleSheet.create({
   changeNumberText: {
     fontSize: 14,
     fontWeight: "600",
-    color: colors.textSecondary,
+    color: "#6B7280",
   },
 });

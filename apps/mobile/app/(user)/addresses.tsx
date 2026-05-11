@@ -7,16 +7,18 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  SafeAreaView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { userAppService } from "../../src/services/userAppService";
 import { Address } from "../../src/types";
-import { colors } from "../../src/constants/theme";
 
 export default function AddressesScreen() {
   const toast = useToast();
+  const insets = useSafeAreaInsets();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -78,7 +80,7 @@ export default function AddressesScreen() {
       <View style={styles.addressHeader}>
         <View style={styles.addressTypeContainer}>
           <Text style={styles.addressType}>
-            {item.type === "home" ? "🏠 Home" : item.type === "work" ? "💼 Work" : "📍 Other"}
+            {item.type === "home" ? "Home" : item.type === "work" ? "Work" : "Other"}
           </Text>
           {item.isDefault && (
             <View style={styles.defaultBadge}>
@@ -91,13 +93,13 @@ export default function AddressesScreen() {
             style={styles.actionBtn}
             onPress={() => router.push(`/(user)/add-address?id=${item.id}`)}
           >
-            <Text style={styles.actionBtnText}>✏️</Text>
+            <Ionicons name="pencil-outline" size={16} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionBtn}
             onPress={() => handleDelete(item.id)}
           >
-            <Text style={styles.actionBtnText}>🗑️</Text>
+            <Ionicons name="trash-outline" size={16} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
@@ -110,7 +112,7 @@ export default function AddressesScreen() {
       <Text style={styles.addressText}>
         {item.city}, {item.state} - {item.pincode}
       </Text>
-      <Text style={styles.addressPhone}>📞 {item.phone}</Text>
+      <Text style={styles.addressPhone}>{item.phone}</Text>
 
       {!item.isDefault && (
         <TouchableOpacity
@@ -126,23 +128,26 @@ export default function AddressesScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={colors.blue[500]} />
+        <ActivityIndicator size="large" color="#DC2626" />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={["#DC2626", "#991B1B"]}
+        style={[styles.header, { paddingTop: insets.top + 12 }]}
+      >
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => router.back()}
         >
-          <Text style={styles.backBtnText}>←</Text>
+          <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Addresses</Text>
         <View style={styles.backBtn} />
-      </View>
+      </LinearGradient>
 
       <FlatList
         data={addresses}
@@ -153,7 +158,9 @@ export default function AddressesScreen() {
         onRefresh={handleRefresh}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📍</Text>
+            <View style={styles.emptyIconWrap}>
+              <Ionicons name="location-outline" size={40} color="#FFFFFF" />
+            </View>
             <Text style={styles.emptyText}>No addresses added yet</Text>
             <Text style={styles.emptySubtext}>Add an address to get started</Text>
           </View>
@@ -164,58 +171,59 @@ export default function AddressesScreen() {
         style={styles.fab}
         onPress={() => router.push("/(user)/add-address")}
       >
-        <Text style={styles.fabText}>+</Text>
+        <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "#F7F8FA",
   },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#F7F8FA",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    paddingBottom: 16,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
-  },
-  backBtnText: {
-    fontSize: 24,
-    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: colors.textPrimary,
+    color: "#FFFFFF",
   },
   listContent: {
     padding: 16,
-    paddingBottom: 100,
+    paddingBottom: 140,
   },
   addressCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   addressHeader: {
     flexDirection: "row",
@@ -231,17 +239,17 @@ const styles = StyleSheet.create({
   addressType: {
     fontSize: 16,
     fontWeight: "700",
-    color: colors.textPrimary,
+    color: "#111827",
   },
   defaultBadge: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#DC2626",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 4,
+    borderRadius: 6,
   },
   defaultText: {
     fontSize: 10,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#FFFFFF",
   },
   addressActions: {
@@ -252,80 +260,78 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#DC2626",
     justifyContent: "center",
     alignItems: "center",
   },
-  actionBtnText: {
-    fontSize: 16,
-  },
   addressName: {
-    fontSize: 14,
+    fontSize: 15,
+    color: "#111827",
     fontWeight: "600",
-    color: colors.textPrimary,
     marginBottom: 4,
   },
   addressText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginBottom: 4,
+    fontSize: 13,
+    color: "#6B7280",
+    marginBottom: 2,
     lineHeight: 20,
   },
   addressPhone: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: "#374151",
     marginTop: 4,
+    fontWeight: "600",
   },
   setDefaultBtn: {
     marginTop: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "#FEF2F2",
     borderRadius: 8,
     alignSelf: "flex-start",
   },
   setDefaultText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#3B82F6",
+    color: "#DC2626",
   },
   emptyContainer: {
     alignItems: "center",
     paddingVertical: 60,
   },
-  emptyIcon: {
-    fontSize: 64,
+  emptyIconWrap: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#DC2626",
     marginBottom: 16,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: "600",
-    color: colors.textPrimary,
+    color: "#111827",
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: "#6B7280",
   },
   fab: {
     position: "absolute",
     right: 20,
-    bottom: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#3B82F6",
+    bottom: 120,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#DC2626",
     justifyContent: "center",
     alignItems: "center",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  fabText: {
-    fontSize: 32,
-    color: "#FFFFFF",
-    fontWeight: "300",
+    elevation: 6,
+    shadowColor: "#DC2626",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
 });

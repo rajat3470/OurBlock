@@ -1,8 +1,9 @@
 import { useEffect } from "react";
-import { ActivityIndicator, View, StyleSheet } from "react-native";
+import { ActivityIndicator, View, StyleSheet, Text, TextInput } from "react-native";
 import { Stack } from "expo-router";
 import { Provider } from "react-redux";
 import { ToastProvider } from "react-native-toast-notifications";
+import { useFonts, Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, Poppins_800ExtraBold } from "@expo-google-fonts/poppins";
 import { store } from "../src/store/index";
 import { useAppDispatch, useAppSelector } from "../src/hooks/useRedux";
 import { logout, setAuth, setHydrated } from "../src/store/slices/authSlice";
@@ -41,7 +42,7 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
   if (!isHydrated) {
     return (
       <View style={styles.loaderWrap}>
-        <ActivityIndicator size="large" color={colors.blue[500]} />
+        <ActivityIndicator size="large" color={process.env.EXPO_PUBLIC_APP_TARGET === "user" ? colors.red[600] : colors.blue[500]} />
       </View>
     );
   }
@@ -50,6 +51,38 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+    Poppins_800ExtraBold,
+  });
+
+  useEffect(() => {
+    const appTarget = process.env.EXPO_PUBLIC_APP_TARGET;
+    if (appTarget !== "user" || !fontsLoaded) return;
+
+    const TextAny = Text as any;
+    const TextInputAny = TextInput as any;
+    TextAny.defaultProps = {
+      ...(TextAny.defaultProps ?? {}),
+      style: [{ fontFamily: "Poppins_400Regular" }, TextAny.defaultProps?.style],
+    };
+    TextInputAny.defaultProps = {
+      ...(TextInputAny.defaultProps ?? {}),
+      style: [{ fontFamily: "Poppins_400Regular" }, TextInputAny.defaultProps?.style],
+    };
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded && process.env.EXPO_PUBLIC_APP_TARGET === "user") {
+    return (
+      <View style={styles.loaderWrap}>
+        <ActivityIndicator size="large" color={colors.red[600]} />
+      </View>
+    );
+  }
+
   return (
     <Provider store={store}>
       <AuthBootstrap>

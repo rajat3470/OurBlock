@@ -4,13 +4,15 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   TextInput,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import { useToast } from "react-native-toast-notifications";
 import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
 import { useUserApp } from "../../src/hooks/useUserApp";
@@ -115,6 +117,7 @@ function HomeSkeleton() {
 }
 
 export default function UserHome() {
+  const insets = useSafeAreaInsets();
   const toast = useToast();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
@@ -347,23 +350,27 @@ export default function UserHome() {
 
   if (isLoading && businesses.length === 0 && featuredProducts.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         <HomeSkeleton />
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        stickyHeaderIndices={[1]}
       >
-        <View style={styles.heroWrap}>
+        <LinearGradient
+          colors={["#DC2626", "#991B1B", "#7F1D1D"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.heroWrap, { paddingTop: insets.top + 12 }]}
+        >
           <View style={styles.locationRow}>
               <View style={styles.locationLeft}>
-                <Text style={styles.locationTitle}>📍 Home</Text>
+                <Text style={styles.locationTitle}>Home</Text>
                 <Text style={styles.locationSubtitle} numberOfLines={1}>
                   {selectedSocietyName}
                 </Text>
@@ -374,8 +381,9 @@ export default function UserHome() {
                     style={styles.cartHeaderBtn}
                     onPress={() => router.push("/(user)/cart")}
                   >
+                    <Ionicons name="cart-outline" size={18} color="#DC2626" />
                     <Text style={styles.cartHeaderText}>
-                      🛒 {cartItems.reduce((s, i) => s + i.quantity, 0)}
+                      {cartItems.reduce((s, i) => s + i.quantity, 0)}
                     </Text>
                   </TouchableOpacity>
                 ) : null}
@@ -498,33 +506,27 @@ export default function UserHome() {
               })}
             </ScrollView>
           ) : null}
-        </View>
 
-        <View style={styles.stickySearchWrap}>
-          <View style={styles.searchRow}>
-            <View style={styles.searchInputWrap}>
-              <Text style={styles.searchIcon}>⌕</Text>
+          <View style={styles.heroSearchWrap}>
+            <View style={styles.heroSearchInput}>
+              <Ionicons name="search-outline" size={17} color="rgba(0,0,0,0.35)" style={{ marginRight: 10 }} />
               <TextInput
                 value={query}
                 onChangeText={setQuery}
                 placeholder="Search products, brands or stores"
-                placeholderTextColor="#6B7280"
+                placeholderTextColor="rgba(0,0,0,0.35)"
                 style={styles.searchInput}
                 returnKeyType="search"
                 onSubmitEditing={onSearchPress}
               />
               {query.trim() ? (
                 <TouchableOpacity onPress={() => setQuery("")}>
-                  <Text style={styles.searchClear}>✕</Text>
+                  <Ionicons name="close-circle" size={17} color="rgba(0,0,0,0.35)" />
                 </TouchableOpacity>
               ) : null}
             </View>
-            <TouchableOpacity style={styles.searchBtn} onPress={onSearchPress}>
-              <Text style={styles.searchBtnText}>Search</Text>
-            </TouchableOpacity>
           </View>
-
-        </View>
+        </LinearGradient>
 
         <ScrollView
           horizontal
@@ -732,7 +734,7 @@ export default function UserHome() {
                       />
                     ) : (
                       <View style={styles.businessImageFallback}>
-                        <Text style={styles.businessFallbackEmoji}>🏪</Text>
+                        <Ionicons name="storefront-outline" size={44} color="#D1D5DB" />
                       </View>
                     )}
                     <Text style={styles.businessBadge}>
@@ -758,27 +760,34 @@ export default function UserHome() {
 
         <View style={styles.bottomPad} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#F7F8FA",
   },
   scrollContent: {
-    paddingBottom: 24,
+    paddingBottom: 130,
+    backgroundColor: "#F7F8FA",
   },
   heroWrap: {
-    backgroundColor: "#FDECC8",
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    paddingBottom: 16,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    paddingBottom: 20,
+    marginHorizontal: 0,
+    shadowColor: "#991B1B",
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
   },
   locationRow: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -793,25 +802,29 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cartHeaderBtn: {
-    backgroundColor: "#D97706",
+    backgroundColor: "rgba(255,255,255,0.95)",
     borderRadius: 20,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   cartHeaderText: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: "#DC2626",
   },
   locationTitle: {
     fontSize: 29,
     fontWeight: "800",
-    color: "#111827",
+    color: "#FFFFFF",
+    letterSpacing: -0.5,
   },
   locationSubtitle: {
     marginTop: 2,
     fontSize: 14,
-    color: "#374151",
+    color: "rgba(255,255,255,0.82)",
     fontWeight: "600",
   },
   avatarWrap: {
@@ -820,22 +833,22 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255,255,255,0.95)",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "rgba(255,255,255,0.8)",
   },
   avatarText: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#92400E",
+    color: "#7F1D1D",
   },
   noticeBar: {
     marginTop: 10,
     marginHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: "#FFF7ED",
+    backgroundColor: "rgba(255,255,255,0.12)",
     borderWidth: 1,
-    borderColor: "#FDBA74",
+    borderColor: "rgba(255,255,255,0.18)",
     paddingHorizontal: 12,
     paddingVertical: 10,
     flexDirection: "row",
@@ -847,21 +860,17 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: "700",
-    color: "#9A3412",
+    color: "#FFFFFF",
   },
   noticeCta: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#C2410C",
+    color: "#FFFFFF",
   },
   bannerCard: {
-    marginTop: 12,
-    marginHorizontal: 16,
-    borderRadius: 18,
-    padding: 14,
-    backgroundColor: "#F3E8FF",
-    borderWidth: 1,
-    borderColor: "#E9D5FF",
+    paddingHorizontal: 20,
+    paddingTop: 6,
+    paddingBottom: 4,
   },
   bannerCarouselRow: {
     marginTop: 12,
@@ -873,9 +882,7 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: 20,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#E9D5FF",
-    backgroundColor: "#1F2937",
+    backgroundColor: "#111111",
   },
   dynamicBannerImage: {
     ...StyleSheet.absoluteFillObject,
@@ -884,7 +891,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 14,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(15,23,42,0.35)",
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   dynamicBannerEyebrow: {
     fontSize: 11,
@@ -925,14 +932,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1.2,
-    color: "#6D28D9",
+    color: "#DC2626",
   },
   bannerTitle: {
     marginTop: 7,
     fontSize: 18,
     lineHeight: 23,
     fontWeight: "800",
-    color: "#1F2937",
+    color: "#FFFFFF",
   },
   bannerMiniRow: {
     marginTop: 12,
@@ -941,7 +948,7 @@ const styles = StyleSheet.create({
   },
   bannerMiniTile: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255,255,255,0.94)",
     borderRadius: 12,
     paddingVertical: 9,
     alignItems: "center",
@@ -957,56 +964,29 @@ const styles = StyleSheet.create({
     color: "#111827",
     fontWeight: "800",
   },
-  stickySearchWrap: {
-    backgroundColor: "rgba(255,255,255,0.92)",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(229,231,235,0.95)",
-    paddingBottom: 10,
-    paddingTop: 10,
-  },
-  searchRow: {
+  heroSearchWrap: {
     paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  heroSearchInput: {
+    backgroundColor: "rgba(255,255,255,0.96)",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-  },
-  searchInputWrap: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  searchIcon: {
-    fontSize: 20,
-    color: "#6B7280",
-    marginRight: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    elevation: 5,
   },
   searchInput: {
     flex: 1,
     color: "#111827",
     fontSize: 14,
-    fontWeight: "600",
-  },
-  searchClear: {
-    fontSize: 12,
-    color: "#6B7280",
-    paddingHorizontal: 4,
-  },
-  searchBtn: {
-    backgroundColor: "#16A34A",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  searchBtnText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "800",
+    fontWeight: "500",
   },
   societyRow: {
     paddingHorizontal: 16,
@@ -1053,8 +1033,8 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
   },
   categoryIconWrapActive: {
-    borderColor: "#16A34A",
-    backgroundColor: "#ECFDF5",
+    borderColor: "#DC2626",
+    backgroundColor: "#FEF2F2",
   },
   categoryIcon: {
     fontSize: 24,
@@ -1074,7 +1054,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 3,
     borderRadius: 4,
-    backgroundColor: "#16A34A",
+    backgroundColor: "#DC2626",
   },
   tagRow: {
     paddingHorizontal: 16,
@@ -1090,8 +1070,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   tagChipActive: {
-    backgroundColor: "#111827",
-    borderColor: "#111827",
+    backgroundColor: "#DC2626",
+    borderColor: "#DC2626",
   },
   tagText: {
     fontSize: 13,
@@ -1108,7 +1088,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     letterSpacing: 2,
-    color: "#6B7280",
+    color: "#7F1D1D",
   },
   productGrid: {
     paddingHorizontal: 16,
@@ -1119,17 +1099,17 @@ const styles = StyleSheet.create({
   },
   productCard: {
     width: "48.5%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255,255,255,0.96)",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "rgba(127,29,29,0.12)",
     padding: 10,
   },
   productThumb: {
     position: "relative",
     height: 104,
     borderRadius: 12,
-    backgroundColor: "#DBEAFE",
+    backgroundColor: "#111111",
     overflow: "hidden",
   },
   productThumbImage: {
@@ -1141,7 +1121,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#DBEAFE",
+    backgroundColor: "#111111",
   },
   fallbackEmoji: {
     fontSize: 28,
@@ -1164,7 +1144,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     left: 8,
-    backgroundColor: "#1F2937",
+    backgroundColor: "#111111",
     color: "#FFFFFF",
     fontSize: 11,
     fontWeight: "700",
@@ -1206,7 +1186,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#D97706",
+    backgroundColor: "#DC2626",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1230,7 +1210,7 @@ const styles = StyleSheet.create({
     height: 26,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#D97706",
+    backgroundColor: "#7F1D1D",
   },
   miniQtyBtnText: {
     fontSize: 16,
@@ -1250,10 +1230,10 @@ const styles = StyleSheet.create({
   },
   quickActionCard: {
     width: 132,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255,255,255,0.96)",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "rgba(127,29,29,0.12)",
     paddingVertical: 16,
     alignItems: "center",
   },
@@ -1278,23 +1258,23 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 13,
     fontWeight: "800",
-    color: "#16A34A",
+    color: "#DC2626",
   },
   businessList: {
     paddingHorizontal: 16,
     gap: 12,
   },
   businessCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255,255,255,0.96)",
     borderRadius: 18,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: "rgba(127,29,29,0.12)",
   },
   businessImage: {
     position: "relative",
     height: 176,
-    backgroundColor: "#FDE68A",
+    backgroundColor: "#111111",
     overflow: "hidden",
   },
   businessImageAsset: {
@@ -1305,10 +1285,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FDE68A",
-  },
-  businessFallbackEmoji: {
-    fontSize: 34,
+    backgroundColor: "#F3F4F6",
   },
   businessBadge: {
     position: "absolute",
@@ -1342,7 +1319,7 @@ const styles = StyleSheet.create({
   businessRating: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#166534",
+    color: "#DC2626",
   },
   businessMeta: {
     marginTop: 3,
@@ -1354,7 +1331,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
     fontWeight: "800",
-    color: "#059669",
+    color: "#DC2626",
   },
   emptyCard: {
     marginHorizontal: 16,

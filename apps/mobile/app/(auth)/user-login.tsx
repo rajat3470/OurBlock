@@ -34,7 +34,7 @@ export default function UserLoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "transparent",
   },
   footer: {
     paddingVertical: 20,
@@ -50,6 +50,6 @@ const styles = StyleSheet.create({
   },
   registerLinkBold: {
     fontWeight: "700",
-    color: "#3B82F6",
+    color: colors.blue[600],
   },
 });

@@ -3,12 +3,14 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { useAppSelector } from "../../src/hooks/useRedux";
@@ -34,6 +36,7 @@ export default function CheckoutScreen() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "upi">("cash");
   const [loadingAddresses, setLoadingAddresses] = useState(true);
+  const insets = useSafeAreaInsets();
 
   const subTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const finalAmount = subTotal + PLATFORM_FEE;
@@ -113,7 +116,7 @@ export default function CheckoutScreen() {
                 paymentMethod,
               };
 
-              const order = await placeOrder(payload);
+              await placeOrder(payload);
               toast.show("🎉 Order placed successfully!", { type: "success", duration: 3000 });
               router.replace("/(user)/orders");
             } catch (err: any) {
@@ -130,14 +133,17 @@ export default function CheckoutScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.headerRow}>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={["#DC2626", "#991B1B"]}
+        style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
+      >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backIcon}>←</Text>
+          <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Checkout</Text>
         <View style={styles.headerRight} />
-      </View>
+      </LinearGradient>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -145,8 +151,8 @@ export default function CheckoutScreen() {
       >
         {/* Order Items Summary */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            🏪 {cartItems[0]?.businessName ?? "Your Order"}
+            <Text style={styles.sectionTitle}>
+            {cartItems[0]?.businessName ?? "Your Order"}
           </Text>
           {cartItems.map((item) => (
             <View key={item.productId} style={styles.orderItemRow}>
@@ -166,7 +172,7 @@ export default function CheckoutScreen() {
         {/* Delivery address */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>📍 Delivery Address</Text>
+            <Text style={styles.sectionTitle}>Delivery Address</Text>
             <TouchableOpacity onPress={() => router.push("/(user)/add-address")}>
               <Text style={styles.addLink}>+ Add New</Text>
             </TouchableOpacity>
@@ -205,7 +211,7 @@ export default function CheckoutScreen() {
                     <View style={styles.addressTitleRow}>
                       <Text style={styles.addressType}>
                         {address.type === "home"
-                          ? "🏠"
+                          ? "Home"
                           : address.type === "work"
                           ? "🏢"
                           : "📌"}{" "}
@@ -265,7 +271,7 @@ export default function CheckoutScreen() {
 
         {/* Bill details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🧾 Bill Details</Text>
+          <Text style={styles.sectionTitle}>Bill Details</Text>
           <View style={styles.billRow}>
             <Text style={styles.billLabel}>Subtotal ({cartItems.length} items)</Text>
             <Text style={styles.billValue}>Rs {subTotal}</Text>
@@ -315,32 +321,30 @@ export default function CheckoutScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB" },
+  container: { flex: 1, backgroundColor: "#F7F8FA" },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    paddingBottom: 16,
     gap: 12,
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
   },
-  backIcon: { fontSize: 20, color: "#111827" },
-  headerTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#111827" },
+  headerTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#FFFFFF", textAlign: "center" },
   headerRight: { width: 36 },
   scroll: { paddingBottom: 32 },
   section: {
@@ -367,7 +371,7 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginBottom: 12,
   },
-  addLink: { fontSize: 13, fontWeight: "700", color: "#D97706" },
+  addLink: { fontSize: 13, fontWeight: "700", color: "#DC2626" },
   orderItemRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -388,7 +392,7 @@ const styles = StyleSheet.create({
   noAddressWrap: { alignItems: "center", paddingVertical: 16, gap: 12 },
   noAddressText: { fontSize: 14, color: "#6B7280" },
   addAddressBtn: {
-    backgroundColor: "#D97706",
+    backgroundColor: "#DC2626",
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -403,7 +407,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 10,
   },
-  addressCardActive: { borderColor: "#D97706", backgroundColor: "#FFFBF0" },
+  addressCardActive: { borderColor: "#DC2626", backgroundColor: "#FEF2F2" },
   addressRadio: {
     paddingTop: 2,
     width: 20,
@@ -416,7 +420,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#D1D5DB",
   },
-  radioCircleActive: { borderColor: "#D97706", backgroundColor: "#D97706" },
+  radioCircleActive: { borderColor: "#DC2626", backgroundColor: "#DC2626" },
   addressBody: { flex: 1, gap: 3 },
   addressTitleRow: {
     flexDirection: "row",
@@ -444,7 +448,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 10,
   },
-  paymentCardActive: { borderColor: "#D97706", backgroundColor: "#FFFBF0" },
+  paymentCardActive: { borderColor: "#DC2626", backgroundColor: "#FEF2F2" },
   paymentIcon: { fontSize: 22 },
   paymentLabel: { flex: 1, fontSize: 14, fontWeight: "700", color: "#111827" },
   comingSoonBadge: {
@@ -465,7 +469,7 @@ const styles = StyleSheet.create({
   billValueGreen: { fontSize: 13, fontWeight: "700", color: "#059669" },
   billDivider: { height: 1, backgroundColor: "#F3F4F6", marginVertical: 6 },
   billLabelBold: { fontSize: 15, fontWeight: "800", color: "#111827" },
-  billValueBold: { fontSize: 15, fontWeight: "800", color: "#D97706" },
+  billValueBold: { fontSize: 15, fontWeight: "800", color: "#DC2626" },
   bottomCta: {
     position: "absolute",
     bottom: 0,
@@ -485,7 +489,7 @@ const styles = StyleSheet.create({
   ctaTotalLabel: { fontSize: 12, color: "#6B7280" },
   ctaTotalAmount: { fontSize: 20, fontWeight: "800", color: "#111827" },
   placeOrderBtn: {
-    backgroundColor: "#D97706",
+    backgroundColor: "#DC2626",
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 24,

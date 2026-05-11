@@ -1,5 +1,4 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
 import { Provider } from "react-redux";
 import { store } from "@store/index";
 
@@ -12,9 +11,3 @@ const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 };
 
 export default AppProvider;
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});

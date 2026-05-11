@@ -1,8 +1,7 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "./useRedux";
 import { setSelectedSociety, setError, setLoading } from "@store/slices/societySlice";
 import { societyService } from "@services/societyService";
-import { Society } from "@/types";
 
 export const useSociety = () => {
   const dispatch = useAppDispatch();

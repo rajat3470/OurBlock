@@ -3,16 +3,18 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { OrderStatus } from "../../src/types";
+import { gradients } from "../../src/constants/theme";
 
 const ORDER_STATUS_META: Record<string, { label: string; color: string; bg: string; emoji: string }> = {
   [OrderStatus.PENDING]:          { label: "Pending",          color: "#D97706", bg: "#FFFBEB", emoji: "⏳" },
@@ -80,6 +82,7 @@ export default function BusinessOwnerDashboard() {
 
   const recentOrders = [...orders].slice(0, 6);
   const loading = isLoading && !stats && orders.length === 0 && products.length === 0;
+  const insets = useSafeAreaInsets();
 
   const greeting = (() => {
     const h = new Date().getHours();
@@ -89,7 +92,7 @@ export default function BusinessOwnerDashboard() {
   })();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -101,7 +104,7 @@ export default function BusinessOwnerDashboard() {
         }
       >
         {/* ── Hero ─────────────────────────────────────────────────────── */}
-        <View style={styles.hero}>
+        <LinearGradient colors={[...gradients.businessOwner]} style={[styles.hero, { paddingTop: insets.top + 22 }]}>
           <View style={styles.heroTop}>
             <View style={styles.heroLeft}>
               <Text style={styles.heroGreeting}>
@@ -149,7 +152,7 @@ export default function BusinessOwnerDashboard() {
               <Text style={styles.heroStatLabel}>All Orders</Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         {loading ? (
           <View style={styles.loaderWrap}>
@@ -271,22 +274,23 @@ export default function BusinessOwnerDashboard() {
         )}
         <View style={styles.bottomPad} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F0F4F8",
+    backgroundColor: "#F7F8FA",
   },
 
   // ── Hero
   hero: {
-    backgroundColor: "#064E3B",
-    paddingHorizontal: 20,
-    paddingTop: 22,
+    paddingHorizontal: 24,
     paddingBottom: 28,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: "hidden",
   },
   heroTop: {
     flexDirection: "row",
@@ -502,5 +506,5 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     textAlign: "center",
   },
-  bottomPad: { height: 32 },
+  bottomPad: { height: 130 },
 });

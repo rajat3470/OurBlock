@@ -1,7 +1,6 @@
 import { Tabs } from "expo-router";
 import RoleGate from "../../src/components/RoleGate";
 import AppTabIcon from "../../src/components/AppTabIcon";
-import { colors } from "../../src/constants/theme";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { OrderStatus } from "../../src/types";
 import { useOrderNotifications } from "../../src/hooks/useOrderNotifications";
@@ -19,14 +18,23 @@ export default function BusinessOwnerLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: colors.green[500],
-          tabBarInactiveTintColor: colors.textMuted,
+          tabBarActiveTintColor: "#16A34A",
+          tabBarInactiveTintColor: "#9CA3AF",
           tabBarStyle: {
-            backgroundColor: colors.surface,
-            borderTopColor: colors.border,
-            height: 82,
-            paddingBottom: 18,
+            backgroundColor: "#FFFFFF",
+            borderTopWidth: 0,
+            height: 76,
+            paddingBottom: 14,
             paddingTop: 8,
+            marginHorizontal: 16,
+            marginBottom: 28,
+            borderRadius: 24,
+            position: "absolute",
+            shadowColor: "#1F2937",
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.18,
+            shadowRadius: 24,
+            elevation: 16,
           },
           tabBarLabelStyle: {
             fontSize: 11,
@@ -39,7 +47,7 @@ export default function BusinessOwnerLayout() {
           options={{
             title: "Dashboard",
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="📈" focused={focused} role="businessOwner" />
+              <AppTabIcon iconName="analytics-outline" focused={focused} role="businessOwner" />
             ),
           }}
         />
@@ -48,7 +56,7 @@ export default function BusinessOwnerLayout() {
           options={{
             title: "Products",
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="📦" focused={focused} role="businessOwner" />
+              <AppTabIcon iconName="cube-outline" focused={focused} role="businessOwner" />
             ),
           }}
         />
@@ -59,7 +67,7 @@ export default function BusinessOwnerLayout() {
             tabBarBadge: activeOrderCount > 0 ? activeOrderCount : undefined,
             tabBarBadgeStyle: { backgroundColor: "#DC2626", fontSize: 10 },
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="🧾" focused={focused} role="businessOwner" />
+              <AppTabIcon iconName="receipt-outline" focused={focused} role="businessOwner" />
             ),
           }}
         />
@@ -68,7 +76,7 @@ export default function BusinessOwnerLayout() {
           options={{
             title: "Profile",
             tabBarIcon: ({ focused }) => (
-              <AppTabIcon emoji="⚙️" focused={focused} role="businessOwner" />
+              <AppTabIcon iconName="settings-outline" focused={focused} role="businessOwner" />
             ),
           }}
         />

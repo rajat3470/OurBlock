@@ -5,17 +5,17 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { userAppService } from "../../src/services/userAppService";
-import { Address } from "../../src/types";
-import { colors } from "../../src/constants/theme";
 
 type AddressType = "home" | "work" | "other";
 
@@ -40,6 +40,7 @@ export default function AddEditAddressScreen() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (isEdit) {
@@ -66,7 +67,7 @@ export default function AddEditAddressScreen() {
           isDefault: address.isDefault,
         });
       }
-    } catch (error: any) {
+    } catch {
       Alert.alert("Error", "Failed to load address");
       router.back();
     } finally {
@@ -121,27 +122,30 @@ export default function AddEditAddressScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color="#DC2626" />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={["#DC2626", "#991B1B"]}
+        style={[styles.header, { paddingTop: insets.top + 12 }]}
+      >
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {isEdit ? "Edit Address" : "Add Address"}
+        </Text>
+        <View style={styles.backBtn} />
+      </LinearGradient>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={0}
       >
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Text style={styles.backBtnText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {isEdit ? "Edit Address" : "Add Address"}
-          </Text>
-          <View style={styles.backBtn} />
-        </View>
 
         <ScrollView
           style={styles.scrollView}
@@ -167,7 +171,7 @@ export default function AddEditAddressScreen() {
                     form.type === type && styles.typeBtnTextActive,
                   ]}
                 >
-                  {type === "home" ? "🏠 Home" : type === "work" ? "💼 Work" : "📍 Other"}
+                  {type === "home" ? "Home" : type === "work" ? "Work" : "Other"}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -182,7 +186,7 @@ export default function AddEditAddressScreen() {
               value={form.name}
               onChangeText={(v) => setField("name", v)}
               autoCorrect={false}
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor="#9CA3AF"
             />
           </View>
 
@@ -197,7 +201,7 @@ export default function AddEditAddressScreen() {
               multiline
               numberOfLines={2}
               autoCorrect={false}
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor="#9CA3AF"
             />
             {errors.street ? <Text style={styles.errorText}>{errors.street}</Text> : null}
           </View>
@@ -211,7 +215,7 @@ export default function AddEditAddressScreen() {
               value={form.landmark}
               onChangeText={(v) => setField("landmark", v)}
               autoCorrect={false}
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor="#9CA3AF"
             />
           </View>
 
@@ -225,7 +229,7 @@ export default function AddEditAddressScreen() {
                 value={form.city}
                 onChangeText={(v) => setField("city", v)}
                 autoCorrect={false}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor="#9CA3AF"
               />
               {errors.city ? <Text style={styles.errorText}>{errors.city}</Text> : null}
             </View>
@@ -237,7 +241,7 @@ export default function AddEditAddressScreen() {
                 value={form.state}
                 onChangeText={(v) => setField("state", v)}
                 autoCorrect={false}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor="#9CA3AF"
               />
               {errors.state ? <Text style={styles.errorText}>{errors.state}</Text> : null}
             </View>
@@ -253,7 +257,7 @@ export default function AddEditAddressScreen() {
               onChangeText={(v) => setField("pincode", v)}
               keyboardType="number-pad"
               maxLength={6}
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor="#9CA3AF"
             />
             {errors.pincode ? <Text style={styles.errorText}>{errors.pincode}</Text> : null}
           </View>
@@ -268,7 +272,7 @@ export default function AddEditAddressScreen() {
               onChangeText={(v) => setField("phone", v)}
               keyboardType="phone-pad"
               maxLength={10}
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor="#9CA3AF"
             />
             {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : null}
           </View>
@@ -300,52 +304,50 @@ export default function AddEditAddressScreen() {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "#F7F8FA",
   },
   flex: { flex: 1 },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#F7F8FA",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E7EB",
+    paddingBottom: 16,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
-  },
-  backBtnText: {
-    fontSize: 24,
-    color: colors.textPrimary,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: colors.textPrimary,
+    color: "#FFFFFF",
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
   typeContainer: {
     flexDirection: "row",
@@ -363,16 +365,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   typeBtnActive: {
-    borderColor: "#3B82F6",
-    backgroundColor: "#EFF6FF",
+    borderColor: "#DC2626",
+    backgroundColor: "#FEF2F2",
   },
   typeBtnText: {
     fontSize: 13,
     fontWeight: "600",
-    color: colors.textSecondary,
+    color: "#6B7280",
   },
   typeBtnTextActive: {
-    color: "#3B82F6",
+    color: "#DC2626",
   },
   row: {
     flexDirection: "row",
@@ -387,7 +389,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "600",
-    color: colors.textPrimary,
+    color: "#111827",
     marginBottom: 8,
   },
   input: {
@@ -398,7 +400,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
-    color: colors.textPrimary,
+    color: "#111827",
   },
   multilineInput: {
     height: 70,
@@ -429,8 +431,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   checkboxChecked: {
-    backgroundColor: "#3B82F6",
-    borderColor: "#3B82F6",
+    backgroundColor: "#DC2626",
+    borderColor: "#DC2626",
   },
   checkmark: {
     color: "#FFFFFF",
@@ -439,10 +441,10 @@ const styles = StyleSheet.create({
   },
   checkboxLabel: {
     fontSize: 15,
-    color: colors.textPrimary,
+    color: "#111827",
   },
   saveBtn: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: "#DC2626",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",

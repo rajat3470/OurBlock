@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
@@ -14,7 +13,8 @@ import {
   Platform,
   Vibration,
 } from "react-native";
-import AppSectionHeader from "../../src/components/AppSectionHeader";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { Order, OrderStatus } from "../../src/types";
 
@@ -73,6 +73,7 @@ export default function BusinessOwnerOrders() {
   const [rejectModal, setRejectModal] = useState<{ orderId: string; orderRef: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejecting, setRejecting] = useState(false);
+  const insets = useSafeAreaInsets();
 
   // Track previous pending count to detect new orders
   const prevPendingCount = useRef<number>(0);
@@ -320,8 +321,14 @@ export default function BusinessOwnerOrders() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <AppSectionHeader title="Orders" subtitle="Track and fulfill customer orders" />
+    <View style={styles.container}>
+      <LinearGradient
+        colors={["#16A34A", "#0A7D55"]}
+        style={[styles.header, { paddingTop: insets.top + 16 }]}
+      >
+        <Text style={styles.headerTitle}>Orders</Text>
+        <Text style={styles.headerSub}>Track and fulfill customer orders</Text>
+      </LinearGradient>
 
       {/* Filter bar — plain View row so chips stay compact */}
       <View style={styles.filterBar}>
@@ -425,14 +432,32 @@ export default function BusinessOwnerOrders() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F0F4F8",
+    backgroundColor: "#F7F8FA",
+  },
+
+  // ── Header
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: -0.5,
+  },
+  headerSub: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.75)",
+    marginTop: 2,
+    fontWeight: "500",
   },
 
   // ── Filter bar ────────────────────────────────────────────────────────────
@@ -499,7 +524,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 14,
-    paddingBottom: 32,
+    paddingBottom: 130,
     gap: 12,
   },
 

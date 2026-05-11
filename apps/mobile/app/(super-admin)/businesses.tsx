@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   FlatList,
   TouchableOpacity,
   TextInput,
@@ -11,6 +10,8 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Business } from "../../src/types/index";
 import { useSuperAdmin } from "../../src/hooks/useSuperAdmin";
@@ -42,6 +43,7 @@ export default function BusinessesScreen() {
   const [activeTab, setActiveTab] = useState<FilterTab>("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     loadBusinesses();
@@ -185,10 +187,13 @@ export default function BusinessesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={["#2563EB", "#4F46E5"]}
+        style={[styles.header, { paddingTop: insets.top + 16 }]}
+      >
         <Text style={styles.title}>Businesses</Text>
-      </View>
+      </LinearGradient>
 
       {/* Tabs */}
       <View style={styles.tabBar}>
@@ -275,31 +280,30 @@ export default function BusinessesScreen() {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F7F8FA",
   },
   header: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
+    paddingBottom: 20,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#0F172A",
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: -0.5,
   },
   tabBar: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
+    paddingTop: 12,
     paddingBottom: 12,
     gap: 8,
     borderBottomWidth: 1,
@@ -312,7 +316,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F5F9",
   },
   tabActive: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#2563EB",
   },
   tabText: {
     fontSize: 13,
@@ -350,7 +354,8 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingTop: 4,
+    paddingBottom: 130,
   },
   card: {
     backgroundColor: "#FFFFFF",

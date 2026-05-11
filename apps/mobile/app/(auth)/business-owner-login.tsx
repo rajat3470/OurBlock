@@ -2,6 +2,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import RoleLoginForm from "../../src/components/RoleLoginForm";
+import { colors } from "../../src/constants/theme";
 
 export default function BusinessOwnerLoginScreen() {
   return (
@@ -36,15 +37,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingBottom: 36,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "transparent",
   },
   registerText: {
     fontSize: 14,
-    color: "#64748B",
+    color: colors.textSecondary,
   },
   registerLink: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#22C55E",
+    color: colors.green[600],
   },
 });

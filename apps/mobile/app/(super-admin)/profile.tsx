@@ -3,11 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Alert,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { useAuth } from "../../src/hooks/useAuth";
@@ -26,6 +27,7 @@ interface MenuItem {
 export default function SuperAdminProfileScreen() {
   const { user } = useAppSelector((state) => state.auth);
   const { logoutUser } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const handleLogout = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -61,14 +63,13 @@ export default function SuperAdminProfileScreen() {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Profile</Text>
-      </View>
-
+    <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Avatar section */}
-        <View style={styles.avatarSection}>
+        {/* Blue gradient hero */}
+        <LinearGradient
+          colors={["#2563EB", "#4F46E5"]}
+          style={[styles.hero, { paddingTop: insets.top + 28 }]}
+        >
           <View style={styles.avatar}>
             <Text style={styles.avatarEmoji}>🔐</Text>
           </View>
@@ -78,7 +79,7 @@ export default function SuperAdminProfileScreen() {
           <View style={styles.adminBadge}>
             <Text style={styles.adminBadgeText}>Super Admin</Text>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Account Info */}
         <View style={styles.section}>
@@ -128,70 +129,60 @@ export default function SuperAdminProfileScreen() {
 
         <Text style={styles.version}>OurBlock Admin v1.0.0</Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F7F8FA",
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E2E8F0",
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#0F172A",
-  },
-  avatarSection: {
+
+  // Blue gradient hero
+  hero: {
     alignItems: "center",
-    paddingVertical: 32,
-    backgroundColor: "#FFFFFF",
-    marginBottom: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
   },
   avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: "#EFF6FF",
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 14,
-    borderWidth: 3,
-    borderColor: "#BFDBFE",
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.4)",
   },
   avatarEmoji: {
-    fontSize: 42,
+    fontSize: 38,
   },
   fullName: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#0F172A",
+    color: "#FFFFFF",
     marginBottom: 10,
   },
   adminBadge: {
-    backgroundColor: "#EFF6FF",
+    backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
+    borderColor: "rgba(255,255,255,0.4)",
   },
   adminBadgeText: {
     fontSize: 13,
-    color: "#007AFF",
+    color: "#FFFFFF",
     fontWeight: "600",
   },
   section: {
     backgroundColor: "#FFFFFF",
     marginHorizontal: 16,
-    marginBottom: 12,
+    marginTop: 16,
+    marginBottom: 0,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingTop: 14,
@@ -262,6 +253,7 @@ const styles = StyleSheet.create({
   logoutBtn: {
     backgroundColor: "#FEF2F2",
     marginHorizontal: 16,
+    marginTop: 24,
     marginBottom: 12,
     borderRadius: 14,
     paddingVertical: 16,
@@ -278,6 +270,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#CBD5E1",
     textAlign: "center",
-    paddingBottom: 32,
+    paddingBottom: 130,
   },
 });

@@ -17,7 +17,8 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
-import AppSectionHeader from "../../src/components/AppSectionHeader";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { Product } from "../../src/types";
 
@@ -118,6 +119,7 @@ export default function BusinessOwnerProducts() {
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     loadProducts().catch(() => null);
@@ -509,11 +511,14 @@ export default function BusinessOwnerProducts() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <AppSectionHeader
-        title="Products"
-        subtitle="Manage your product catalog"
-      />
+    <View style={styles.container}>
+      <LinearGradient
+        colors={["#16A34A", "#0A7D55"]}
+        style={[styles.header, { paddingTop: insets.top + 16 }]}
+      >
+        <Text style={styles.headerTitle}>Products</Text>
+        <Text style={styles.headerSub}>Manage your product catalog</Text>
+      </LinearGradient>
 
       <View style={styles.searchRow}>
         <TextInput
@@ -854,15 +859,34 @@ export default function BusinessOwnerProducts() {
           </SafeAreaView>
         </KeyboardAvoidingView>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: "#F7F8FA",
   },
+
+  // ── Header
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: -0.5,
+  },
+  headerSub: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.75)",
+    marginTop: 2,
+    fontWeight: "500",
+  },
+
   searchRow: {
     flexDirection: "row",
     gap: 10,
@@ -899,7 +923,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 14,
-    paddingBottom: 30,
+    paddingBottom: 130,
   },
 
   // ─── Product Card ───

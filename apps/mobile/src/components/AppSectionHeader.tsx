@@ -1,6 +1,6 @@
-import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors, spacing, radius, typography } from "../constants/theme";
+import { LinearGradient } from "expo-linear-gradient";
+import { colors, spacing, radius, typography, gradients } from "../constants/theme";
 
 interface AppSectionHeaderProps {
   title: string;
@@ -14,30 +14,43 @@ export default function AppSectionHeader({
   badge,
 }: AppSectionHeaderProps) {
   return (
-    <View style={styles.header}>
-      <View>
-        <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-      </View>
-      {badge ? (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badge}</Text>
+    <LinearGradient
+      colors={[...gradients.appBackground]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.headerWrap}
+    >
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.title}>{title}</Text>
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
-      ) : null}
-    </View>
+        {badge ? (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge}</Text>
+          </View>
+        ) : null}
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
+  headerWrap: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.22)",
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderRadius: radius.xl,
   },
   title: {
     fontSize: typography.title.fontSize,
@@ -50,12 +63,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   badge: {
-    backgroundColor: colors.blue[100],
+    backgroundColor: "rgba(59,130,246,0.14)",
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.blue[300],
+    borderColor: "rgba(59,130,246,0.38)",
   },
   badgeText: {
     fontSize: 12,

@@ -3,11 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import { useToast } from "react-native-toast-notifications";
@@ -35,6 +37,7 @@ export default function ProductDetailScreen() {
   const [business, setBusiness] = useState<Business | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const insets = useSafeAreaInsets();
 
   // Load product from the home feed (from redux) or fetch individually
   const featuredProducts = useAppSelector((state) => state.userApp.featuredProducts);
@@ -58,7 +61,7 @@ export default function ProductDetailScreen() {
     const fetchProduct = async () => {
       try {
         setIsLoading(true);
-        const [products] = await Promise.all([
+        await Promise.all([
           userAppService.getFeaturedProducts(""), // fallback: just show what we have
         ]);
         setIsLoading(false);
@@ -118,26 +121,41 @@ export default function ProductDetailScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={["#DC2626", "#991B1B"]}
+          style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
+        >
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }} />
+          <View style={styles.headerRight} />
+        </LinearGradient>
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color="#D97706" />
+          <ActivityIndicator size="large" color="#DC2626" />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!product) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.headerRow}>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={["#DC2626", "#991B1B"]}
+          style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
+        >
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backIcon}>←</Text>
+            <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
-        </View>
+          <View style={{ flex: 1 }} />
+          <View style={styles.headerRight} />
+        </LinearGradient>
         <View style={styles.loadingWrap}>
           <Text style={styles.notFoundText}>Product not found</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -146,11 +164,14 @@ export default function ProductDetailScreen() {
   const images = product.imageUrls.filter((url) => url?.trim());
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
-      <View style={styles.headerRow}>
+      <LinearGradient
+        colors={["#DC2626", "#991B1B"]}
+        style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
+      >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backIcon}>←</Text>
+          <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {product.name}
@@ -160,12 +181,12 @@ export default function ProductDetailScreen() {
             style={styles.cartBadgeBtn}
             onPress={() => router.push("/(user)/cart")}
           >
-            <Text style={styles.cartBadgeText}>🛒 {cartCount}</Text>
+            <Text style={styles.cartBadgeText}>{cartCount}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.headerRight} />
         )}
-      </View>
+      </LinearGradient>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {/* Image */}
@@ -178,7 +199,7 @@ export default function ProductDetailScreen() {
             />
           ) : (
             <View style={styles.imagePlaceholder}>
-              <Text style={styles.imagePlaceholderEmoji}>🛍️</Text>
+              <Text style={styles.imagePlaceholderEmoji}>OurBlock</Text>
             </View>
           )}
           {discount > 0 && (
@@ -215,7 +236,7 @@ export default function ProductDetailScreen() {
           <Text style={styles.productName}>{product.name}</Text>
 
           {business ? (
-            <Text style={styles.businessName}>🏪 {business.name}</Text>
+            <Text style={styles.businessName}>{business.name}</Text>
           ) : null}
 
           <View style={styles.priceRow}>
@@ -320,44 +341,42 @@ export default function ProductDetailScreen() {
           </View>
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9FAFB" },
+  container: { flex: 1, backgroundColor: "#F7F8FA" },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   notFoundText: { fontSize: 16, color: "#6B7280" },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    paddingBottom: 14,
     gap: 12,
   },
   backBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
   },
-  backIcon: { fontSize: 20, color: "#111827" },
-  headerTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#111827" },
+  headerTitle: { flex: 1, fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
   headerRight: { width: 64 },
   cartBadgeBtn: {
-    backgroundColor: "#FEF3C7",
+    backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "#FDE68A",
+    borderColor: "rgba(255,255,255,0.35)",
   },
-  cartBadgeText: { fontSize: 13, fontWeight: "700", color: "#92400E" },
+  cartBadgeText: { fontSize: 13, fontWeight: "700", color: "#FFFFFF" },
   scroll: { paddingBottom: 32 },
   imageWrap: {
     width: "100%",
@@ -391,7 +410,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#E5E7EB",
   },
-  thumbActive: { borderColor: "#D97706" },
+  thumbActive: { borderColor: "#DC2626" },
   infoWrap: { padding: 16 },
   productName: {
     fontSize: 22,
@@ -411,7 +430,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  price: { fontSize: 24, fontWeight: "800", color: "#D97706" },
+  price: { fontSize: 24, fontWeight: "800", color: "#DC2626" },
   originalPrice: {
     fontSize: 16,
     color: "#9CA3AF",
@@ -474,17 +493,17 @@ const styles = StyleSheet.create({
   attrName: { fontSize: 13, color: "#6B7280", fontWeight: "600" },
   attrValue: { fontSize: 13, color: "#111827", fontWeight: "700" },
   priceSummaryWrap: {
-    backgroundColor: "#FFFBF0",
+    backgroundColor: "#FEF2F2",
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#FEF3C7",
+    borderColor: "#FECACA",
     marginTop: 8,
   },
   priceSummaryTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#92400E",
+    color: "#991B1B",
     marginBottom: 10,
   },
   priceSummaryRow: {
@@ -496,11 +515,11 @@ const styles = StyleSheet.create({
   priceSummaryValue: { fontSize: 13, color: "#374151", fontWeight: "600" },
   priceDivider: {
     height: 1,
-    backgroundColor: "#FDE68A",
+    backgroundColor: "#FECACA",
     marginVertical: 8,
   },
   priceSummaryLabelBold: { fontSize: 14, fontWeight: "800", color: "#111827" },
-  priceSummaryValueBold: { fontSize: 14, fontWeight: "800", color: "#D97706" },
+  priceSummaryValueBold: { fontSize: 14, fontWeight: "800", color: "#DC2626" },
   priceNote: {
     fontSize: 11,
     color: "#9CA3AF",
@@ -526,7 +545,7 @@ const styles = StyleSheet.create({
   },
   outOfStockText: { fontSize: 16, fontWeight: "700", color: "#9CA3AF" },
   addToCartBtn: {
-    backgroundColor: "#D97706",
+    backgroundColor: "#DC2626",
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: "center",
@@ -536,10 +555,10 @@ const styles = StyleSheet.create({
   qtyControl: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FEF3C7",
+    backgroundColor: "rgba(220,38,38,0.08)",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#FDE68A",
+    borderColor: "rgba(220,38,38,0.18)",
     overflow: "hidden",
   },
   qtyBtn: {
@@ -547,7 +566,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#D97706",
+    backgroundColor: "#DC2626",
   },
   qtyBtnText: { fontSize: 22, color: "#FFFFFF", fontWeight: "700" },
   qtyCount: {
@@ -555,11 +574,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 18,
     fontWeight: "800",
-    color: "#92400E",
+    color: "#991B1B",
   },
   goToCartBtn: {
     flex: 1,
-    backgroundColor: "#D97706",
+    backgroundColor: "#DC2626",
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
