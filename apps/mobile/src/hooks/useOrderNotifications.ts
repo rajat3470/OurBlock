@@ -17,9 +17,15 @@ import { useAppSelector } from "./useRedux";
 // in Expo Go web/managed builds — it is available in bare/standalone builds.
 let messaging: any = null;
 try {
-  messaging = require("@react-native-firebase/messaging").default;
+  const _messaging = require("@react-native-firebase/messaging").default;
+  // Verify the native module is actually installed by calling once.
+  // This throws "firebase.app() not installed" on Android if the native
+  // @react-native-firebase/app module isn't linked (e.g. EAS dev client not rebuilt).
+  _messaging();
+  messaging = _messaging;
 } catch {
-  // Not available in this environment
+  // Not available in this environment — push notifications gracefully disabled
+  messaging = null;
 }
 
 const APP_TARGET = process.env.EXPO_PUBLIC_APP_TARGET; // "user" | "businessOwner"
