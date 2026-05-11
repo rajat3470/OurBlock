@@ -10,6 +10,7 @@ const statusMessages: Record<string, string> = {
   outForDelivery: 'Your order is out for delivery',
   delivered: 'Your order has been delivered',
   cancelled: 'Your order has been cancelled',
+  rejected: 'Your order has been rejected by the business owner',
 };
 
 export const onOrderUpdate = functions.firestore
@@ -24,15 +25,24 @@ export const onOrderUpdate = functions.firestore
       if (before.status !== after.status) {
         console.log(`Order ${orderId} status changed: ${before.status} -> ${after.status}`);
         
-        const message = statusMessages[after.status] || 'Order status updated';
+        let message = statusMessages[after.status] || 'Order status updated';
+        
+        // For rejected orders, append rejection reason if available
+        if (after.status === 'rejected' && after.rejectionReason) {
+          message = `${message}: ${after.rejectionReason}`;
+        }
         
         // Notify customer
         await db.collection('notifications').add({
           userId: after.userId,
           type: 'order',
-          title: 'Order Status Updated',
+          title: after.status === 'rejected' ? 'Order Rejected' : 'Order Status Updated',
           body: `Order #${orderId.substring(0, 8)}: ${message}`,
-          data: { orderId, status: after.status },
+          data: { 
+            orderId, 
+            status: after.status,
+            rejectionReason: after.rejectionReason || undefined,
+          },
           read: false,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),

@@ -11,7 +11,9 @@ import {
   setStats,
   toggleFavoriteBusiness,
 } from "@store/slices/userAppSlice";
+import { clearCart } from "@store/slices/cartSlice";
 import { userAppService } from "@services/userAppService";
+import { CreateOrderPayload } from "@/types";
 
 export const useUserApp = () => {
   const dispatch = useAppDispatch();
@@ -96,6 +98,43 @@ export const useUserApp = () => {
     }
   }, [authUserSocietyId, dispatch, loadSocieties, selectSociety, state.selectedSocietyId]);
 
+  const placeOrder = useCallback(
+    async (payload: CreateOrderPayload) => {
+      dispatch(setLoading(true));
+      try {
+        const order = await userAppService.createOrder(payload);
+        dispatch(clearCart());
+        // Refresh orders list
+        const response = await userAppService.getMyOrders();
+        dispatch(setOrders(response.data));
+        return order;
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to place order";
+        dispatch(setError(message));
+        throw err;
+      } finally {
+        dispatch(setLoading(false));
+      }
+    },
+    [dispatch]
+  );
+
+  const cancelOrder = useCallback(
+    async (orderId: string) => {
+      try {
+        const order = await userAppService.cancelOrder(orderId);
+        const response = await userAppService.getMyOrders();
+        dispatch(setOrders(response.data));
+        return order;
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to cancel order";
+        dispatch(setError(message));
+        throw err;
+      }
+    },
+    [dispatch]
+  );
+
   return {
     ...state,
     initializeHome,
@@ -103,5 +142,7 @@ export const useUserApp = () => {
     selectSociety,
     loadMyOrders,
     toggleFavorite,
+    placeOrder,
+    cancelOrder,
   };
 };

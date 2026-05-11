@@ -7,7 +7,9 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
+import { router } from "expo-router";
 import AppSectionHeader from "../../src/components/AppSectionHeader";
 import { useUserApp } from "../../src/hooks/useUserApp";
 import { Order, OrderStatus } from "../../src/types";
@@ -28,8 +30,22 @@ const ACTIVE_STATUSES = [
   OrderStatus.OUT_FOR_DELIVERY,
 ];
 
+const STATUS_COLOR: Record<string, { bg: string; border: string; text: string }> = {
+  pending:         { bg: "#FFF7ED", border: "#FED7AA", text: "#9A3412" },
+  confirmed:       { bg: "#ECFDF5", border: "#A7F3D0", text: "#065F46" },
+  preparing:       { bg: "#EFF6FF", border: "#BFDBFE", text: "#1E40AF" },
+  ready:           { bg: "#F0FDF4", border: "#86EFAC", text: "#15803D" },
+  outForDelivery:  { bg: "#FDF4FF", border: "#E9D5FF", text: "#6B21A8" },
+  delivered:       { bg: "#ECFDF5", border: "#6EE7B7", text: "#065F46" },
+  cancelled:       { bg: "#FEF2F2", border: "#FECACA", text: "#991B1B" },
+};
+
+function getStatusStyle(status: string) {
+  return STATUS_COLOR[status] ?? STATUS_COLOR.pending;
+}
+
 export default function UserOrders() {
-  const { orders, isLoading, loadMyOrders } = useUserApp();
+  const { orders, isLoading, loadMyOrders, cancelOrder } = useUserApp();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
 
   useEffect(() => {
@@ -40,7 +56,6 @@ export default function UserOrders() {
     if (activeFilter === "active") {
       return orders.filter((item) => ACTIVE_STATUSES.includes(item.status));
     }
-
     if (activeFilter === "completed") {
       return orders.filter(
         (item) =>
@@ -48,28 +63,87 @@ export default function UserOrders() {
           item.status === OrderStatus.CANCELLED
       );
     }
-
     return orders;
   }, [activeFilter, orders]);
 
-  const renderItem = ({ item }: { item: Order }) => (
-    <View style={styles.card}>
-      <View style={styles.rowTop}>
-        <View>
-          <Text style={styles.orderId}>#{item.id.slice(0, 8)}</Text>
-          <Text style={styles.orderMeta}>{item.items.length} items</Text>
-        </View>
-        <Text style={styles.amount}>Rs {item.finalAmount}</Text>
-      </View>
+  function handleCancel(orderId: string) {
+    Alert.alert("Cancel Order", "Are you sure you want to cancel this order?", [
+      { text: "No", style: "cancel" },
+      {
+        text: "Yes, Cancel",
+        style: "destructive",
+        onPress: () => cancelOrder(orderId).catch(() => null),
+      },
+    ]);
+  }
 
-      <View style={styles.rowBottom}>
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>{item.status}</Text>
+  const renderItem = ({ item }: { item: Order }) => {
+    const statusStyle = getStatusStyle(item.status);
+    const canCancel =
+      item.status === OrderStatus.PENDING || item.status === OrderStatus.CONFIRMED;
+
+    return (
+      <View style={styles.card}>
+        {/* Top row */}
+        <View style={styles.rowTop}>
+          <View>
+            <Text style={styles.orderId}>#{item.id.slice(0, 8).toUpperCase()}</Text>
+            <Text style={styles.businessName}>{(item as any).businessName ?? "Shop"}</Text>
+          </View>
+          <View style={styles.rightCol}>
+            <Text style={styles.amount}>Rs {item.finalAmount}</Text>
+            <Text style={styles.orderMeta}>{item.items.length} item{item.items.length !== 1 ? "s" : ""}</Text>
+          </View>
         </View>
-        <Text style={styles.paymentText}>{item.paymentStatus}</Text>
+
+        {/* Items list */}
+        {item.items.slice(0, 3).map((orderItem: any, idx: number) => (
+          <View key={idx} style={styles.itemRow}>
+            <Text style={styles.itemQty}>{orderItem.quantity}×</Text>
+            <Text style={styles.itemName} numberOfLines={1}>
+              {orderItem.productName ?? `Item ${idx + 1}`}
+            </Text>
+            <Text style={styles.itemPrice}>Rs {orderItem.lineTotal ?? orderItem.price * orderItem.quantity}</Text>
+          </View>
+        ))}
+        {item.items.length > 3 ? (
+          <Text style={styles.moreItems}>+{item.items.length - 3} more items</Text>
+        ) : null}
+
+        {/* Price breakdown */}
+        <View style={styles.priceBreakdown}>
+          <Text style={styles.priceBreakdownText}>
+            Subtotal: Rs {(item as any).subTotal ?? item.totalAmount} · Platform fee: Rs {(item as any).platformFee ?? 2}
+          </Text>
+        </View>
+
+        {/* Bottom row */}
+        <View style={styles.rowBottom}>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: statusStyle.bg, borderColor: statusStyle.border },
+            ]}
+          >
+            <Text style={[styles.statusText, { color: statusStyle.text }]}>
+              {item.status.replace(/([A-Z])/g, " $1").trim()}
+            </Text>
+          </View>
+          <View style={styles.rowBottomRight}>
+            <Text style={styles.paymentText}>{item.paymentStatus}</Text>
+            {canCancel ? (
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => handleCancel(item.id)}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -107,12 +181,21 @@ export default function UserOrders() {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
+          onRefresh={() => loadMyOrders().catch(() => null)}
+          refreshing={isLoading}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
+              <Text style={styles.emptyEmoji}>🛒</Text>
               <Text style={styles.emptyTitle}>No orders yet</Text>
               <Text style={styles.emptySubtitle}>
                 Your placed orders will appear here.
               </Text>
+              <TouchableOpacity
+                style={styles.browseBtn}
+                onPress={() => router.push("/(user)/home")}
+              >
+                <Text style={styles.browseBtnText}>Browse Products</Text>
+              </TouchableOpacity>
             </View>
           }
         />
@@ -122,10 +205,7 @@ export default function UserOrders() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
   filterRow: {
     flexDirection: "row",
     gap: 8,
@@ -139,91 +219,94 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  filterBtnActive: {
-    backgroundColor: "#D97706",
-  },
-  filterLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#64748B",
-  },
-  filterLabelActive: {
-    color: "#FFFFFF",
-  },
-  loaderWrap: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
-  },
+  filterBtnActive: { backgroundColor: "#D97706" },
+  filterLabel: { fontSize: 12, fontWeight: "700", color: "#64748B" },
+  filterLabelActive: { color: "#FFFFFF" },
+  loaderWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
+  listContent: { paddingHorizontal: 16, paddingBottom: 20 },
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
+    padding: 14,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   rowTop: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 10,
+  },
+  orderId: { fontSize: 14, fontWeight: "800", color: "#111827" },
+  businessName: { fontSize: 12, color: "#6B7280", fontWeight: "600", marginTop: 2 },
+  rightCol: { alignItems: "flex-end" },
+  amount: { fontSize: 16, fontWeight: "800", color: "#D97706" },
+  orderMeta: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
+  itemRow: {
+    flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 3,
+    gap: 6,
   },
-  orderId: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#111827",
-  },
-  orderMeta: {
-    marginTop: 3,
+  itemQty: {
     fontSize: 12,
-    color: "#6B7280",
+    fontWeight: "700",
+    color: "#92400E",
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+    minWidth: 28,
+    textAlign: "center",
   },
-  amount: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#111827",
+  itemName: { flex: 1, fontSize: 13, color: "#374151" },
+  itemPrice: { fontSize: 13, fontWeight: "700", color: "#111827" },
+  moreItems: { fontSize: 11, color: "#9CA3AF", marginTop: 4, marginLeft: 34 },
+  priceBreakdown: {
+    marginTop: 6,
+    marginBottom: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
   },
+  priceBreakdownText: { fontSize: 11, color: "#9CA3AF" },
   rowBottom: {
-    marginTop: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+  rowBottomRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   statusBadge: {
-    backgroundColor: "#FFF7ED",
     borderWidth: 1,
-    borderColor: "#FED7AA",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
   },
-  statusText: {
-    color: "#9A3412",
-    fontSize: 11,
-    fontWeight: "700",
-    textTransform: "capitalize",
+  statusText: { fontSize: 11, fontWeight: "700", textTransform: "capitalize" },
+  paymentText: { color: "#64748B", fontSize: 11, fontWeight: "600", textTransform: "capitalize" },
+  cancelBtn: {
+    backgroundColor: "#FEE2E2",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "#FECACA",
   },
-  paymentText: {
-    color: "#64748B",
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "capitalize",
+  cancelBtnText: { fontSize: 11, fontWeight: "700", color: "#991B1B" },
+  emptyWrap: { alignItems: "center", paddingVertical: 50, gap: 8 },
+  emptyEmoji: { fontSize: 48, marginBottom: 8 },
+  emptyTitle: { fontSize: 18, fontWeight: "700", color: "#334155" },
+  emptySubtitle: { fontSize: 13, color: "#94A3B8", textAlign: "center" },
+  browseBtn: {
+    marginTop: 8,
+    backgroundColor: "#D97706",
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
-  emptyWrap: {
-    alignItems: "center",
-    paddingVertical: 50,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#334155",
-  },
-  emptySubtitle: {
-    marginTop: 6,
-    fontSize: 13,
-    color: "#94A3B8",
-    textAlign: "center",
-  },
+  browseBtnText: { fontSize: 14, fontWeight: "800", color: "#FFFFFF" },
 });

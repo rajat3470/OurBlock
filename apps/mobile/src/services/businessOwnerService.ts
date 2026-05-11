@@ -38,16 +38,29 @@ export const businessOwnerService = {
     page = 1,
     limit = 50
   ): Promise<PaginatedResponse<Order>> {
-    return apiClient.get<PaginatedResponse<Order>>(
-      `/owner/orders?page=${page}&limit=${limit}`
+    const res = await apiClient.get<{ success: boolean; data: Order[]; total: number }>(
+      `/orders/business?page=${page}&limit=${limit}`
     );
+    const total = res.total ?? res.data.length;
+    return {
+      data: res.data,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
   },
 
   async updateOrderStatus(
     orderId: string,
     status: Order["status"]
   ): Promise<Order> {
-    const res = await apiClient.patch<ApiEnvelope<Order>>(`/owner/orders/${orderId}/status`, { status });
+    const res = await apiClient.put<{ success: boolean; data: Order }>(`/orders/${orderId}/status`, { status });
+    return res.data;
+  },
+
+  async rejectOrder(orderId: string, reason: string): Promise<Order> {
+    const res = await apiClient.post<{ success: boolean; data: Order }>(
+      `/owner/orders/${orderId}/reject`,
+      { reason }
+    );
     return res.data;
   },
 

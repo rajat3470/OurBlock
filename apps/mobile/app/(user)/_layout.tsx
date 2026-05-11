@@ -63,6 +63,9 @@ export default function UserLayout() {
         <Tabs.Screen name="addresses" options={{ href: null }} />
         <Tabs.Screen name="add-address" options={{ href: null }} />
         <Tabs.Screen name="verify-phone" options={{ href: null }} />
+        <Tabs.Screen name="product" options={{ href: null }} />
+        <Tabs.Screen name="cart" options={{ href: null }} />
+        <Tabs.Screen name="checkout" options={{ href: null }} />
       </Tabs>
     </RoleGate>
   );

@@ -150,6 +150,7 @@ export enum OrderStatus {
   OUT_FOR_DELIVERY = "outForDelivery",
   DELIVERED = "delivered",
   CANCELLED = "cancelled",
+  REJECTED = "rejected",
 }
 
 export interface Order {
@@ -168,6 +169,8 @@ export interface Order {
   notes?: string;
   estimatedDeliveryTime?: Date;
   deliveredAt?: Date;
+  rejectionReason?: string; // If order was rejected by business owner
+  rejectedAt?: Date; // Timestamp of rejection
   trackingUpdates?: TrackingUpdate[];
   createdAt: Date;
   updatedAt: Date;
@@ -185,6 +188,8 @@ export interface TrackingUpdate {
   timestamp: Date;
   location?: string;
   notes?: string;
+  rejectionReason?: string; // Specific reason if order was rejected
+  rejectedBy?: 'business_owner'; // Who initiated the rejection
 }
 
 // Address Types

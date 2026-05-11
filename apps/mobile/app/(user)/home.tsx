@@ -11,9 +11,10 @@ import {
 import { router } from "expo-router";
 import { Image } from "expo-image";
 import { useToast } from "react-native-toast-notifications";
-import { useAppSelector } from "../../src/hooks/useRedux";
+import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
 import { useUserApp } from "../../src/hooks/useUserApp";
 import { userAppService } from "../../src/services/userAppService";
+import { addItem, updateQuantity } from "../../src/store/slices/cartSlice";
 
 const FILTER_TAGS = ["Near & Fast", "Top Rated", "Great Offers", "New Arrivals"];
 
@@ -111,7 +112,10 @@ function HomeSkeleton() {
 
 export default function UserHome() {
   const toast = useToast();
+  const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
+  const cartItems = useAppSelector((state) => state.cart.items);
+  const cartBusinessId = useAppSelector((state) => state.cart.businessId);
   const {
     societies,
     selectedSocietyId,
@@ -345,16 +349,28 @@ export default function UserHome() {
       >
         <View style={styles.heroWrap}>
           <View style={styles.locationRow}>
-            <View style={styles.locationLeft}>
-              <Text style={styles.locationTitle}>📍 Home</Text>
-              <Text style={styles.locationSubtitle} numberOfLines={1}>
-                {selectedSocietyName}
-              </Text>
+              <View style={styles.locationLeft}>
+                <Text style={styles.locationTitle}>📍 Home</Text>
+                <Text style={styles.locationSubtitle} numberOfLines={1}>
+                  {selectedSocietyName}
+                </Text>
+              </View>
+              <View style={styles.locationRight}>
+                {cartItems.length > 0 ? (
+                  <TouchableOpacity
+                    style={styles.cartHeaderBtn}
+                    onPress={() => router.push("/(user)/cart")}
+                  >
+                    <Text style={styles.cartHeaderText}>
+                      🛒 {cartItems.reduce((s, i) => s + i.quantity, 0)}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+                <TouchableOpacity style={styles.avatarWrap} onPress={() => router.push("/(user)/profile")}>
+                  <Text style={styles.avatarText}>{(user?.firstName || "U").charAt(0).toUpperCase()}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <TouchableOpacity style={styles.avatarWrap} onPress={() => router.push("/(user)/profile")}>
-              <Text style={styles.avatarText}>{(user?.firstName || "U").charAt(0).toUpperCase()}</Text>
-            </TouchableOpacity>
-          </View>
 
           {!user?.isPhoneVerified ? (
             <TouchableOpacity style={styles.noticeBar} onPress={() => router.push("/(user)/verify-phone")}>
@@ -498,14 +514,19 @@ export default function UserHome() {
               const store = businessesById.get(product.businessId);
               const discount = Number(product.discount || 0);
               const imageUrl = getFirstImageUrl(product.imageUrls);
+              const cartItem = cartItems.find((i) => i.productId === product.id);
+              const qty = cartItem?.quantity ?? 0;
+
               return (
                 <TouchableOpacity
                   key={product.id}
                   style={styles.productCard}
-                  onPress={() => {
-                    setQuery(product.name);
-                    onSearchPress();
-                  }}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(user)/product",
+                      params: { id: product.id, businessId: product.businessId },
+                    })
+                  }
                 >
                   <View style={styles.productThumb}>
                     {imageUrl ? (
@@ -527,9 +548,58 @@ export default function UserHome() {
                   </Text>
                   <View style={styles.productBottom}>
                     <Text style={styles.productPrice}>Rs {product.price}</Text>
-                    <Text style={styles.productEta}>
-                      ⚡ {Number(store?.metadata?.etaMins ?? 25)} mins
-                    </Text>
+                    {qty === 0 ? (
+                      <TouchableOpacity
+                        style={styles.addCartBtn}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          if (cartBusinessId && cartBusinessId !== product.businessId) {
+                            toast.show("Clears cart from other shop", { type: "warning" });
+                          }
+                          dispatch(
+                            addItem({
+                              productId: product.id,
+                              productName: product.name,
+                              productImage: imageUrl,
+                              businessId: product.businessId,
+                              businessName: store?.name ?? "Local Store",
+                              price: product.price,
+                              quantity: 1,
+                              maxQuantity: product.stock,
+                            })
+                          );
+                          toast.show(`${product.name} added`, { type: "success" });
+                        }}
+                      >
+                        <Text style={styles.addCartBtnText}>+</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={styles.miniQtyRow}>
+                        <TouchableOpacity
+                          style={styles.miniQtyBtn}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            dispatch(updateQuantity({ productId: product.id, quantity: qty - 1 }));
+                          }}
+                        >
+                          <Text style={styles.miniQtyBtnText}>−</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.miniQtyCount}>{qty}</Text>
+                        <TouchableOpacity
+                          style={styles.miniQtyBtn}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            if (qty >= product.stock) {
+                              toast.show(`Only ${product.stock} available`, { type: "warning" });
+                              return;
+                            }
+                            dispatch(updateQuantity({ productId: product.id, quantity: qty + 1 }));
+                          }}
+                        >
+                          <Text style={styles.miniQtyBtnText}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                 </TouchableOpacity>
               );
@@ -638,6 +708,22 @@ const styles = StyleSheet.create({
   locationLeft: {
     flex: 1,
     marginRight: 8,
+  },
+  locationRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  cartHeaderBtn: {
+    backgroundColor: "#D97706",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  cartHeaderText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
   locationTitle: {
     fontSize: 29,
@@ -979,6 +1065,48 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: "#059669",
+  },
+  addCartBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#D97706",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addCartBtnText: {
+    fontSize: 20,
+    color: "#FFFFFF",
+    fontWeight: "700",
+    lineHeight: 26,
+  },
+  miniQtyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF3C7",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    overflow: "hidden",
+  },
+  miniQtyBtn: {
+    width: 26,
+    height: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#D97706",
+  },
+  miniQtyBtnText: {
+    fontSize: 16,
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  miniQtyCount: {
+    width: 26,
+    textAlign: "center",
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#92400E",
   },
   quickActionRow: {
     paddingHorizontal: 16,

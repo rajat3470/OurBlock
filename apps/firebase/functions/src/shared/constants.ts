@@ -30,13 +30,14 @@ export const FIREBASE_CONFIG = {
 
 // Order Status Flow
 export const ORDER_STATUS_FLOW = {
-  pending: ['confirmed', 'cancelled'],
+  pending: ['confirmed', 'cancelled', 'rejected'],
   confirmed: ['preparing', 'cancelled'],
   preparing: ['ready', 'cancelled'],
   ready: ['outForDelivery'],
   outForDelivery: ['delivered'],
   delivered: [],
   cancelled: [],
+  rejected: [],
 } as const;
 
 // User Roles

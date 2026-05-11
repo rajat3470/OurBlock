@@ -156,11 +156,30 @@ export default function BusinessOwnerOrders() {
             <Text style={styles.infoIcon}>🛍</Text>
             <Text style={styles.infoText}>
               {item.items.length} item{item.items.length !== 1 ? "s" : ""}
-              {item.items.length > 0
-                ? `  ·  ${item.items.map((i) => `×${i.quantity}`).join(", ")}`
-                : ""}
             </Text>
           </View>
+          {/* Item names */}
+          {item.items.slice(0, 3).map((orderItem: any, idx: number) => (
+            <View key={idx} style={styles.infoRow}>
+              <Text style={styles.infoIcon}>  ·</Text>
+              <Text style={styles.infoText} numberOfLines={1}>
+                {orderItem.quantity}× {orderItem.productName ?? `Item ${idx + 1}`} — Rs {orderItem.lineTotal ?? orderItem.price * orderItem.quantity}
+              </Text>
+            </View>
+          ))}
+          {item.items.length > 3 ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoIcon}>  ·</Text>
+              <Text style={styles.infoText}>+{item.items.length - 3} more</Text>
+            </View>
+          ) : null}
+          {/* Customer info */}
+          {(item as any).userName ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoIcon}>👤</Text>
+              <Text style={styles.infoText}>{(item as any).userName}{(item as any).userPhone ? ` · ${(item as any).userPhone}` : ""}</Text>
+            </View>
+          ) : null}
           {addressLine ? (
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>📍</Text>

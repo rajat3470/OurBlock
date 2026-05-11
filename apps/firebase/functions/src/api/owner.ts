@@ -306,6 +306,64 @@ router.patch('/orders/:orderId/status', requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /owner/orders/:orderId/reject — reject an order with reason
+// ---------------------------------------------------------------------------
+router.post('/orders/:orderId/reject', requireAuth, async (req, res) => {
+  try {
+    const uid = (req as any).uid;
+    const { reason } = req.body;
+
+    if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+      return res.status(400).json({ success: false, error: 'Rejection reason is required' });
+    }
+
+    const business = await getOwnerBusiness(uid);
+    if (!business) {
+      return res.status(404).json({ success: false, error: 'No business found for this owner' });
+    }
+
+    const orderDoc = await db.collection('orders').doc(req.params.orderId).get();
+    if (!orderDoc.exists) {
+      return res.status(404).json({ success: false, error: 'Order not found' });
+    }
+
+    const orderData = orderDoc.data();
+    if (orderData?.businessId !== (business as any).id) {
+      return res.status(403).json({ success: false, error: 'Order does not belong to your business' });
+    }
+
+    // Only allow rejection of PENDING orders
+    if (orderData?.status !== 'pending') {
+      return res.status(400).json({ 
+        success: false, 
+        error: `Cannot reject order with status "${orderData?.status}". Only pending orders can be rejected.` 
+      });
+    }
+
+    const trackingUpdate = {
+      status: 'rejected',
+      timestamp: new Date().toISOString(),
+      rejectionReason: reason.trim(),
+      rejectedBy: 'business_owner',
+      notes: `Order rejected by ${(business as any).name}: ${reason}`,
+    };
+
+    await db.collection('orders').doc(req.params.orderId).update({
+      status: 'rejected',
+      rejectionReason: reason.trim(),
+      rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
+      trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    const updatedDoc = await db.collection('orders').doc(req.params.orderId).get();
+    return res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
+  } catch (error: any) {
+    return res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /owner/stats — dashboard statistics for the owner
 // ---------------------------------------------------------------------------
 router.get('/stats', requireAuth, async (req, res) => {

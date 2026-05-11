@@ -1,5 +1,5 @@
 import { apiClient } from "./apiClient";
-import { Business, Order, Product, Society, PaginatedResponse, Address, AppUser } from "@/types";
+import { Business, CreateOrderPayload, Order, Product, Society, PaginatedResponse, Address, AppUser } from "@/types";
 import { UserAppStats } from "@store/slices/userAppSlice";
 
 export interface HomeFeedCategory {
@@ -36,9 +36,26 @@ export const userAppService = {
   },
 
   async getMyOrders(page = 1, limit = 50): Promise<PaginatedResponse<Order>> {
-    return apiClient.get<PaginatedResponse<Order>>(
+    const res = await apiClient.get<{ success: boolean; data: Order[]; total: number }>(
       `/orders/my?page=${page}&limit=${limit}`
     );
+    const total = res.total ?? res.data.length;
+    return {
+      data: res.data,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    };
+  },
+
+  async getOrder(id: string): Promise<Order> {
+    return apiClient.get<Order>(`/orders/${id}`);
+  },
+
+  async createOrder(payload: CreateOrderPayload): Promise<Order> {
+    return apiClient.post<Order>("/orders", payload);
+  },
+
+  async cancelOrder(id: string): Promise<Order> {
+    return apiClient.put<Order>(`/orders/${id}/status`, { status: "cancelled" });
   },
 
   async getStats(societyId?: string): Promise<UserAppStats> {
