@@ -344,4 +344,28 @@ router.post('/verify-phone/me', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// POST /user/fcm-token — save FCM push token for the authenticated user
+// ---------------------------------------------------------------------------
+router.post('/fcm-token', requireAuth, async (req: any, res: any) => {
+  try {
+    const uid = req.uid;
+    const { fcmToken } = req.body;
+
+    if (!fcmToken || typeof fcmToken !== 'string') {
+      return res.status(400).json({ success: false, error: 'fcmToken is required' });
+    }
+
+    await db.collection('users').doc(uid).update({
+      fcmToken,
+      fcmTokenUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return res.json({ success: true });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 export default router;

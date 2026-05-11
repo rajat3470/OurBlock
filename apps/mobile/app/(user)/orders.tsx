@@ -38,6 +38,18 @@ const STATUS_COLOR: Record<string, { bg: string; border: string; text: string }>
   outForDelivery:  { bg: "#FDF4FF", border: "#E9D5FF", text: "#6B21A8" },
   delivered:       { bg: "#ECFDF5", border: "#6EE7B7", text: "#065F46" },
   cancelled:       { bg: "#FEF2F2", border: "#FECACA", text: "#991B1B" },
+  rejected:        { bg: "#FEF2F2", border: "#FECACA", text: "#991B1B" },
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pending:        "Waiting for Acceptance",
+  confirmed:      "Accepted",
+  preparing:      "Processing",
+  ready:          "Ready to Collect",
+  outForDelivery: "On the Way",
+  delivered:      "Completed",
+  cancelled:      "Cancelled",
+  rejected:       "Rejected",
 };
 
 function getStatusStyle(status: string) {
@@ -60,7 +72,8 @@ export default function UserOrders() {
       return orders.filter(
         (item) =>
           item.status === OrderStatus.DELIVERED ||
-          item.status === OrderStatus.CANCELLED
+          item.status === OrderStatus.CANCELLED ||
+          item.status === OrderStatus.REJECTED
       );
     }
     return orders;
@@ -126,7 +139,7 @@ export default function UserOrders() {
             ]}
           >
             <Text style={[styles.statusText, { color: statusStyle.text }]}>
-              {item.status.replace(/([A-Z])/g, " $1").trim()}
+              {STATUS_LABEL[item.status] ?? item.status}
             </Text>
           </View>
           <View style={styles.rowBottomRight}>
@@ -141,6 +154,13 @@ export default function UserOrders() {
             ) : null}
           </View>
         </View>
+        {/* Show rejection reason if order was rejected */}
+        {item.status === OrderStatus.REJECTED && (item as any).rejectionReason ? (
+          <View style={styles.rejectionBanner}>
+            <Text style={styles.rejectionLabel}>Rejection reason:</Text>
+            <Text style={styles.rejectionText}>{(item as any).rejectionReason}</Text>
+          </View>
+        ) : null}
       </View>
     );
   };
@@ -309,4 +329,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   browseBtnText: { fontSize: 14, fontWeight: "800", color: "#FFFFFF" },
+  rejectionBanner: {
+    marginHorizontal: 12,
+    marginBottom: 10,
+    backgroundColor: "#FEF2F2",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  rejectionLabel: { fontSize: 11, fontWeight: "700", color: "#991B1B", marginBottom: 2 },
+  rejectionText: { fontSize: 12, color: "#7F1D1D", lineHeight: 17 },
 });

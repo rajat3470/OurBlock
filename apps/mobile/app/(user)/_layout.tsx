@@ -2,8 +2,10 @@ import { Tabs } from "expo-router";
 import RoleGate from "../../src/components/RoleGate";
 import AppTabIcon from "../../src/components/AppTabIcon";
 import { colors } from "../../src/constants/theme";
+import { useOrderNotifications } from "../../src/hooks/useOrderNotifications";
 
 export default function UserLayout() {
+  useOrderNotifications();
   return (
     <RoleGate allowedRole="user">
       <Tabs

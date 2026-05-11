@@ -3,14 +3,32 @@ import * as admin from 'firebase-admin';
 
 const db = admin.firestore();
 
+async function sendPushNotification(userId: string, title: string, body: string, data: Record<string, string>) {
+  try {
+    const userDoc = await db.collection('users').doc(userId).get();
+    const fcmToken = userDoc.data()?.fcmToken;
+    if (!fcmToken) return;
+
+    await admin.messaging().send({
+      token: fcmToken,
+      notification: { title, body },
+      data,
+      android: { priority: 'high', notification: { channelId: 'orders', sound: 'default' } },
+      apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+    });
+  } catch (err) {
+    console.warn('FCM send failed for user', userId, err);
+  }
+}
+
 const statusMessages: Record<string, string> = {
-  confirmed: 'Your order has been confirmed by the business owner',
-  preparing: 'Your order is being prepared',
-  ready: 'Your order is ready',
-  outForDelivery: 'Your order is out for delivery',
-  delivered: 'Your order has been delivered',
+  confirmed: 'Your order has been accepted by the store',
+  preparing: 'Your order is being processed',
+  ready: 'Your order is ready for collection/delivery',
+  outForDelivery: 'Your order is on its way',
+  delivered: 'Your order has been completed',
   cancelled: 'Your order has been cancelled',
-  rejected: 'Your order has been rejected by the business owner',
+  rejected: 'Your order has been rejected by the store',
 };
 
 export const onOrderUpdate = functions.firestore
@@ -20,33 +38,40 @@ export const onOrderUpdate = functions.firestore
       const before = change.before.data();
       const after = change.after.data();
       const orderId = context.params.orderId;
+      const orderRef = orderId.substring(0, 8).toUpperCase();
       
-      // Check if status changed
       if (before.status !== after.status) {
         console.log(`Order ${orderId} status changed: ${before.status} -> ${after.status}`);
         
         let message = statusMessages[after.status] || 'Order status updated';
         
-        // For rejected orders, append rejection reason if available
         if (after.status === 'rejected' && after.rejectionReason) {
-          message = `${message}: ${after.rejectionReason}`;
+          message = `Your order was rejected: ${after.rejectionReason}`;
         }
-        
-        // Notify customer
+
+        const title = after.status === 'rejected' ? 'Order Rejected' : 'Order Update';
+        const body = `Order #${orderRef}: ${message}`;
+
+        // Firestore in-app notification
         await db.collection('notifications').add({
           userId: after.userId,
           type: 'order',
-          title: after.status === 'rejected' ? 'Order Rejected' : 'Order Status Updated',
-          body: `Order #${orderId.substring(0, 8)}: ${message}`,
-          data: { 
-            orderId, 
+          title,
+          body,
+          data: {
+            orderId,
             status: after.status,
-            rejectionReason: after.rejectionReason || undefined,
+            ...(after.rejectionReason ? { rejectionReason: after.rejectionReason } : {}),
           },
           read: false,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
+
+        // FCM push to customer
+        const pushData: Record<string, string> = { orderId, status: after.status };
+        if (after.rejectionReason) pushData.rejectionReason = after.rejectionReason;
+        await sendPushNotification(after.userId, title, body, pushData);
         
         console.log('Order update notification sent');
       }

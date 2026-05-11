@@ -149,6 +149,24 @@ export const useBusinessOwner = () => {
     [dispatch]
   );
 
+  const rejectOrder = useCallback(
+    async (orderId: string, reason: string) => {
+      dispatch(setLoading(true));
+      try {
+        const order = await businessOwnerService.rejectOrder(orderId, reason);
+        dispatch(updateOrder(order));
+        return order;
+      } catch (err: unknown) {
+        const message = extractErrorMessage(err, "Failed to reject order");
+        dispatch(setError(message));
+        throw err;
+      } finally {
+        dispatch(setLoading(false));
+      }
+    },
+    [dispatch]
+  );
+
   const loadStats = useCallback(async () => {
     dispatch(setLoading(true));
     try {
@@ -186,6 +204,7 @@ export const useBusinessOwner = () => {
     removeProductById,
     loadOrders,
     changeOrderStatus,
+    rejectOrder,
     loadStats,
     selectOrder,
     selectProduct,

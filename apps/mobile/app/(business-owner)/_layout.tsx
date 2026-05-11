@@ -4,12 +4,16 @@ import AppTabIcon from "../../src/components/AppTabIcon";
 import { colors } from "../../src/constants/theme";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { OrderStatus } from "../../src/types";
+import { useOrderNotifications } from "../../src/hooks/useOrderNotifications";
 
 export default function BusinessOwnerLayout() {
   const orders = useAppSelector((state) => state.businessOwner.orders);
   const activeOrderCount = orders.filter(
     (o) => o.status !== OrderStatus.DELIVERED && o.status !== OrderStatus.CANCELLED
   ).length;
+
+  useOrderNotifications();
+
   return (
     <RoleGate allowedRole="businessOwner">
       <Tabs

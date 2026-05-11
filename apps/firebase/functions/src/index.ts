@@ -45,6 +45,7 @@ export const api = functions.https.onRequest(app);
 // Export triggers
 export * from './triggers/onUserCreate';
 export * from './triggers/onOrderCreate';
+export * from './triggers/onOrderUpdate';
 export * from './triggers/onSocietyDelete';
 
 // Export scheduled functions

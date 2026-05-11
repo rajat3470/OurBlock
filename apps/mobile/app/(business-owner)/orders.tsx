@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  TextInput,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  Vibration,
 } from "react-native";
 import AppSectionHeader from "../../src/components/AppSectionHeader";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
@@ -22,16 +27,17 @@ const ACTIVE_STATUSES: OrderStatus[] = [
   OrderStatus.OUT_FOR_DELIVERY,
 ];
 
-const DONE_STATUSES: OrderStatus[] = [OrderStatus.DELIVERED, OrderStatus.CANCELLED];
+const DONE_STATUSES: OrderStatus[] = [OrderStatus.DELIVERED, OrderStatus.CANCELLED, OrderStatus.REJECTED];
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; emoji: string; border: string }> = {
-  [OrderStatus.PENDING]:          { label: "Pending",          color: "#D97706", bg: "#FFFBEB", emoji: "⏳", border: "#FDE68A" },
-  [OrderStatus.CONFIRMED]:        { label: "Confirmed",        color: "#2563EB", bg: "#EFF6FF", emoji: "✅", border: "#BFDBFE" },
-  [OrderStatus.PREPARING]:        { label: "Preparing",        color: "#7C3AED", bg: "#F5F3FF", emoji: "🍳", border: "#DDD6FE" },
-  [OrderStatus.READY]:            { label: "Ready to Pick",    color: "#059669", bg: "#ECFDF5", emoji: "📦", border: "#A7F3D0" },
-  [OrderStatus.OUT_FOR_DELIVERY]: { label: "Out for Delivery", color: "#0284C7", bg: "#F0F9FF", emoji: "🚚", border: "#BAE6FD" },
-  [OrderStatus.DELIVERED]:        { label: "Delivered",        color: "#16A34A", bg: "#DCFCE7", emoji: "🎉", border: "#86EFAC" },
-  [OrderStatus.CANCELLED]:        { label: "Cancelled",        color: "#DC2626", bg: "#FEF2F2", emoji: "✗",  border: "#FECACA" },
+  [OrderStatus.PENDING]:          { label: "New Order",         color: "#D97706", bg: "#FFFBEB", emoji: "🔔", border: "#FDE68A" },
+  [OrderStatus.CONFIRMED]:        { label: "Accepted",          color: "#2563EB", bg: "#EFF6FF", emoji: "✅", border: "#BFDBFE" },
+  [OrderStatus.PREPARING]:        { label: "Processing",        color: "#7C3AED", bg: "#F5F3FF", emoji: "⚙️", border: "#DDD6FE" },
+  [OrderStatus.READY]:            { label: "Ready to Collect",  color: "#059669", bg: "#ECFDF5", emoji: "📦", border: "#A7F3D0" },
+  [OrderStatus.OUT_FOR_DELIVERY]: { label: "On the Way",        color: "#0284C7", bg: "#F0F9FF", emoji: "🚚", border: "#BAE6FD" },
+  [OrderStatus.DELIVERED]:        { label: "Completed",         color: "#16A34A", bg: "#DCFCE7", emoji: "🎉", border: "#86EFAC" },
+  [OrderStatus.CANCELLED]:        { label: "Cancelled",         color: "#DC2626", bg: "#FEF2F2", emoji: "✗",  border: "#FECACA" },
+  [OrderStatus.REJECTED]:         { label: "Rejected",          color: "#991B1B", bg: "#FEF2F2", emoji: "🚫", border: "#FECACA" },
 };
 
 const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
@@ -43,11 +49,10 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
 };
 
 const NEXT_STATUS_LABEL: Partial<Record<OrderStatus, string>> = {
-  [OrderStatus.PENDING]:          "✅ Confirm Order",
-  [OrderStatus.CONFIRMED]:        "🍳 Start Preparing",
+  [OrderStatus.CONFIRMED]:        "⚙️ Start Processing",
   [OrderStatus.PREPARING]:        "📦 Mark Ready",
   [OrderStatus.READY]:            "🚚 Out for Delivery",
-  [OrderStatus.OUT_FOR_DELIVERY]: "🎉 Mark Delivered",
+  [OrderStatus.OUT_FOR_DELIVERY]: "✅ Mark Completed",
 };
 
 function timeAgo(date: Date | string): string {
@@ -62,13 +67,42 @@ function timeAgo(date: Date | string): string {
 }
 
 export default function BusinessOwnerOrders() {
-  const { orders, isLoading, loadOrders, changeOrderStatus } = useBusinessOwner();
+  const { orders, isLoading, loadOrders, changeOrderStatus, rejectOrder } = useBusinessOwner();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [advancing, setAdvancing] = useState<string | null>(null);
+  const [rejectModal, setRejectModal] = useState<{ orderId: string; orderRef: string } | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejecting, setRejecting] = useState(false);
+
+  // Track previous pending count to detect new orders
+  const prevPendingCount = useRef<number>(0);
 
   useEffect(() => {
     loadOrders().catch(() => null);
   }, [loadOrders]);
+
+  // Ring/buzz when a new pending order arrives
+  useEffect(() => {
+    const pendingCount = orders.filter((o) => o.status === OrderStatus.PENDING).length;
+    if (pendingCount > prevPendingCount.current) {
+      playNewOrderAlert();
+    }
+    prevPendingCount.current = pendingCount;
+  }, [orders]);
+
+  // Cleanup sound on unmount
+  useEffect(() => {
+    return () => {};
+  }, []);
+
+  const playNewOrderAlert = async () => {
+    try {
+      // Zomato-style short-long-short-long vibration pattern
+      Vibration.vibrate([0, 400, 200, 400, 200, 600]);
+    } catch {
+      Vibration.vibrate([0, 300, 200, 300]);
+    }
+  };
 
   const counts = useMemo(
     () => ({
@@ -104,6 +138,40 @@ export default function BusinessOwnerOrders() {
       Alert.alert("Error", "Failed to update order status. Please try again.");
     } finally {
       setAdvancing(null);
+    }
+  };
+
+  const handleAccept = async (order: Order) => {
+    setAdvancing(order.id);
+    try {
+      await changeOrderStatus(order.id, OrderStatus.CONFIRMED);
+    } catch {
+      Alert.alert("Error", "Failed to accept order. Please try again.");
+    } finally {
+      setAdvancing(null);
+    }
+  };
+
+  const openRejectModal = (order: Order) => {
+    setRejectReason("");
+    setRejectModal({ orderId: order.id, orderRef: order.id.slice(0, 8).toUpperCase() });
+  };
+
+  const handleReject = async () => {
+    if (!rejectModal) return;
+    if (!rejectReason.trim()) {
+      Alert.alert("Reason Required", "Please provide a reason for rejecting this order.");
+      return;
+    }
+    setRejecting(true);
+    try {
+      await rejectOrder(rejectModal.orderId, rejectReason.trim());
+      setRejectModal(null);
+      setRejectReason("");
+    } catch {
+      Alert.alert("Error", "Failed to reject order. Please try again.");
+    } finally {
+      setRejecting(false);
     }
   };
 
@@ -195,7 +263,30 @@ export default function BusinessOwnerOrders() {
         </View>
 
         {/* Action */}
-        {next ? (
+        {item.status === OrderStatus.PENDING ? (
+          <View style={styles.pendingActions}>
+            <TouchableOpacity
+              style={[styles.rejectBtn, isAdvancing && styles.advanceBtnDisabled]}
+              onPress={() => openRejectModal(item)}
+              disabled={isAdvancing}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.rejectBtnText}>✕ Reject</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.acceptBtn, isAdvancing && styles.advanceBtnDisabled]}
+              onPress={() => handleAccept(item)}
+              disabled={isAdvancing}
+              activeOpacity={0.85}
+            >
+              {isAdvancing ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.acceptBtnText}>✓ Accept</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : next ? (
           <TouchableOpacity
             style={[styles.advanceBtn, isAdvancing && styles.advanceBtnDisabled]}
             onPress={() => handleAdvance(item)}
@@ -211,8 +302,17 @@ export default function BusinessOwnerOrders() {
         ) : (
           <View style={styles.terminalBanner}>
             <Text style={styles.terminalBannerText}>
-              {item.status === OrderStatus.DELIVERED ? "🎉 Order completed" : "✗ Order cancelled"}
+              {item.status === OrderStatus.DELIVERED
+                ? "✅ Order completed"
+                : item.status === OrderStatus.REJECTED
+                ? "🚫 Order rejected"
+                : "✗ Order cancelled"}
             </Text>
+            {item.status === OrderStatus.REJECTED && (item as any).rejectionReason ? (
+              <Text style={styles.rejectionReasonText}>
+                Reason: {(item as any).rejectionReason}
+              </Text>
+            ) : null}
           </View>
         )}
       </View>
@@ -271,6 +371,60 @@ export default function BusinessOwnerOrders() {
           }
         />
       )}
+
+      {/* Reject Order Modal */}
+      <Modal
+        visible={!!rejectModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => !rejecting && setRejectModal(null)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Reject Order #{rejectModal?.orderRef}</Text>
+            <Text style={styles.modalSubtitle}>
+              Please provide a reason. The customer will be notified.
+            </Text>
+            <TextInput
+              style={styles.reasonInput}
+              placeholder="e.g. Out of stock, Shop is closed, Item unavailable..."
+              placeholderTextColor="#94A3B8"
+              value={rejectReason}
+              onChangeText={setRejectReason}
+              multiline
+              numberOfLines={3}
+              maxLength={200}
+              autoFocus
+              textAlignVertical="top"
+            />
+            <Text style={styles.charCount}>{rejectReason.length}/200</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setRejectModal(null)}
+                disabled={rejecting}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalRejectBtn, rejecting && styles.advanceBtnDisabled]}
+                onPress={handleReject}
+                disabled={rejecting}
+              >
+                {rejecting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalRejectText}>Reject Order</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -458,11 +612,46 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.2,
   },
+
+  // Pending order: Accept + Reject split buttons
+  pendingActions: {
+    flexDirection: "row",
+    margin: 12,
+    gap: 10,
+  },
+  rejectBtn: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1.5,
+    borderColor: "#FECACA",
+  },
+  rejectBtnText: {
+    color: "#DC2626",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  acceptBtn: {
+    flex: 2,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: "#064E3B",
+  },
+  acceptBtnText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
   terminalBanner: {
     margin: 12,
     backgroundColor: "#F8FAFC",
     borderRadius: 12,
     paddingVertical: 12,
+    paddingHorizontal: 14,
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -471,6 +660,93 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#64748B",
+  },
+  rejectionReasonText: {
+    fontSize: 11,
+    color: "#94A3B8",
+    marginTop: 4,
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+
+  // ── Reject Modal ─────────────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  modalSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 36,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#E2E8F0",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 6,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: "#64748B",
+    marginBottom: 16,
+    lineHeight: 19,
+  },
+  reasonInput: {
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    padding: 14,
+    fontSize: 14,
+    color: "#0F172A",
+    minHeight: 90,
+    backgroundColor: "#F8FAFC",
+  },
+  charCount: {
+    alignSelf: "flex-end",
+    fontSize: 11,
+    color: "#94A3B8",
+    marginTop: 4,
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+  },
+  modalCancelText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  modalRejectBtn: {
+    flex: 2,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: "#DC2626",
+  },
+  modalRejectText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 
   // Empty state
