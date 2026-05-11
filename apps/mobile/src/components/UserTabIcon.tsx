@@ -11,14 +11,14 @@ interface UserTabIconProps {
 export default function UserTabIcon({ iconName, focused }: UserTabIconProps) {
   if (focused) {
     return (
-      <LinearGradient colors={["#DC2626", "#111111"]} style={styles.focusedWrap}>
+      <LinearGradient colors={["#DC2626", "#111111"]} style={[styles.focusedWrap, { marginBottom: 4 }]}>
         <Ionicons name={iconName} size={20} color="#FFFFFF" />
       </LinearGradient>
     );
   }
 
   return (
-    <View style={styles.iconWrap}>
+    <View style={[styles.iconWrap, { marginBottom: 4 }]}>
       <Ionicons name={iconName} size={20} color={colors.textSecondary} />
     </View>
   );

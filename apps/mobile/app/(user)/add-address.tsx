@@ -45,6 +45,20 @@ export default function AddEditAddressScreen() {
   useEffect(() => {
     if (isEdit) {
       fetchAddress();
+    } else {
+      // Reset form when navigating to "Add new"
+      setForm({
+        type: "home",
+        name: "",
+        street: "",
+        landmark: "",
+        city: "",
+        state: "",
+        pincode: "",
+        phone: "",
+        isDefault: false,
+      });
+      setErrors({});
     }
   }, [addressId]);
 

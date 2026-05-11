@@ -141,7 +141,7 @@ export default function AddressesScreen() {
       >
         <TouchableOpacity
           style={styles.backBtn}
-          onPress={() => router.back()}
+          onPress={() => router.push("/(user)/profile")}
         >
           <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
