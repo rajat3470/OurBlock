@@ -1,5 +1,5 @@
 import { apiClient } from "./apiClient";
-import { Business, CreateOrderPayload, Order, Product, Society, PaginatedResponse, Address, AppUser } from "@/types";
+import { Business, CreateOrderPayload, Order, Product, Society, PaginatedResponse, Address, AppUser, HomeBanner } from "@/types";
 import { UserAppStats } from "@store/slices/userAppSlice";
 
 export interface HomeFeedCategory {
@@ -15,6 +15,7 @@ export interface HomeFeedResponse {
   featuredProducts: Product[];
   topRatedBusinesses: Business[];
   offerProducts: Product[];
+  banners: HomeBanner[];
 }
 
 export const userAppService = {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Dimensions,
   View,
   Text,
   StyleSheet,
@@ -37,6 +38,9 @@ const CATEGORY_ICON: Record<string, string> = {
   snacks: "🍟",
   beverages: "🥤",
 };
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const DYNAMIC_BANNER_WIDTH = Math.min(SCREEN_WIDTH - 32, 420);
 
 function toTitleCase(value: string) {
   return value
@@ -120,6 +124,7 @@ export default function UserHome() {
     societies,
     selectedSocietyId,
     businesses,
+    banners,
     featuredProducts,
     isLoading,
     initializeHome,
@@ -188,6 +193,14 @@ export default function UserHome() {
     () => societies.filter((society) => addressSocietyIds.includes(society.id)),
     [addressSocietyIds, societies]
   );
+
+  const activeBanners = useMemo(() => {
+    if (!Array.isArray(banners)) return [];
+    return [...banners]
+      .filter((banner) => banner?.isActive && banner?.imageUrl)
+      .sort((a, b) => Number(a.sortOrder ?? 100) - Number(b.sortOrder ?? 100))
+      .slice(0, 5);
+  }, [banners]);
 
   const businessesById = useMemo(() => {
     const map = new Map<string, (typeof businesses)[number]>();
@@ -379,24 +392,89 @@ export default function UserHome() {
             </TouchableOpacity>
           ) : null}
 
-          <View style={styles.bannerCard}>
-            <Text style={styles.bannerEyebrow}>TRENDING IN YOUR SOCIETY</Text>
-            <Text style={styles.bannerTitle}>Top picks, fresh deals, and local bestsellers</Text>
-            <View style={styles.bannerMiniRow}>
-              <View style={styles.bannerMiniTile}>
-                <Text style={styles.bannerMiniTitle}>Products</Text>
-                <Text style={styles.bannerMiniValue}>{featuredProducts.length}</Text>
-              </View>
-              <View style={styles.bannerMiniTile}>
-                <Text style={styles.bannerMiniTitle}>Shops</Text>
-                <Text style={styles.bannerMiniValue}>{businesses.length}</Text>
-              </View>
-              <View style={styles.bannerMiniTile}>
-                <Text style={styles.bannerMiniTitle}>Fastest ETA</Text>
-                <Text style={styles.bannerMiniValue}>20m</Text>
+          {activeBanners.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.bannerCarouselRow}
+            >
+              {activeBanners.map((banner) => (
+                <TouchableOpacity
+                  key={banner.id}
+                  activeOpacity={0.92}
+                  style={styles.dynamicBannerCard}
+                  onPress={() => {
+                    if (!banner.ctaRoute) return;
+                    try {
+                      router.push(banner.ctaRoute as any);
+                    } catch {
+                      toast.show("Unable to open banner link", { type: "warning" });
+                    }
+                  }}
+                >
+                  <Image
+                    source={{ uri: banner.imageUrl }}
+                    style={styles.dynamicBannerImage}
+                    contentFit="cover"
+                    contentPosition="center"
+                  />
+                  <View style={styles.dynamicBannerOverlay}>
+                    <Text style={styles.dynamicBannerEyebrow} numberOfLines={1}>
+                      {banner.tagText || "TRENDING IN YOUR SOCIETY"}
+                    </Text>
+                    <Text style={styles.dynamicBannerTitle} numberOfLines={2}>
+                      {banner.title}
+                    </Text>
+                    {banner.subtitle ? (
+                      <Text style={styles.dynamicBannerSubtitle} numberOfLines={2}>
+                        {banner.subtitle}
+                      </Text>
+                    ) : null}
+
+                    <View style={styles.bannerMiniRow}>
+                      <View style={styles.bannerMiniTile}>
+                        <Text style={styles.bannerMiniTitle}>Products</Text>
+                        <Text style={styles.bannerMiniValue}>{featuredProducts.length}</Text>
+                      </View>
+                      <View style={styles.bannerMiniTile}>
+                        <Text style={styles.bannerMiniTitle}>Shops</Text>
+                        <Text style={styles.bannerMiniValue}>{businesses.length}</Text>
+                      </View>
+                      <View style={styles.bannerMiniTile}>
+                        <Text style={styles.bannerMiniTitle}>Fastest ETA</Text>
+                        <Text style={styles.bannerMiniValue}>20m</Text>
+                      </View>
+                    </View>
+
+                    {banner.ctaText ? (
+                      <View style={styles.dynamicBannerCtaWrap}>
+                        <Text style={styles.dynamicBannerCta}>{banner.ctaText}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <View style={styles.bannerCard}>
+              <Text style={styles.bannerEyebrow}>TRENDING IN YOUR SOCIETY</Text>
+              <Text style={styles.bannerTitle}>Top picks, fresh deals, and local bestsellers</Text>
+              <View style={styles.bannerMiniRow}>
+                <View style={styles.bannerMiniTile}>
+                  <Text style={styles.bannerMiniTitle}>Products</Text>
+                  <Text style={styles.bannerMiniValue}>{featuredProducts.length}</Text>
+                </View>
+                <View style={styles.bannerMiniTile}>
+                  <Text style={styles.bannerMiniTitle}>Shops</Text>
+                  <Text style={styles.bannerMiniValue}>{businesses.length}</Text>
+                </View>
+                <View style={styles.bannerMiniTile}>
+                  <Text style={styles.bannerMiniTitle}>Fastest ETA</Text>
+                  <Text style={styles.bannerMiniValue}>20m</Text>
+                </View>
               </View>
             </View>
-          </View>
+          )}
 
           {visibleAddressSocieties.length > 1 ? (
             <ScrollView
@@ -784,6 +862,64 @@ const styles = StyleSheet.create({
     backgroundColor: "#F3E8FF",
     borderWidth: 1,
     borderColor: "#E9D5FF",
+  },
+  bannerCarouselRow: {
+    marginTop: 12,
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  dynamicBannerCard: {
+    width: DYNAMIC_BANNER_WIDTH,
+    aspectRatio: 16 / 9,
+    borderRadius: 20,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E9D5FF",
+    backgroundColor: "#1F2937",
+  },
+  dynamicBannerImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  dynamicBannerOverlay: {
+    flex: 1,
+    padding: 14,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(15,23,42,0.35)",
+  },
+  dynamicBannerEyebrow: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+    color: "#F8FAFC",
+    textTransform: "uppercase",
+  },
+  dynamicBannerTitle: {
+    marginTop: 6,
+    fontSize: 24,
+    lineHeight: 29,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    letterSpacing: 0.2,
+  },
+  dynamicBannerSubtitle: {
+    marginTop: 6,
+    fontSize: 14,
+    lineHeight: 19,
+    fontWeight: "600",
+    color: "#E2E8F0",
+  },
+  dynamicBannerCtaWrap: {
+    alignSelf: "flex-start",
+    marginTop: 10,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  dynamicBannerCta: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#111827",
   },
   bannerEyebrow: {
     fontSize: 11,

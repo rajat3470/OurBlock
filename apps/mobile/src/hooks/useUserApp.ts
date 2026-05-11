@@ -6,6 +6,7 @@ import {
   setSocieties,
   setSelectedSocietyId,
   setBusinesses,
+  setBanners,
   setFeaturedProducts,
   setOrders,
   setStats,
@@ -48,6 +49,7 @@ export const useUserApp = () => {
         const feed = await userAppService.getHomeFeed(societyId);
 
         dispatch(setBusinesses(feed.businesses));
+        dispatch(setBanners(feed.banners ?? []));
         dispatch(setFeaturedProducts(feed.featuredProducts));
         dispatch(setStats(feed.stats));
       } catch (err: unknown) {

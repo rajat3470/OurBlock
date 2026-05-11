@@ -876,6 +876,40 @@ router.get('/home-feed', async (req, res) => {
 
     const offerProducts = featuredProducts.filter((product) => Number(product.discount || 0) > 0).slice(0, 10);
 
+    const nowMs = Date.now();
+    const toMillis = (value: any): number => {
+      if (!value) return 0;
+      if (typeof value?.toMillis === 'function') return value.toMillis();
+      if (typeof value?.seconds === 'number') return value.seconds * 1000;
+      if (value instanceof Date) return value.getTime();
+      const parsed = new Date(value).getTime();
+      return Number.isNaN(parsed) ? 0 : parsed;
+    };
+
+    const bannersSnapshot = await db
+      .collection('homeBanners')
+      .where('isActive', '==', true)
+      .get();
+
+    const banners = bannersSnapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() } as any))
+      .filter((banner) => {
+        const targetSociety = String(banner.societyId || 'global');
+        if (targetSociety !== 'global' && targetSociety !== societyId) return false;
+        const startAtMs = toMillis(banner.startAt);
+        const endAtMs = toMillis(banner.endAt);
+        if (startAtMs && nowMs < startAtMs) return false;
+        if (endAtMs && nowMs > endAtMs) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const orderA = Number(a.sortOrder ?? 100);
+        const orderB = Number(b.sortOrder ?? 100);
+        if (orderA !== orderB) return orderA - orderB;
+        return toMillis(b.updatedAt) - toMillis(a.updatedAt);
+      })
+      .slice(0, 6);
+
     return res.json({
       societyId,
       stats: {
@@ -888,6 +922,7 @@ router.get('/home-feed', async (req, res) => {
       featuredProducts,
       topRatedBusinesses,
       offerProducts,
+      banners,
     });
   } catch (error: any) {
     return res.status(error.statusCode || 500).json({ success: false, error: error.message || 'Failed to load home feed' });

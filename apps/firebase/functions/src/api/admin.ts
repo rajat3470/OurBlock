@@ -6,6 +6,74 @@ const router = Router();
 const db = admin.firestore();
 const auth = admin.auth();
 
+const MOCK_TOKEN_UIDS: Record<string, string> = {
+  'mock-access-token-superadmin': 'mock-super-admin-1',
+  'mock-access-token-businessowner': 'mock-business-owner-1',
+  'mock-access-token-user': 'mock-user-1',
+};
+
+const SUPER_ADMIN_EMAIL_ALLOWLIST = new Set(
+  (process.env.SUPER_ADMIN_EMAILS || 'ankushrishi5@gmail.com')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+);
+
+function normalizeRole(role: unknown): 'superAdmin' | 'businessOwner' | 'user' | null {
+  if (typeof role !== 'string') return null;
+  const compact = role.replace(/[-_\s]/g, '').toLowerCase();
+  if (compact === 'superadmin') return 'superAdmin';
+  if (compact === 'businessowner' || compact === 'owner' || compact === 'merchant') return 'businessOwner';
+  if (compact === 'user' || compact === 'customer') return 'user';
+  return null;
+}
+
+const requireSuperAdmin = async (req: any, res: any, next: any) => {
+  const token = req.headers.authorization?.split('Bearer ')[1];
+  if (!token) return res.status(401).json({ success: false, error: 'No token provided' });
+
+  try {
+    let uid = '';
+    let claimRole: 'superAdmin' | 'businessOwner' | 'user' | null = null;
+    let decodedEmail: string | null = null;
+    if (token in MOCK_TOKEN_UIDS) {
+      uid = MOCK_TOKEN_UIDS[token];
+      claimRole = uid === 'mock-super-admin-1' ? 'superAdmin' : null;
+    } else {
+      const decoded = await auth.verifyIdToken(token);
+      uid = decoded.uid;
+      claimRole = normalizeRole((decoded as any)?.role);
+      decodedEmail = typeof (decoded as any)?.email === 'string' ? (decoded as any).email.toLowerCase() : null;
+    }
+
+    // Prefer token custom claims (source of truth for role-based auth),
+    // fallback to Firestore user role for backward compatibility.
+    if (claimRole !== 'superAdmin') {
+      const userDoc = await db.collection('users').doc(uid).get();
+      const firestoreRole = userDoc.exists ? normalizeRole((userDoc.data() as any)?.role) : null;
+      const firestoreEmail = userDoc.exists && typeof (userDoc.data() as any)?.email === 'string'
+        ? String((userDoc.data() as any).email).toLowerCase()
+        : null;
+
+      const isAllowlistedEmail = Boolean(
+        (decodedEmail && SUPER_ADMIN_EMAIL_ALLOWLIST.has(decodedEmail)) ||
+        (firestoreEmail && SUPER_ADMIN_EMAIL_ALLOWLIST.has(firestoreEmail))
+      );
+
+      if (firestoreRole !== 'superAdmin' && !isAllowlistedEmail) {
+        return res.status(403).json({ success: false, error: 'Super admin access required' });
+      }
+    }
+
+    req.uid = uid;
+    return next();
+  } catch {
+    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
+  }
+};
+
+router.use(requireSuperAdmin);
+
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
 router.get('/stats', async (req, res) => {
@@ -335,6 +403,155 @@ router.post('/users/:id/activate', async (req, res) => {
     res.json({ success: true, data: { id: doc.id, ...doc.data() } });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ─── Home Banners CMS (Super Admin only) ───────────────────────────────────
+
+function parseDateInput(value: any): admin.firestore.Timestamp | null {
+  if (!value) return null;
+  if (value instanceof Date) return admin.firestore.Timestamp.fromDate(value);
+  if (typeof value === 'string') {
+    const d = new Date(value);
+    if (!Number.isNaN(d.getTime())) return admin.firestore.Timestamp.fromDate(d);
+  }
+  if (typeof value?.seconds === 'number') {
+    return new admin.firestore.Timestamp(value.seconds, value.nanoseconds ?? 0);
+  }
+  return null;
+}
+
+router.get('/banners', async (req, res) => {
+  try {
+    const societyId = typeof req.query.societyId === 'string' ? req.query.societyId : undefined;
+
+    let query: admin.firestore.Query = db.collection('homeBanners');
+    if (societyId) {
+      query = db.collection('homeBanners').where('societyId', '==', societyId);
+    }
+
+    const snapshot = await query.get();
+    const data = snapshot.docs
+      .map((doc) => ({ id: doc.id, ...doc.data() } as any))
+      .sort((a, b) => Number(a.sortOrder ?? 100) - Number(b.sortOrder ?? 100));
+    return res.json({ success: true, data });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/banners', async (req, res) => {
+  try {
+    const {
+      title,
+      subtitle,
+      imageUrl,
+      tagText,
+      ctaText,
+      ctaRoute,
+      societyId,
+      isActive,
+      sortOrder,
+      startAt,
+      endAt,
+      theme,
+    } = req.body;
+
+    if (!title || typeof title !== 'string') {
+      return res.status(400).json({ success: false, error: 'title is required' });
+    }
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      return res.status(400).json({ success: false, error: 'imageUrl is required' });
+    }
+
+    const docRef = db.collection('homeBanners').doc();
+    const payload = {
+      title: title.trim(),
+      subtitle: typeof subtitle === 'string' ? subtitle.trim() : '',
+      imageUrl: imageUrl.trim(),
+      tagText: typeof tagText === 'string' ? tagText.trim() : 'TRENDING IN YOUR SOCIETY',
+      ctaText: typeof ctaText === 'string' ? ctaText.trim() : '',
+      ctaRoute: typeof ctaRoute === 'string' ? ctaRoute.trim() : '',
+      societyId: typeof societyId === 'string' && societyId.trim() ? societyId.trim() : 'global',
+      isActive: Boolean(isActive ?? true),
+      sortOrder: Number.isFinite(Number(sortOrder)) ? Number(sortOrder) : 100,
+      startAt: parseDateInput(startAt),
+      endAt: parseDateInput(endAt),
+      theme: typeof theme === 'object' && theme ? theme : null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdBy: (req as any).uid,
+    };
+
+    await docRef.set(payload);
+    const newDoc = await docRef.get();
+    return res.status(201).json({ success: true, data: { id: newDoc.id, ...newDoc.data() } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.put('/banners/:id', async (req, res) => {
+  try {
+    const docRef = db.collection('homeBanners').doc(req.params.id);
+    const existing = await docRef.get();
+    if (!existing.exists) {
+      return res.status(404).json({ success: false, error: 'Banner not found' });
+    }
+
+    const {
+      title,
+      subtitle,
+      imageUrl,
+      tagText,
+      ctaText,
+      ctaRoute,
+      societyId,
+      isActive,
+      sortOrder,
+      startAt,
+      endAt,
+      theme,
+    } = req.body;
+
+    const updates: Record<string, any> = {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedBy: (req as any).uid,
+    };
+
+    if (title !== undefined) updates.title = String(title).trim();
+    if (subtitle !== undefined) updates.subtitle = String(subtitle || '').trim();
+    if (imageUrl !== undefined) updates.imageUrl = String(imageUrl || '').trim();
+    if (tagText !== undefined) updates.tagText = String(tagText || '').trim();
+    if (ctaText !== undefined) updates.ctaText = String(ctaText || '').trim();
+    if (ctaRoute !== undefined) updates.ctaRoute = String(ctaRoute || '').trim();
+    if (societyId !== undefined) updates.societyId = String(societyId || '').trim() || 'global';
+    if (isActive !== undefined) updates.isActive = Boolean(isActive);
+    if (sortOrder !== undefined) updates.sortOrder = Number.isFinite(Number(sortOrder)) ? Number(sortOrder) : 100;
+    if (startAt !== undefined) updates.startAt = parseDateInput(startAt);
+    if (endAt !== undefined) updates.endAt = parseDateInput(endAt);
+    if (theme !== undefined) updates.theme = typeof theme === 'object' && theme ? theme : null;
+
+    await docRef.update(updates);
+    const updated = await docRef.get();
+    return res.json({ success: true, data: { id: updated.id, ...updated.data() } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.delete('/banners/:id', async (req, res) => {
+  try {
+    const docRef = db.collection('homeBanners').doc(req.params.id);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ success: false, error: 'Banner not found' });
+    }
+
+    await docRef.delete();
+    return res.json({ success: true });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
   }
 });
 

@@ -1,5 +1,5 @@
 import { apiClient } from "./apiClient";
-import { Society, Business, User, PaginatedResponse } from "@/types";
+import { Society, Business, User, PaginatedResponse, HomeBanner } from "@/types";
 import { SuperAdminStats } from "@store/slices/superAdminSlice";
 
 export interface CreateBusinessOwnerPayload {
@@ -15,6 +15,20 @@ export interface CreateBusinessOwnerResult {
   email: string;
   temporaryPassword: string;
   message: string;
+}
+
+export interface BannerPayload {
+  title: string;
+  subtitle?: string;
+  imageUrl: string;
+  tagText?: string;
+  ctaText?: string;
+  ctaRoute?: string;
+  societyId?: string;
+  isActive?: boolean;
+  sortOrder?: number;
+  startAt?: string;
+  endAt?: string;
 }
 
 export const superAdminService = {
@@ -104,5 +118,25 @@ export const superAdminService = {
       "/admin/business-owners",
       data
     );
+  },
+
+  async getBanners(societyId?: string): Promise<HomeBanner[]> {
+    const query = societyId ? `?societyId=${societyId}` : "";
+    const res = await apiClient.get<{ success: boolean; data: HomeBanner[] }>(`/admin/banners${query}`);
+    return res.data;
+  },
+
+  async createBanner(data: BannerPayload): Promise<HomeBanner> {
+    const res = await apiClient.post<{ success: boolean; data: HomeBanner }>("/admin/banners", data);
+    return res.data;
+  },
+
+  async updateBanner(id: string, data: Partial<BannerPayload>): Promise<HomeBanner> {
+    const res = await apiClient.put<{ success: boolean; data: HomeBanner }>(`/admin/banners/${id}`, data);
+    return res.data;
+  },
+
+  async deleteBanner(id: string): Promise<{ success: boolean }> {
+    return apiClient.delete<{ success: boolean }>(`/admin/banners/${id}`);
   },
 };

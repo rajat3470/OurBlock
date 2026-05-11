@@ -8,7 +8,7 @@
  *
  * Usage: Call once inside each role's root layout (_layout.tsx).
  */
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Alert, Vibration } from "react-native";
 import { useRouter } from "expo-router";
 import { useAppSelector } from "./useRedux";

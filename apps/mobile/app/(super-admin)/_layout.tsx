@@ -61,6 +61,15 @@ export default function SuperAdminLayout() {
           }}
         />
         <Tabs.Screen
+          name="banners"
+          options={{
+            title: "Banners",
+            tabBarIcon: ({ focused }) => (
+              <AppTabIcon emoji="🖼️" focused={focused} role="superAdmin" />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="profile"
           options={{
             title: "Profile",

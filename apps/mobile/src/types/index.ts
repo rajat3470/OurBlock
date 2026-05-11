@@ -100,6 +100,28 @@ export interface Business {
   updatedAt: Date;
 }
 
+export interface HomeBanner {
+  id: string;
+  title: string;
+  subtitle?: string;
+  imageUrl: string;
+  tagText?: string;
+  ctaText?: string;
+  ctaRoute?: string;
+  societyId: string;
+  isActive: boolean;
+  sortOrder?: number;
+  startAt?: Date | null;
+  endAt?: Date | null;
+  theme?: {
+    accentStart?: string;
+    accentEnd?: string;
+    textColor?: string;
+  } | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export interface OperatingHours {
   monday?: DayHours;
   tuesday?: DayHours;

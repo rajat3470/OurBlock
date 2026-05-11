@@ -10,6 +10,7 @@ const navigation = [
   { name: 'Societies', href: '/dashboard/societies', icon: '🏘️' },
   { name: 'Businesses', href: '/dashboard/businesses', icon: '🏪' },
   { name: 'Users', href: '/dashboard/users', icon: '👥' },
+  { name: 'Banners', href: '/dashboard/banners', icon: '🖼️' },
   { name: 'Settings', href: '/dashboard/settings', icon: '⚙️' },
 ];
 

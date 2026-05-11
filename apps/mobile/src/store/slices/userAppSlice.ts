@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Business, Order, Product, Society } from "@/types";
+import { Business, HomeBanner, Order, Product, Society } from "@/types";
 
 export interface UserAppStats {
   totalBusinesses: number;
@@ -11,6 +11,7 @@ interface UserAppState {
   societies: Society[];
   selectedSocietyId: string | null;
   businesses: Business[];
+  banners: HomeBanner[];
   featuredProducts: Product[];
   orders: Order[];
   favoriteBusinessIds: string[];
@@ -23,6 +24,7 @@ const initialState: UserAppState = {
   societies: [],
   selectedSocietyId: null,
   businesses: [],
+  banners: [],
   featuredProducts: [],
   orders: [],
   favoriteBusinessIds: [],
@@ -47,6 +49,10 @@ const userAppSlice = createSlice({
     },
     setBusinesses(state, action: PayloadAction<Business[]>) {
       state.businesses = action.payload;
+      state.error = null;
+    },
+    setBanners(state, action: PayloadAction<HomeBanner[]>) {
+      state.banners = action.payload;
       state.error = null;
     },
     setFeaturedProducts(state, action: PayloadAction<Product[]>) {
@@ -88,6 +94,7 @@ export const {
   setSocieties,
   setSelectedSocietyId,
   setBusinesses,
+  setBanners,
   setFeaturedProducts,
   setOrders,
   setStats,
