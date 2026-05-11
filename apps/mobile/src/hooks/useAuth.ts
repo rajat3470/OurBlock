@@ -1,6 +1,7 @@
 import { authService } from "@services/authService";
 import { useAppDispatch } from "./useRedux";
 import { setAuth, setError, logout, setLoading } from "@store/slices/authSlice";
+import { clearUserAppState } from "@store/slices/userAppSlice";
 import { apiClient } from "@services/apiClient";
 import { authStateService } from "@services/authStateService";
 import { AuthCredentials, AuthResponse } from "@/types";
@@ -174,6 +175,7 @@ export const useAuth = () => {
     // Clear local state and tokens immediately so the UI reflects logout at once.
     // The API call is best-effort — a network/backend failure should never block logout.
     dispatch(logout());
+    dispatch(clearUserAppState());
     await apiClient.clearTokens();
     await authStateService.clearAuth();
     try {

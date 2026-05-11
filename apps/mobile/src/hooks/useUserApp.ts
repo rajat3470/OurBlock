@@ -16,6 +16,7 @@ import { userAppService } from "@services/userAppService";
 export const useUserApp = () => {
   const dispatch = useAppDispatch();
   const state = useAppSelector((store) => store.userApp);
+  const authUserSocietyId = useAppSelector((store) => store.auth.user?.societyId);
 
   const loadSocieties = useCallback(async () => {
     dispatch(setLoading(true));
@@ -83,12 +84,17 @@ export const useUserApp = () => {
 
   const initializeHome = useCallback(async () => {
     const societies = await loadSocieties();
-    const preferredSocietyId = state.selectedSocietyId ?? societies?.[0]?.id;
+    const preferredSocietyId =
+      authUserSocietyId ?? state.selectedSocietyId ?? societies?.[0]?.id;
+
+    if (authUserSocietyId && authUserSocietyId !== state.selectedSocietyId) {
+      dispatch(setSelectedSocietyId(authUserSocietyId));
+    }
 
     if (preferredSocietyId) {
       await selectSociety(preferredSocietyId);
     }
-  }, [loadSocieties, selectSociety, state.selectedSocietyId]);
+  }, [authUserSocietyId, dispatch, loadSocieties, selectSociety, state.selectedSocietyId]);
 
   return {
     ...state,

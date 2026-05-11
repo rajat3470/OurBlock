@@ -13,6 +13,7 @@ import { Image } from "expo-image";
 import { useToast } from "react-native-toast-notifications";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { useUserApp } from "../../src/hooks/useUserApp";
+import { userAppService } from "../../src/services/userAppService";
 
 const FILTER_TAGS = ["Near & Fast", "Top Rated", "Great Offers", "New Arrivals"];
 
@@ -64,6 +65,12 @@ function getFirstImageUrl(images?: string[]) {
 
 function isVerifiedProduct(product: any) {
   return Boolean(product?.isVerified) || product?.approvalStatus === "approved";
+}
+
+function addressMatchesSociety(addressText: string, societyName: string) {
+  const normalizedAddress = addressText.toLowerCase();
+  const normalizedSociety = societyName.toLowerCase();
+  return normalizedAddress.includes(normalizedSociety);
 }
 
 function HomeSkeleton() {
@@ -118,13 +125,65 @@ export default function UserHome() {
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [addressSocietyIds, setAddressSocietyIds] = useState<string[]>([]);
 
   useEffect(() => {
     initializeHome().catch(() => null);
   }, [initializeHome]);
 
+  useEffect(() => {
+    const loadAddressSocieties = async () => {
+      try {
+        const addresses = await userAppService.getAddresses();
+        if (addresses.length <= 1) {
+          setAddressSocietyIds([]);
+          return;
+        }
+
+        const matchedIds = new Set<string>();
+        addresses.forEach((address) => {
+          const searchable = [
+            address.name,
+            address.street,
+            address.landmark,
+            address.city,
+            address.state,
+            address.pincode,
+          ]
+            .filter(Boolean)
+            .join(" ");
+
+          societies.forEach((society) => {
+            if (addressMatchesSociety(searchable, society.name)) {
+              matchedIds.add(society.id);
+            }
+          });
+        });
+
+        // Only show filter chips when there are multiple unique societies from addresses.
+        if (matchedIds.size > 1) {
+          setAddressSocietyIds(Array.from(matchedIds));
+        } else {
+          setAddressSocietyIds([]);
+        }
+      } catch {
+        setAddressSocietyIds([]);
+      }
+    };
+
+    if (societies.length > 0) {
+      loadAddressSocieties().catch(() => null);
+    }
+  }, [societies]);
+
+  const activeSocietyId = user?.societyId ?? selectedSocietyId;
   const selectedSocietyName =
-    societies.find((society) => society.id === selectedSocietyId)?.name ?? "Your Society";
+    societies.find((society) => society.id === activeSocietyId)?.name ?? "Your Society";
+
+  const visibleAddressSocieties = useMemo(
+    () => societies.filter((society) => addressSocietyIds.includes(society.id)),
+    [addressSocietyIds, societies]
+  );
 
   const businessesById = useMemo(() => {
     const map = new Map<string, (typeof businesses)[number]>();
@@ -322,6 +381,29 @@ export default function UserHome() {
               </View>
             </View>
           </View>
+
+          {visibleAddressSocieties.length > 1 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.societyRow}
+            >
+              {visibleAddressSocieties.map((society) => {
+                const selected = activeSocietyId === society.id;
+                return (
+                  <TouchableOpacity
+                    key={society.id}
+                    style={[styles.societyChip, selected ? styles.societyChipActive : null]}
+                    onPress={() => selectSociety(society.id)}
+                  >
+                    <Text style={[styles.societyLabel, selected ? styles.societyLabelActive : null]}>
+                      {society.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          ) : null}
         </View>
 
         <View style={styles.stickySearchWrap}>
@@ -348,26 +430,6 @@ export default function UserHome() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.societyRow}
-          >
-            {societies.map((society) => {
-              const selected = selectedSocietyId === society.id;
-              return (
-                <TouchableOpacity
-                  key={society.id}
-                  style={[styles.societyChip, selected ? styles.societyChipActive : null]}
-                  onPress={() => selectSociety(society.id)}
-                >
-                  <Text style={[styles.societyLabel, selected ? styles.societyLabelActive : null]}>
-                    {society.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
         </View>
 
         <ScrollView
