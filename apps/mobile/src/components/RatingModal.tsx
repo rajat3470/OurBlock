@@ -10,9 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
 import { userAppService } from "../services/userAppService";
 
 interface Props {
@@ -35,12 +38,14 @@ export default function RatingModal({
   const insets = useSafeAreaInsets();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
+  const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function reset() {
     setRating(0);
     setComment("");
+    setPhotoUris([]);
     setError(null);
     setSubmitting(false);
   }
@@ -50,6 +55,31 @@ export default function RatingModal({
     onClose();
   }
 
+  async function handleAddPhoto() {
+    if (photoUris.length >= 3) {
+      Alert.alert("Max Photos", "You can attach up to 3 photos.");
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Required", "Allow photo library access to attach photos.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.5,
+      base64: true,
+    });
+    if (!result.canceled && result.assets?.[0]) {
+      const asset = result.assets[0];
+      const dataUrl = asset.base64
+        ? `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`
+        : asset.uri;
+      setPhotoUris((prev) => [...prev, dataUrl]);
+    }
+  }
+
   async function handleSubmit() {
     if (rating === 0) { setError("Please select a star rating."); return; }
     if (comment.trim().length < 5) { setError("Please write at least a few words."); return; }
@@ -57,7 +87,13 @@ export default function RatingModal({
     setError(null);
     setSubmitting(true);
     try {
-      await userAppService.submitReview({ orderId, businessId, rating, comment: comment.trim() });
+      await userAppService.submitReview({
+        orderId,
+        businessId,
+        rating,
+        comment: comment.trim(),
+        imageUrls: photoUris.length > 0 ? photoUris : undefined,
+      });
       reset();
       onSubmitted();
     } catch (e: any) {
@@ -134,6 +170,33 @@ export default function RatingModal({
               textAlignVertical="top"
             />
             <Text style={styles.charCount}>{comment.length}/500</Text>
+
+            {/* Photo upload */}
+            <Text style={styles.label}>Add Photos (optional)</Text>
+            <View style={styles.photoRow}>
+              {photoUris.map((uri, idx) => (
+                <View key={idx} style={styles.photoWrap}>
+                  <Image source={{ uri }} style={styles.photoThumb} />
+                  <TouchableOpacity
+                    style={styles.photoRemove}
+                    onPress={() => setPhotoUris((prev) => prev.filter((_, i) => i !== idx))}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#DC2626" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {photoUris.length < 3 && (
+                <TouchableOpacity
+                  style={styles.photoAddBtn}
+                  onPress={handleAddPhoto}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="camera-outline" size={22} color="#6B7280" />
+                  <Text style={styles.photoAddText}>Add</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             {/* Error */}
             {error ? (
@@ -241,6 +304,47 @@ const styles = StyleSheet.create({
     backgroundColor: "#FAFAFA",
   },
   charCount: { fontSize: 11, color: "#9CA3AF", textAlign: "right", marginTop: 4, marginBottom: 16 },
+  photoRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 20,
+  },
+  photoWrap: {
+    position: "relative",
+    width: 72,
+    height: 72,
+  },
+  photoThumb: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    backgroundColor: "#F3F4F6",
+  },
+  photoRemove: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 999,
+  },
+  photoAddBtn: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#D1D5DB",
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+    backgroundColor: "#FAFAFA",
+  },
+  photoAddText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
   errorBox: {
     flexDirection: "row",
     alignItems: "center",

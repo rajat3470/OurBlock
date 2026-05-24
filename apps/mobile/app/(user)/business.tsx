@@ -23,6 +23,28 @@ import { useUserApp } from "../../src/hooks/useUserApp";
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
+const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+
+function getBusinessOrderStatus(business: Business): "open" | "paused" | "closed" {
+  if (business.status !== "active") return "closed";
+  let withinHours = true;
+  if (business.operatingHours) {
+    const now = new Date();
+    const dayKey = DAYS[now.getDay()];
+    const hours = business.operatingHours[dayKey];
+    if (!hours || hours.isClosed) {
+      withinHours = false;
+    } else {
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const current = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      withinHours = current >= hours.open && current < hours.close;
+    }
+  }
+  if (!withinHours) return "closed";
+  if (business.isTakingOrders === false) return "paused";
+  return "open";
+}
+
 function getFirstImageUrl(images?: string[]) {
   return images?.find((url) => typeof url === "string" && url.trim().length > 0) ?? null;
 }
@@ -42,6 +64,10 @@ export default function BusinessDetailScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Derive orderable status from business state
+  const bizOrderStatus = business ? getBusinessOrderStatus(business) : "open";
+  const isOrderable = bizOrderStatus === "open";
 
   useEffect(() => {
     if (!businessId) return;
@@ -113,7 +139,7 @@ export default function BusinessDetailScreen() {
             ) : null}
           </View>
 
-          {product.stock > 0 ? (
+          {product.stock > 0 && isOrderable ? (
             qty === 0 ? (
               <TouchableOpacity
                 style={styles.addCartBtn}
@@ -232,6 +258,21 @@ export default function BusinessDetailScreen() {
         />
       ) : null}
 
+      {/* Paused / closed notice banner */}
+      {bizOrderStatus === "paused" ? (
+        <View style={styles.orderNoticeBanner}>
+          <Text style={styles.orderNoticeText}>
+            ⏸ This shop has temporarily paused orders
+          </Text>
+        </View>
+      ) : bizOrderStatus === "closed" ? (
+        <View style={[styles.orderNoticeBanner, styles.orderNoticeClosedBanner]}>
+          <Text style={styles.orderNoticeText}>
+            🕐 This shop is currently closed
+          </Text>
+        </View>
+      ) : null}
+
       {/* Products */}
       {isLoading ? (
         <View style={styles.centeredState}>
@@ -345,6 +386,22 @@ const styles = StyleSheet.create({
   bannerImage: {
     width: "100%",
     height: 160,
+  },
+  orderNoticeBanner: {
+    backgroundColor: "#FEF3C7",
+    borderLeftWidth: 4,
+    borderLeftColor: "#F59E0B",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  orderNoticeClosedBanner: {
+    backgroundColor: "#FEE2E2",
+    borderLeftColor: "#DC2626",
+  },
+  orderNoticeText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#92400E",
   },
   centeredState: {
     flex: 1,

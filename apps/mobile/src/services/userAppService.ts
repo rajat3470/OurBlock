@@ -149,6 +149,7 @@ export const userAppService = {
     rating: number;
     title?: string;
     comment: string;
+    imageUrls?: string[];
   }): Promise<{ id: string }> {
     const res = await apiClient.post<{ success: boolean; data: { id: string } }>("/reviews", payload);
     return (res as any).data ?? res;

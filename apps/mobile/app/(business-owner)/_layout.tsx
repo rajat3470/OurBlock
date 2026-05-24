@@ -72,6 +72,15 @@ export default function BusinessOwnerLayout() {
           }}
         />
         <Tabs.Screen
+          name="promotions"
+          options={{
+            title: "Promos",
+            tabBarIcon: ({ focused }) => (
+              <AppTabIcon iconName="pricetag-outline" focused={focused} role="businessOwner" />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="profile"
           options={{
             title: "Profile",

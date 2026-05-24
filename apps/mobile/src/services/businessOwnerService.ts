@@ -1,6 +1,6 @@
 import { apiClient } from "./apiClient";
 import { Business, Order, Product, PaginatedResponse } from "@/types";
-import { BusinessOwnerStats } from "@store/slices/businessOwnerSlice";
+import { BusinessOwnerStats, BusinessAnalytics } from "@store/slices/businessOwnerSlice";
 
 // All API responses are wrapped in { success, data }. This helper unwraps them.
 type ApiEnvelope<T> = { success: boolean; data: T; error?: string };
@@ -67,5 +67,49 @@ export const businessOwnerService = {
   async getMyStats(): Promise<BusinessOwnerStats> {
     const res = await apiClient.get<ApiEnvelope<BusinessOwnerStats>>("/owner/stats");
     return res.data;
+  },
+
+  async toggleTakingOrders(isTakingOrders: boolean): Promise<{ isTakingOrders: boolean }> {
+    const res = await apiClient.patch<ApiEnvelope<{ isTakingOrders: boolean }>>("/owner/business/taking-orders", { isTakingOrders });
+    return res.data;
+  },
+
+  async updateBusinessSettings(data: {
+    minimumOrderAmount?: number;
+    estimatedDeliveryTime?: string;
+    preparationTime?: string;
+    deliveryFee?: number;
+    tags?: string[];
+  }): Promise<Business> {
+    const res = await apiClient.patch<ApiEnvelope<Business>>("/owner/business/settings", data);
+    return res.data;
+  },
+
+  async getAnalytics(): Promise<BusinessAnalytics> {
+    const res = await apiClient.get<ApiEnvelope<BusinessAnalytics>>("/owner/analytics");
+    return res.data;
+  },
+
+  async createCoupon(data: {
+    code: string;
+    type: "percentage" | "flat";
+    value: number;
+    minOrderAmount?: number;
+    maxDiscount?: number;
+    expiresAt?: string;
+    usageLimit?: number;
+    description?: string;
+  }): Promise<any> {
+    const res = await apiClient.post<ApiEnvelope<any>>("/owner/coupons", data);
+    return res.data;
+  },
+
+  async getMyCoupons(): Promise<any[]> {
+    const res = await apiClient.get<ApiEnvelope<any[]>>("/owner/coupons");
+    return res.data ?? [];
+  },
+
+  async deleteCoupon(id: string): Promise<void> {
+    await apiClient.delete<any>(`/owner/coupons/${id}`);
   },
 };

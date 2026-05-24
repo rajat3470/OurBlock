@@ -22,6 +22,28 @@ function getFirstImageUrl(images?: string[]) {
   return images?.find((url) => typeof url === "string" && url.trim().length > 0) ?? null;
 }
 
+const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+
+function getBusinessOrderStatus(business: Business): "open" | "paused" | "closed" {
+  if (business.status !== "active") return "closed";
+  let withinHours = true;
+  if (business.operatingHours) {
+    const now = new Date();
+    const dayKey = DAYS[now.getDay()];
+    const hours = business.operatingHours[dayKey];
+    if (!hours || hours.isClosed) {
+      withinHours = false;
+    } else {
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const current = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      withinHours = current >= hours.open && current < hours.close;
+    }
+  }
+  if (!withinHours) return "closed";
+  if (business.isTakingOrders === false) return "paused";
+  return "open";
+}
+
 export default function ProductDetailScreen() {
   const toast = useToast();
   const dispatch = useAppDispatch();
@@ -78,6 +100,8 @@ export default function ProductDetailScreen() {
   const cartTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   const qty = cartItem?.quantity ?? 0;
+  const bizOrderStatus = business ? getBusinessOrderStatus(business) : "open";
+  const isOrderable = bizOrderStatus === "open";
 
   function handleAddToCart() {
     if (!product) return;
@@ -181,6 +205,7 @@ export default function ProductDetailScreen() {
             style={styles.cartBadgeBtn}
             onPress={() => router.push("/(user)/cart")}
           >
+            <Ionicons name="cart" size={16} color="#FFFFFF" />
             <Text style={styles.cartBadgeText}>{cartCount}</Text>
           </TouchableOpacity>
         ) : (
@@ -315,6 +340,12 @@ export default function ProductDetailScreen() {
           <View style={styles.outOfStockBtn}>
             <Text style={styles.outOfStockText}>Out of Stock</Text>
           </View>
+        ) : !isOrderable ? (
+          <View style={[styles.outOfStockBtn, styles.shopNotOrderableBtn]}>
+            <Text style={styles.outOfStockText}>
+              {bizOrderStatus === "paused" ? "⏸ Shop Paused" : "🕐 Shop Closed"}
+            </Text>
+          </View>
         ) : qty === 0 ? (
           <TouchableOpacity style={styles.addToCartBtn} onPress={handleAddToCart}>
             <Text style={styles.addToCartText}>Add to Cart</Text>
@@ -367,6 +398,9 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
   headerRight: { width: 64 },
   cartBadgeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 20,
     paddingHorizontal: 12,
@@ -543,6 +577,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: "center",
+  },
+  shopNotOrderableBtn: {
+    backgroundColor: "#FEF3C7",
   },
   outOfStockText: { fontSize: 16, fontWeight: "700", color: "#9CA3AF" },
   addToCartBtn: {

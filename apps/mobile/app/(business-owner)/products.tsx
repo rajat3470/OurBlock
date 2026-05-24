@@ -25,6 +25,8 @@ import { Product } from "../../src/types";
 interface ProductForm {
   name: string;
   category: string;
+  menuSection: string;
+  isVeg: boolean;
   price: string;
   originalPrice: string;
   stock: number;
@@ -70,6 +72,8 @@ const CATEGORIES = [
 const EMPTY_FORM: ProductForm = {
   name: "",
   category: "general",
+  menuSection: "",
+  isVeg: true,
   price: "",
   originalPrice: "",
   stock: 1,
@@ -337,6 +341,8 @@ export default function BusinessOwnerProducts() {
       await createProduct({
         name: form.name.trim(),
         category: form.category || "general",
+        menuSection: form.menuSection.trim() || undefined,
+        isVeg: form.isVeg,
         description: form.description.trim() || undefined,
         price,
         originalPrice,
@@ -438,9 +444,21 @@ export default function BusinessOwnerProducts() {
           </View>
 
           <View style={styles.cardInfo}>
-            <Text style={styles.productName} numberOfLines={2}>{item.name ?? "—"}</Text>
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryChipText}>{item.category ?? "general"}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <Text style={styles.productName} numberOfLines={2}>{item.name ?? "—"}</Text>
+              {item.isVeg !== undefined && (
+                <View style={item.isVeg ? styles.vegDot : styles.nonVegDot} />
+              )}
+            </View>
+            <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+              <View style={styles.categoryChip}>
+                <Text style={styles.categoryChipText}>{item.category ?? "general"}</Text>
+              </View>
+              {item.menuSection ? (
+                <View style={[styles.categoryChip, { backgroundColor: "#EFF6FF" }]}>
+                  <Text style={[styles.categoryChipText, { color: "#1D4ED8" }]}>{item.menuSection}</Text>
+                </View>
+              ) : null}
             </View>
             <View style={styles.priceRow}>
               <Text style={styles.productPrice}>₹{price}</Text>
@@ -840,6 +858,42 @@ export default function BusinessOwnerProducts() {
                   maxLength={500}
                 />
                 <Text style={styles.charCount}>{form.description.length}/500</Text>
+              </View>
+
+              {/* Menu Section */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Menu Section (optional)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form.menuSection}
+                  onChangeText={(v) => setForm((p) => ({ ...p, menuSection: v }))}
+                  placeholder="e.g. Starters, Main Course, Beverages"
+                  placeholderTextColor="#94A3B8"
+                  maxLength={40}
+                />
+              </View>
+
+              {/* Veg / Non-Veg */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Dietary Type</Text>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <TouchableOpacity
+                    style={[styles.dietChip, form.isVeg && styles.dietChipVegActive]}
+                    onPress={() => setForm((p) => ({ ...p, isVeg: true }))}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.vegDot} />
+                    <Text style={[styles.dietChipText, form.isVeg && { color: "#166534", fontWeight: "700" }]}>Veg</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.dietChip, !form.isVeg && styles.dietChipNonVegActive]}
+                    onPress={() => setForm((p) => ({ ...p, isVeg: false }))}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.nonVegDot} />
+                    <Text style={[styles.dietChipText, !form.isVeg && { color: "#991B1B", fontWeight: "700" }]}>Non-Veg</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Save button at bottom */}
@@ -1461,6 +1515,48 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 0.3,
+  },
+
+  // Diet chips
+  dietChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#F8FAFC",
+  },
+  dietChipVegActive: {
+    backgroundColor: "#DCFCE7",
+    borderColor: "#16A34A",
+  },
+  dietChipNonVegActive: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#DC2626",
+  },
+  dietChipText: {
+    fontSize: 13,
+    color: "#64748B",
+    fontWeight: "600",
+  },
+  vegDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#16A34A",
+    borderWidth: 1.5,
+    borderColor: "#15803D",
+  },
+  nonVegDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#DC2626",
+    borderWidth: 1.5,
+    borderColor: "#B91C1C",
   },
 
   // Additional images

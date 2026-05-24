@@ -1058,4 +1058,20 @@ router.post('/refresh-token', async (req, res) => {
   }
 });
 
+// PUT /auth/push-token — store Expo push token for the authenticated user
+router.put('/push-token', async (req, res) => {
+  const uid = (req as any).user?.uid;
+  if (!uid) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  const { pushToken } = req.body;
+  if (!pushToken || typeof pushToken !== 'string') {
+    return res.status(400).json({ success: false, error: 'pushToken is required' });
+  }
+  try {
+    await admin.firestore().collection('users').doc(uid).set({ pushToken }, { merge: true });
+    return res.json({ success: true });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 export default router;

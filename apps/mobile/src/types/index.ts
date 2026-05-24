@@ -95,6 +95,13 @@ export interface Business {
   operatingHours?: OperatingHours;
   status: "active" | "inactive" | "suspended";
   isVerified: boolean;
+  // Real-time availability
+  isTakingOrders?: boolean;        // owner can pause orders mid-day
+  minimumOrderAmount?: number;     // per-business override (fallback to global Rs 50)
+  estimatedDeliveryTime?: string;  // e.g. "30-40 mins"
+  preparationTime?: string;        // e.g. "15-20 mins" kitchen prep time
+  deliveryFee?: number;            // 0 = free
+  tags?: string[];                 // cuisine/style tags e.g. ["Chinese", "Veg"]
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -145,6 +152,9 @@ export interface Product {
   name: string;
   description?: string;
   category: string;
+  menuSection?: string;         // e.g. "Starters", "Main Course", "Beverages"
+  isVeg?: boolean;              // true = veg (green dot), false = non-veg (red dot)
+  tags?: string[];              // e.g. ["bestseller", "recommended", "new", "spicy"]
   price: number;
   originalPrice?: number;
   discount?: number; // percentage

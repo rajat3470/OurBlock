@@ -364,6 +364,211 @@ router.post('/orders/:orderId/reject', requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// PATCH /owner/business/taking-orders — toggle isTakingOrders
+// ---------------------------------------------------------------------------
+router.patch('/business/taking-orders', requireAuth, async (req, res) => {
+  try {
+    const uid = (req as any).uid;
+    const { isTakingOrders } = req.body;
+    if (typeof isTakingOrders !== 'boolean') {
+      return res.status(400).json({ success: false, error: 'isTakingOrders must be a boolean' });
+    }
+    const business = await getOwnerBusiness(uid);
+    if (!business) return res.status(404).json({ success: false, error: 'No business found' });
+
+    await db.collection('businesses').doc((business as any).id).update({
+      isTakingOrders,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return res.json({ success: true, data: { isTakingOrders } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /owner/business/settings — update operational settings
+// ---------------------------------------------------------------------------
+router.patch('/business/settings', requireAuth, async (req, res) => {
+  try {
+    const uid = (req as any).uid;
+    const { minimumOrderAmount, estimatedDeliveryTime, preparationTime, deliveryFee, tags } = req.body;
+    const business = await getOwnerBusiness(uid);
+    if (!business) return res.status(404).json({ success: false, error: 'No business found' });
+
+    const updates: Record<string, any> = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+    if (minimumOrderAmount !== undefined) updates.minimumOrderAmount = Number(minimumOrderAmount);
+    if (estimatedDeliveryTime !== undefined) updates.estimatedDeliveryTime = String(estimatedDeliveryTime);
+    if (preparationTime !== undefined) updates.preparationTime = String(preparationTime);
+    if (deliveryFee !== undefined) updates.deliveryFee = Number(deliveryFee);
+    if (Array.isArray(tags)) updates.tags = tags.map(String);
+
+    await db.collection('businesses').doc((business as any).id).update(updates);
+    const updated = await db.collection('businesses').doc((business as any).id).get();
+    return res.json({ success: true, data: { id: updated.id, ...updated.data() } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /owner/analytics — revenue (last 7 days) + popular items
+// ---------------------------------------------------------------------------
+router.get('/analytics', requireAuth, async (req, res) => {
+  try {
+    const uid = (req as any).uid;
+    const business = await getOwnerBusiness(uid);
+    if (!business) return res.json({ success: true, data: { daily: [], popularItems: [], totalRevenue7d: 0 } });
+
+    const businessId = (business as any).id;
+
+    // Last 30 days of delivered orders
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+
+    const snapshot = await db
+      .collection('orders')
+      .where('businessId', '==', businessId)
+      .where('status', '==', 'delivered')
+      .get();
+
+    // Build day buckets for last 7 days
+    const days: Record<string, { date: string; revenue: number; orders: number }> = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      days[key] = { date: key, revenue: 0, orders: 0 };
+    }
+
+    // Tally popular items
+    const itemCounts: Record<string, { productId: string; name: string; count: number; revenue: number }> = {};
+
+    snapshot.docs.forEach((doc) => {
+      const data = doc.data();
+      const createdAt: Date | undefined = data.createdAt?.toDate?.() ?? (data.createdAt ? new Date(data.createdAt) : undefined);
+      if (!createdAt) return;
+
+      const key = createdAt.toISOString().slice(0, 10);
+      if (days[key]) {
+        days[key].revenue += Number(data.finalAmount ?? data.totalAmount ?? 0);
+        days[key].orders += 1;
+      }
+
+      (data.items || []).forEach((item: any) => {
+        const pid = item.productId;
+        if (!pid) return;
+        if (!itemCounts[pid]) itemCounts[pid] = { productId: pid, name: item.productName ?? pid, count: 0, revenue: 0 };
+        itemCounts[pid].count += Number(item.quantity ?? 1);
+        itemCounts[pid].revenue += Number(item.lineTotal ?? 0);
+      });
+    });
+
+    const popularItems = Object.values(itemCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const daily = Object.values(days);
+    const totalRevenue7d = daily.reduce((sum, d) => sum + d.revenue, 0);
+
+    return res.json({ success: true, data: { daily, popularItems, totalRevenue7d } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /owner/coupons — create a coupon scoped to this business
+// ---------------------------------------------------------------------------
+router.post('/coupons', requireAuth, async (req, res) => {
+  try {
+    const uid = (req as any).uid;
+    const business = await getOwnerBusiness(uid);
+    if (!business) return res.status(404).json({ success: false, error: 'No business found' });
+
+    const { code, type, value, minOrderAmount, maxDiscount, expiresAt, usageLimit, description } = req.body;
+    if (!code || !type || !value) {
+      return res.status(400).json({ success: false, error: 'code, type, and value are required' });
+    }
+    if (!['percentage', 'flat'].includes(type)) {
+      return res.status(400).json({ success: false, error: 'type must be percentage or flat' });
+    }
+
+    // Ensure code is unique
+    const existing = await db.collection('coupons').where('code', '==', code.toUpperCase()).limit(1).get();
+    if (!existing.empty) return res.status(400).json({ success: false, error: 'Coupon code already exists' });
+
+    const docRef = await db.collection('coupons').add({
+      code: code.toUpperCase().trim(),
+      type,
+      value: Number(value),
+      minOrderAmount: minOrderAmount ? Number(minOrderAmount) : 0,
+      maxDiscount: maxDiscount ? Number(maxDiscount) : null,
+      businessId: (business as any).id,
+      usageLimit: usageLimit ? Number(usageLimit) : null,
+      usageCount: 0,
+      perUserLimit: 1,
+      description: description ?? '',
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+      status: 'active',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    const newDoc = await docRef.get();
+    return res.status(201).json({ success: true, data: { id: newDoc.id, ...newDoc.data() } });
+  } catch (error: any) {
+    return res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /owner/coupons — list this business's coupons
+// ---------------------------------------------------------------------------
+router.get('/coupons', requireAuth, async (req, res) => {
+  try {
+    const uid = (req as any).uid;
+    const business = await getOwnerBusiness(uid);
+    if (!business) return res.json({ success: true, data: [] });
+
+    const snap = await db
+      .collection('coupons')
+      .where('businessId', '==', (business as any).id)
+      .orderBy('createdAt', 'desc')
+      .get();
+
+    const coupons = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return res.json({ success: true, data: coupons });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /owner/coupons/:id — deactivate / delete a coupon
+// ---------------------------------------------------------------------------
+router.delete('/coupons/:id', requireAuth, async (req, res) => {
+  try {
+    const uid = (req as any).uid;
+    const business = await getOwnerBusiness(uid);
+    if (!business) return res.status(404).json({ success: false, error: 'No business found' });
+
+    const couponDoc = await db.collection('coupons').doc(req.params.id).get();
+    if (!couponDoc.exists) return res.status(404).json({ success: false, error: 'Coupon not found' });
+    if (couponDoc.data()?.businessId !== (business as any).id) {
+      return res.status(403).json({ success: false, error: 'Coupon does not belong to your business' });
+    }
+
+    await db.collection('coupons').doc(req.params.id).update({
+      status: 'inactive',
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return res.json({ success: true, message: 'Coupon deactivated' });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /owner/stats — dashboard statistics for the owner
 // ---------------------------------------------------------------------------
 router.get('/stats', requireAuth, async (req, res) => {

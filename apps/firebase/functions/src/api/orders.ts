@@ -1,11 +1,65 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
+import * as https from 'https';
 import { computeCouponDiscount } from './coupons';
 import { ORDER_FEES } from '../shared/constants';
 
 const router = Router();
 const db = admin.firestore();
 const auth = admin.auth();
+
+// ---------------------------------------------------------------------------
+// Push notification helper (Expo Push API)
+// ---------------------------------------------------------------------------
+const STATUS_MESSAGES: Record<string, { title: string; body: (name?: string) => string }> = {
+  confirmed:  { title: '✅ Order Confirmed', body: (n) => `${n || 'Your order'} has been confirmed and is being prepared.` },
+  preparing:  { title: '👨‍🍳 Being Prepared', body: (n) => `${n || 'Your order'} is now being prepared.` },
+  ready:      { title: '🎉 Ready for Pickup', body: (n) => `${n || 'Your order'} is ready! Delivery is on the way.` },
+  out_for_delivery: { title: '🚚 Out for Delivery', body: (n) => `${n || 'Your order'} is on its way to you!` },
+  delivered:  { title: '✅ Order Delivered', body: (n) => `${n || 'Your order'} has been delivered. Enjoy your order!` },
+  cancelled:  { title: '❌ Order Cancelled', body: (n) => `${n || 'Your order'} has been cancelled.` },
+};
+
+async function sendPushNotification(pushToken: string, title: string, body: string): Promise<void> {
+  if (!pushToken.startsWith('ExponentPushToken[')) return;
+  const payload = JSON.stringify({
+    to: pushToken,
+    sound: 'default',
+    title,
+    body,
+    data: {},
+  });
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'exp.host',
+      path: '/--/api/v2/push/send',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    };
+    const req = https.request(options, () => resolve());
+    req.on('error', () => resolve()); // non-blocking; ignore errors
+    req.write(payload);
+    req.end();
+  });
+}
+
+async function notifyOrderStatusChange(
+  userId: string,
+  status: string,
+  orderNote?: string
+): Promise<void> {
+  try {
+    const userDoc = await db.collection('users').doc(userId).get();
+    const pushToken = userDoc.data()?.pushToken;
+    if (!pushToken) return;
+    const msg = STATUS_MESSAGES[status];
+    if (!msg) return;
+    await sendPushNotification(pushToken, msg.title, msg.body(orderNote));
+  } catch { /* non-blocking */ }
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -139,6 +193,11 @@ router.post('/', requireAuth, async (req, res) => {
     if (!bizDoc.exists) return res.status(404).json({ success: false, error: 'Business not found' });
     const business = { id: bizDoc.id, ...bizDoc.data() } as any;
 
+    // Check business is accepting orders
+    if (business.isTakingOrders === false) {
+      return res.status(400).json({ success: false, error: `${business.name} is not accepting orders right now. Please try again later.` });
+    }
+
     const validatedItems: any[] = [];
     let subTotal = 0;
 
@@ -179,10 +238,12 @@ router.post('/', requireAuth, async (req, res) => {
       });
     }
 
-    if (subTotal < MINIMUM_ORDER) {
+    // Use per-business minimum order amount if set, otherwise fall back to global
+    const effectiveMinimum = Number(business.minimumOrderAmount ?? MINIMUM_ORDER);
+    if (subTotal < effectiveMinimum) {
       return res.status(400).json({
         success: false,
-        error: `Minimum order amount is Rs. ${MINIMUM_ORDER}. Your subtotal is Rs. ${subTotal}.`,
+        error: `Minimum order amount is Rs. ${effectiveMinimum}. Your subtotal is Rs. ${subTotal}.`,
       });
     }
 
@@ -275,6 +336,10 @@ router.put('/:id/status', requireAuth, async (req, res) => {
     });
 
     const updatedDoc = await db.collection('orders').doc(req.params.id).get();
+
+    // Fire-and-forget push notification to the customer
+    notifyOrderStatusChange(orderData.userId, status, orderData.businessName ?? undefined);
+
     return res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
