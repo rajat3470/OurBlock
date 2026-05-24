@@ -89,7 +89,7 @@ android/keystore
 tmp/
 temp/
 
-# AI assistant tool directories (not application code)
+# AI assistant tool cache & state directories (not application code)
 .agent/
 .amazonq/
 .augment/
@@ -119,6 +119,7 @@ temp/
 .trae/
 .windsurf/
 
-# OpenSpec & SpecKit generated artifacts
+# Generated specification artifacts (local, per-branch)
+# Keep .github/ and .specify/ — they're shared configuration
 openspec/
 specs/
