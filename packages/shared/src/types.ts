@@ -117,6 +117,8 @@ export interface DayHours {
 }
 
 // Product Types
+export type ProductUnit = "piece" | "g" | "kg" | "ml" | "L";
+
 export interface Product {
   id: string;
   businessId: string;
@@ -128,6 +130,8 @@ export interface Product {
   discount?: number; // percentage
   imageUrls: string[];
   stock: number;
+  unit?: ProductUnit;    // unit of measure — default "piece"
+  unitStep?: number;    // purchasable increment in that unit (e.g. 100 for 100g)
   rating?: number;
   totalReviews?: number;
   status: "active" | "inactive";

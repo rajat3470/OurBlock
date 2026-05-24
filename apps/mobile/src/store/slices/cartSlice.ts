@@ -9,6 +9,8 @@ export interface CartItem {
   price: number;
   quantity: number;
   maxQuantity: number;
+  unit?: string;      // "piece" | "g" | "kg" | "ml" | "L" — for display
+  unitStep?: number;  // purchasable increment in that unit
 }
 
 interface CartState {

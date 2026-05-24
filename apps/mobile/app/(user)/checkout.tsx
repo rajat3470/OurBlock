@@ -19,6 +19,7 @@ import { useUserApp } from "../../src/hooks/useUserApp";
 import { userAppService } from "../../src/services/userAppService";
 import { Address } from "../../src/types";
 import { ORDER_FEES } from "../../src/constants";
+import { displayQuantity } from "../../src/utils/helpers";
 
 const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
 
@@ -191,7 +192,7 @@ export default function CheckoutScreen() {
           {cartItems.map((item) => (
             <View key={item.productId} style={styles.orderItemRow}>
               <View style={styles.orderItemQty}>
-                <Text style={styles.orderItemQtyText}>{item.quantity}×</Text>
+                <Text style={styles.orderItemQtyText}>{displayQuantity(item.quantity, item.unit, item.unitStep)}</Text>
               </View>
               <Text style={styles.orderItemName} numberOfLines={1}>
                 {item.productName}

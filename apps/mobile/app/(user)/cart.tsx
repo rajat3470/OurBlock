@@ -7,6 +7,7 @@ import { Image } from "expo-image";
 import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
 import { updateQuantity, removeItem, clearCart } from "../../src/store/slices/cartSlice";
 import { ORDER_FEES } from "../../src/constants";
+import { displayQuantity } from "../../src/utils/helpers";
 
 const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
 
@@ -91,7 +92,7 @@ export default function CartScreen() {
                 </View>
                 <View style={styles.itemDetails}>
                   <Text style={styles.itemName} numberOfLines={2}>{item.productName}</Text>
-                  <Text style={styles.itemPrice}>Rs {item.price} × {item.quantity}</Text>
+                  <Text style={styles.itemPrice}>Rs {item.price} × {displayQuantity(item.quantity, item.unit, item.unitStep)}</Text>
                   <Text style={styles.itemLineTotal}>Rs {item.price * item.quantity}</Text>
                 </View>
                 <View style={styles.itemActions}>
@@ -99,7 +100,7 @@ export default function CartScreen() {
                     <TouchableOpacity style={styles.qtyBtn} onPress={() => handleDecrease(item.productId, item.quantity)}>
                       <Text style={styles.qtyBtnText}>−</Text>
                     </TouchableOpacity>
-                    <Text style={styles.qtyCount}>{item.quantity}</Text>
+                    <Text style={styles.qtyCount}>{displayQuantity(item.quantity, item.unit, item.unitStep)}</Text>
                     <TouchableOpacity style={styles.qtyBtn} onPress={() => handleIncrease(item.productId, item.quantity, item.maxQuantity)}>
                       <Text style={styles.qtyBtnText}>+</Text>
                     </TouchableOpacity>

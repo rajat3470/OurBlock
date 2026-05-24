@@ -18,6 +18,7 @@ import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
 import { addItem, updateQuantity } from "../../src/store/slices/cartSlice";
 import { userAppService } from "../../src/services/userAppService";
 import { Business, Product } from "../../src/types";
+import { unitStepLabel, displayQuantity, maxCartSteps } from "../../src/utils/helpers";
 import { useUserApp } from "../../src/hooks/useUserApp";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -96,6 +97,8 @@ export default function BusinessDetailScreen() {
     const imageUrl = getFirstImageUrl(product.imageUrls);
     const qty = cartItems.find((i) => i.productId === product.id)?.quantity ?? 0;
     const discount = Number(product.discount || 0);
+    const uLabel = unitStepLabel(product.unit, product.unitStep);
+    const maxSteps = maxCartSteps(product.stock, product.unit, product.unitStep);
 
     return (
       <TouchableOpacity
@@ -133,13 +136,15 @@ export default function BusinessDetailScreen() {
             {product.name}
           </Text>
           <View style={styles.productPriceRow}>
-            <Text style={styles.productPrice}>Rs {product.price}</Text>
+            <Text style={styles.productPrice}>
+              Rs {product.price}{uLabel ? `/${uLabel}` : ""}
+            </Text>
             {product.originalPrice && product.originalPrice > product.price ? (
               <Text style={styles.productOriginalPrice}>Rs {product.originalPrice}</Text>
             ) : null}
           </View>
 
-          {product.stock > 0 && isOrderable ? (
+          {maxSteps > 0 && isOrderable ? (
             qty === 0 ? (
               <TouchableOpacity
                 style={styles.addCartBtn}
@@ -157,7 +162,9 @@ export default function BusinessDetailScreen() {
                       businessName: business?.name ?? "Local Store",
                       price: product.price,
                       quantity: 1,
-                      maxQuantity: product.stock,
+                      maxQuantity: maxSteps,
+                      unit: product.unit,
+                      unitStep: product.unitStep,
                     })
                   );
                   toast.show(`${product.name} added`, { type: "success" });
@@ -176,13 +183,18 @@ export default function BusinessDetailScreen() {
                 >
                   <Text style={styles.miniQtyBtnText}>−</Text>
                 </TouchableOpacity>
-                <Text style={styles.miniQtyCount}>{qty}</Text>
+                <Text style={styles.miniQtyCount}>{displayQuantity(qty, product.unit, product.unitStep)}</Text>
                 <TouchableOpacity
                   style={styles.miniQtyBtn}
                   onPress={(e) => {
                     e.stopPropagation();
-                    if (qty >= product.stock) {
-                      toast.show(`Only ${product.stock} available`, { type: "warning" });
+                    if (qty >= maxSteps) {
+                      toast.show(
+                        product.unit && product.unit !== "piece"
+                          ? `Only ${unitStepLabel(product.unit, product.unitStep) ? `${product.stock}${product.unit}` : product.stock} available`
+                          : `Only ${product.stock} available`,
+                        { type: "warning" }
+                      );
                       return;
                     }
                     dispatch(updateQuantity({ productId: product.id, quantity: qty + 1 }));
