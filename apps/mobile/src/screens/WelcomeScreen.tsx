@@ -4,7 +4,7 @@ import { View, Text, StyleSheet } from "react-native";
 const WelcomeScreen: React.FC = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome to OurBlock</Text>
+      <Text style={styles.title}>Welcome to mohallaMitr</Text>
       <Text style={styles.subtitle}>
         Your Society's Marketplace
       </Text>

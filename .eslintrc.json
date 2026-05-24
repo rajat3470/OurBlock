@@ -1,4 +1,4 @@
-# OurBlock ESLint Configuration
+# mohallaMitr ESLint Configuration
 
 {
   "extends": "expo",

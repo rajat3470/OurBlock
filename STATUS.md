@@ -124,7 +124,7 @@ https://us-central1-our-block-app.cloudfunctions.net/api
 
 #### Start Backend (Terminal 1)
 ```bash
-cd OurBlock
+cd mohallaMitr
 yarn firebase:serve
 ```
 **Output:** 

@@ -1,12 +1,12 @@
-# OurBlock — Project Details
+# mohallaMitr — Project Details
 
 ## Architecture Overview
 
-OurBlock is structured as a **monorepo with three independent apps** sharing a single React Native / Expo codebase. At runtime, the `EXPO_PUBLIC_APP_TARGET` environment variable determines which app boots. Each app has its own route group, tab layout, Redux slice, service layer, and custom hook.
+mohallaMitr is structured as a **monorepo with three independent apps** sharing a single React Native / Expo codebase. At runtime, the `EXPO_PUBLIC_APP_TARGET` environment variable determines which app boots. Each app has its own route group, tab layout, Redux slice, service layer, and custom hook.
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    OurBlock Monorepo                │
+│                    mohallaMitr Monorepo                │
 │                                                     │
 │  ┌─────────────┐  ┌──────────────┐  ┌───────────┐  │
 │  │ SuperAdmin  │  │BusinessOwner │  │   User    │  │

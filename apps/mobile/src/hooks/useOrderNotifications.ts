@@ -90,7 +90,7 @@ export function useOrderNotifications() {
 
       // Show in-app alert (since system notification is suppressed while app is open)
       Alert.alert(
-        notification.title ?? "OurBlock",
+        notification.title ?? "mohallaMitr",
         notification.body ?? "",
         [
           { text: "Dismiss", style: "cancel" },

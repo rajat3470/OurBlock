@@ -1,7 +1,7 @@
 {
-  "name": "@ourblock/shared",
+  "name": "@mohallamitr/shared",
   "version": "1.0.0",
-  "description": "Shared types, utilities, and constants for OurBlock",
+  "description": "Shared types, utilities, and constants for mohallaMitr",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "private": true,

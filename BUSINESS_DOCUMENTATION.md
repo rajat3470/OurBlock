@@ -1,8 +1,8 @@
-# OurBlock - Local Society Marketplace Platform
+# mohallaMitr - Local Society Marketplace Platform
 
 ## 📋 Executive Summary
 
-**OurBlock** is a hyper-local marketplace platform designed to connect residents within the same residential society with local businesses and service providers. The platform enables neighborhood commerce, allowing residents to discover and purchase products/services from vendors operating within their own society, fostering community engagement and supporting local micro-entrepreneurs.
+**mohallaMitr** is a hyper-local marketplace platform designed to connect residents within the same residential society with local businesses and service providers. The platform enables neighborhood commerce, allowing residents to discover and purchase products/services from vendors operating within their own society, fostering community engagement and supporting local micro-entrepreneurs.
 
 ### Vision
 Transform residential societies into self-sustaining micro-economies where neighbors can easily buy, sell, and trade goods and services without leaving their community.
@@ -581,7 +581,7 @@ At the current stage, the platform will generate revenue primarily through:
 
 ## 🔮 Future Vision
 
-**OurBlock** aims to become the operating system for residential societies - going beyond commerce to include:
+**mohallaMitr** aims to become the operating system for residential societies - going beyond commerce to include:
 - Society management (visitor tracking, amenity booking)
 - Community events and activities
 - Emergency services coordination
@@ -594,7 +594,7 @@ At the current stage, the platform will generate revenue primarily through:
 
 ## 📝 Conclusion
 
-OurBlock addresses a clear market need for hyperlocal commerce in organized residential communities. By focusing on the unique dynamics of society-based living, the platform creates a three-way value exchange between customers, vendors, and the community itself.
+mohallaMitr addresses a clear market need for hyperlocal commerce in organized residential communities. By focusing on the unique dynamics of society-based living, the platform creates a three-way value exchange between customers, vendors, and the community itself.
 
 The key to success lies in:
 1. **User Experience**: Making it dead simple to buy and sell
@@ -602,7 +602,7 @@ The key to success lies in:
 3. **Community**: Fostering relationships beyond transactions
 4. **Execution**: Reliable, fast, and transparent service
 
-With the right execution, OurBlock can transform how residential societies function, creating vibrant micro-economies that benefit all stakeholders.
+With the right execution, mohallaMitr can transform how residential societies function, creating vibrant micro-economies that benefit all stakeholders.
 
 ---
 

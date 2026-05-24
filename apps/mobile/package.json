@@ -1,7 +1,7 @@
 {
-  "name": "@ourblock/mobile",
+  "name": "@mohallamitr/mobile",
   "version": "1.0.0",
-  "description": "OurBlock Mobile App (Customer & Business Owner)",
+  "description": "mohallaMitr Mobile App (Customer & Business Owner)",
   "main": "expo-router/entry",
   "private": true,
   "scripts": {

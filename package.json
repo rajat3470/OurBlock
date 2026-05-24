@@ -1,19 +1,19 @@
 {
-  "name": "ourblock-monorepo",
+  "name": "mohallamitr-monorepo",
   "version": "1.0.0",
-  "description": "OurBlock - Local Society Marketplace Platform (Monorepo)",
+  "description": "mohallaMitr - Local Society Marketplace Platform (Monorepo)",
   "private": true,
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "mobile": "yarn workspace @ourblock/mobile start",
-    "mobile:customer": "yarn workspace @ourblock/mobile start:user",
-    "mobile:business": "yarn workspace @ourblock/mobile start:business-owner",
-    "mobile:ios": "yarn workspace @ourblock/mobile ios",
-    "mobile:android": "yarn workspace @ourblock/mobile android",
-    "web": "yarn workspace @ourblock/web dev",
+    "mobile": "yarn workspace @mohallamitr/mobile start",
+    "mobile:customer": "yarn workspace @mohallamitr/mobile start:user",
+    "mobile:business": "yarn workspace @mohallamitr/mobile start:business-owner",
+    "mobile:ios": "yarn workspace @mohallamitr/mobile ios",
+    "mobile:android": "yarn workspace @mohallamitr/mobile android",
+    "web": "yarn workspace @mohallamitr/web dev",
     "firebase:serve": "yarn workspace @ourblock/firebase serve",
     "firebase:deploy": "yarn workspace @ourblock/firebase deploy",
     "lint": "yarn workspaces run lint",

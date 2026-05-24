@@ -138,7 +138,7 @@ Features:
 ## Project Structure
 
 ```
-OurBlock/
+mohallaMitr/
 ├── apps/
 │   ├── mobile/           # React Native app (Expo)
 │   ├── web/              # Next.js admin dashboard

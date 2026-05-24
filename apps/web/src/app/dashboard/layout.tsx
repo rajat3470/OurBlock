@@ -62,7 +62,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">O</span>
               </div>
-              <span className="font-bold text-gray-900 text-base">OurBlock</span>
+              <span className="font-bold text-gray-900 text-base">mohallaMitr</span>
               <span className="ml-1 text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded-full">
                 Super Admin
               </span>
@@ -145,7 +145,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="flex-1">{children}</main>
 
       <footer className="py-3 text-center text-xs text-gray-400 border-t border-gray-100 bg-white">
-        OurBlock Super Admin · Production API Connected
+        mohallaMitr Super Admin · Production API Connected
       </footer>
     </div>
   );

@@ -11,12 +11,12 @@ import { AuthCredentials, AuthResponse } from "@/types";
 // Remove this block (and the mockLogin call below) once the real API is ready.
 // ---------------------------------------------------------------------------
 const MOCK_USERS: Record<string, AuthResponse> = {
-  "admin@ourblock.com": {
+  "admin@mohallamitr.com": {
     user: {
       id: "mock-super-admin-1",
       firstName: "Super",
       lastName: "Admin",
-      email: "admin@ourblock.com",
+      email: "admin@mohallamitr.com",
       phone: "9000000001",
       role: "superAdmin",
       isEmailVerified: true,
@@ -31,12 +31,12 @@ const MOCK_USERS: Record<string, AuthResponse> = {
       expiresIn: 900,
     },
   },
-  "business@ourblock.com": {
+  "business@mohallamitr.com": {
     user: {
       id: "mock-business-owner-1",
       firstName: "Business",
       lastName: "Owner",
-      email: "business@ourblock.com",
+      email: "business@mohallamitr.com",
       phone: "9000000002",
       role: "businessOwner",
       societyId: "mock-society-1",
@@ -52,12 +52,12 @@ const MOCK_USERS: Record<string, AuthResponse> = {
       expiresIn: 900,
     },
   },
-  "user@ourblock.com": {
+  "user@mohallamitr.com": {
     user: {
       id: "mock-user-1",
       firstName: "Test",
       lastName: "User",
-      email: "user@ourblock.com",
+      email: "user@mohallamitr.com",
       phone: "9000000003",
       role: "user",
       societyId: "mock-society-1",

@@ -1,4 +1,4 @@
-# OurBlock - Local Society Marketplace Platform
+# mohallaMitr - Local Society Marketplace Platform
 
 A hyperlocal marketplace platform connecting residents within residential societies with local businesses and service providers.
 
@@ -52,10 +52,10 @@ https://us-central1-our-block-app.cloudfunctions.net/api
 
 ## 🏗️ Architecture
 
-OurBlock is built as a **monorepo** with three main applications and shared packages:
+mohallaMitr is built as a **monorepo** with three main applications and shared packages:
 
 ```
-OurBlock/
+mohallaMitr/
 ├── apps/
 │   ├── mobile/          # React Native (Expo) - Customer & Business Owner
 │   ├── web/             # Next.js - Super Admin Dashboard
@@ -91,7 +91,7 @@ OurBlock/
 ### Installation
 
 ```bash
-cd OurBlock
+cd mohallaMitr
 yarn install
 ```
 

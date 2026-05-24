@@ -199,7 +199,7 @@ export default function ProductDetailScreen() {
             />
           ) : (
             <View style={styles.imagePlaceholder}>
-              <Text style={styles.imagePlaceholderEmoji}>OurBlock</Text>
+              <Text style={styles.imagePlaceholderEmoji}>mohallaMitr</Text>
             </View>
           )}
           {discount > 0 && (

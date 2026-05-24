@@ -190,7 +190,7 @@ async function ensureSocietyDemoCatalog(societyId: string) {
       societyId,
       address: `${societyName}, ${seed.addressSuffix}`,
       phone: seed.phone,
-      email: `hello+${seed.name.toLowerCase().replace(/\s+/g, '')}@ourblock.in`,
+      email: `hello+${seed.name.toLowerCase().replace(/\s+/g, '')}@mohallamitr.in`,
       rating: seed.rating,
       totalReviews: seed.totalReviews,
       isVerified: true,
