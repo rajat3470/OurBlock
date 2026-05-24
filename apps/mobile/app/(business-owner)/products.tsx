@@ -69,7 +69,6 @@ const CATEGORIES = [
   { label: "Household", value: "household" },
   { label: "Medicines", value: "medicines" },
   { label: "Electronics", value: "electronics" },
-  { label: "Clothing", value: "clothing" },
   { label: "Other", value: "other" },
 ];
 

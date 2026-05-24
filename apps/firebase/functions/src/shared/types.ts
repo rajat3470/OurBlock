@@ -70,10 +70,8 @@ export enum BusinessCategory {
   PHARMACY = "pharmacy",
   RESTAURANT = "restaurant",
   ELECTRONICS = "electronics",
-  CLOTHING = "clothing",
   HARDWARE = "hardware",
   CAFE = "cafe",
-  SALON = "salon",
   GYM = "gym",
   OTHER = "other",
 }
@@ -169,7 +167,7 @@ export interface Order {
   deliveryAddress: Address;
   status: OrderStatus;
   paymentMethod: "cash" | "card" | "upi" | "wallet";
-  paymentStatus: "pending" | "completed" | "failed";
+  paymentStatus: "pending" | "completed" | "failed" | "cod";
   notes?: string;
   estimatedDeliveryTime?: Date;
   deliveredAt?: Date;

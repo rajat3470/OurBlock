@@ -10,10 +10,8 @@ export const BUSINESS_CATEGORIES = {
   PHARMACY: "pharmacy",
   RESTAURANT: "restaurant",
   ELECTRONICS: "electronics",
-  CLOTHING: "clothing",
   HARDWARE: "hardware",
   CAFE: "cafe",
-  SALON: "salon",
   GYM: "gym",
   OTHER: "other",
 };
@@ -23,10 +21,8 @@ export const BUSINESS_CATEGORY_LABELS = {
   pharmacy: "💊 Pharmacy",
   restaurant: "🍽️ Restaurant",
   electronics: "📱 Electronics",
-  clothing: "👕 Clothing",
   hardware: "🔨 Hardware",
   cafe: "☕ Cafe",
-  salon: "💇 Salon",
   gym: "🏋️ Gym",
   other: "📦 Other",
 };

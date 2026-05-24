@@ -25,10 +25,8 @@ const BUSINESS_CATEGORIES = [
   { label: "💊  Pharmacy", value: "pharmacy" },
   { label: "🍽️  Restaurant", value: "restaurant" },
   { label: "⚡  Electronics", value: "electronics" },
-  { label: "👕  Clothing", value: "clothing" },
-  { label: "🔧  Hardware", value: "hardware" },
+  { label: "�  Hardware", value: "hardware" },
   { label: "☕  Café", value: "cafe" },
-  { label: "💇  Salon", value: "salon" },
   { label: "🏋️  Gym", value: "gym" },
   { label: "🏪  Other", value: "other" },
 ];

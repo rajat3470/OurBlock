@@ -285,7 +285,7 @@ router.post('/', requireAuth, async (req, res) => {
       deliveryAddress,
       status: 'pending',
       paymentMethod: paymentMethod || 'cash',
-      paymentStatus: 'pending',
+      paymentStatus: (paymentMethod === 'cash' || !paymentMethod) ? 'cod' : 'pending',
       notes: notes ?? '',
       trackingUpdates: [
         { status: 'pending', timestamp: new Date().toISOString(), notes: 'Order placed' },

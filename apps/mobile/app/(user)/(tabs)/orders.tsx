@@ -192,7 +192,15 @@ export default function UserOrders() {
             </Text>
           </View>
           <View style={styles.rowBottomRight}>
-            <Text style={styles.paymentText}>{item.paymentStatus}</Text>
+            <Text style={styles.paymentText}>
+              {item.paymentStatus === "cod"
+                ? "Cash on Delivery"
+                : item.paymentStatus === "completed"
+                ? "Paid"
+                : item.paymentStatus === "failed"
+                ? "Payment Failed"
+                : "Pending"}
+            </Text>
             {canCancel ? (
               <TouchableOpacity
                 style={styles.cancelBtn}

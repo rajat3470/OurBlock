@@ -205,16 +205,32 @@ export default function BusinessOwnerOrders() {
           <View
             style={[
               styles.paymentBadge,
-              item.paymentStatus === "completed" ? styles.paymentBadgePaid : styles.paymentBadgePending,
+              item.paymentStatus === "completed"
+                ? styles.paymentBadgePaid
+                : item.paymentStatus === "cod"
+                ? styles.paymentBadgeCod
+                : styles.paymentBadgePending,
             ]}
           >
             <Text
               style={[
                 styles.paymentBadgeText,
-                { color: item.paymentStatus === "completed" ? "#166534" : "#92400E" },
+                {
+                  color:
+                    item.paymentStatus === "completed"
+                      ? "#166534"
+                      : item.paymentStatus === "cod"
+                      ? "#1E40AF"
+                      : "#92400E",
+                },
               ]}
             >
-              {item.paymentMethod.toUpperCase()} · {item.paymentStatus === "completed" ? "Paid" : "Pending"}
+              {item.paymentMethod.toUpperCase()} ·{" "}
+              {item.paymentStatus === "completed"
+                ? "Paid"
+                : item.paymentStatus === "cod"
+                ? "COD"
+                : "Pending"}
             </Text>
           </View>
         </View>
@@ -588,6 +604,7 @@ const styles = StyleSheet.create({
   },
   paymentBadgePaid: { backgroundColor: "#DCFCE7" },
   paymentBadgePending: { backgroundColor: "#FEF3C7" },
+  paymentBadgeCod: { backgroundColor: "#DBEAFE" },
   paymentBadgeText: {
     fontSize: 11,
     fontWeight: "700",
