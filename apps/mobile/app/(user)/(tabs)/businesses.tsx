@@ -8,10 +8,25 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useUserApp } from "../../src/hooks/useUserApp";
-import { Business } from "../../src/types";
+import { useUserApp } from "../../../src/hooks/useUserApp";
+import { Business } from "../../../src/types";
+
+const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+
+function isBusinessOpen(business: Business): boolean {
+  if (business.status !== "active") return false;
+  if (!business.operatingHours) return true; // no hours set → assume open
+  const now = new Date();
+  const dayKey = DAYS[now.getDay()];
+  const hours = business.operatingHours[dayKey];
+  if (!hours || hours.isClosed) return false;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const currentTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  return currentTime >= hours.open && currentTime < hours.close;
+}
 
 export default function UserBusinesses() {
   const insets = useSafeAreaInsets();
@@ -31,20 +46,34 @@ export default function UserBusinesses() {
   const renderItem = ({ item }: { item: Business }) => {
     const isFavorite = favoriteBusinessIds.includes(item.id);
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => router.push({ pathname: "/(user)/business", params: { id: item.id } })}
+        activeOpacity={0.85}
+      >
         <View style={styles.cardLeft}>
           <View style={styles.iconWrap}>
             <Ionicons name="storefront-outline" size={22} color="#DC2626" />
           </View>
           <View style={styles.cardBody}>
-            <Text style={styles.name}>{item.name}</Text>
+            <View style={styles.nameRow}>
+              <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+              {isBusinessOpen(item) ? (
+                <View style={styles.badgeOpen}><Text style={styles.badgeOpenText}>Open</Text></View>
+              ) : (
+                <View style={styles.badgeClosed}><Text style={styles.badgeClosedText}>Closed</Text></View>
+              )}
+            </View>
             <Text style={styles.meta}>{item.category}</Text>
             <Text style={styles.address} numberOfLines={1}>{item.address}</Text>
           </View>
         </View>
         <TouchableOpacity
           style={[styles.favoriteBtn, isFavorite ? styles.favoriteBtnActive : null]}
-          onPress={() => toggleFavorite(item.id)}
+          onPress={(e) => {
+            e.stopPropagation();
+            toggleFavorite(item.id);
+          }}
         >
           <Ionicons
             name={isFavorite ? "heart" : "heart-outline"}
@@ -52,7 +81,7 @@ export default function UserBusinesses() {
             color={isFavorite ? "#FFFFFF" : "#DC2626"}
           />
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -178,11 +207,27 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cardBody: { flex: 1 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   name: {
     fontSize: 15,
     fontWeight: "700",
     color: "#111827",
+    flexShrink: 1,
   },
+  badgeOpen: {
+    backgroundColor: "#D1FAE5",
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  badgeOpenText: { fontSize: 11, fontWeight: "700", color: "#065F46" },
+  badgeClosed: {
+    backgroundColor: "#FEE2E2",
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  badgeClosedText: { fontSize: 11, fontWeight: "700", color: "#991B1B" },
   meta: {
     marginTop: 2,
     fontSize: 12,

@@ -13,8 +13,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
-import { userAppService } from "../../src/services/userAppService";
-import { Address } from "../../src/types";
+import { userAppService } from "../../../src/services/userAppService";
+import { Address } from "../../../src/types";
 
 export default function AddressesScreen() {
   const toast = useToast();

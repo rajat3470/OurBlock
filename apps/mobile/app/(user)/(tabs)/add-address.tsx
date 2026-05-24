@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { userAppService } from "../../src/services/userAppService";
+import { userAppService } from "../../../src/services/userAppService";
 
 type AddressType = "home" | "work" | "other";
 

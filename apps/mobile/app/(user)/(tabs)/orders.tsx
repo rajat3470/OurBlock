@@ -12,8 +12,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { useUserApp } from "../../src/hooks/useUserApp";
-import { Order, OrderStatus } from "../../src/types";
+import { useUserApp } from "../../../src/hooks/useUserApp";
+import { Order, OrderStatus } from "../../../src/types";
 
 type FilterKey = "all" | "active" | "completed";
 

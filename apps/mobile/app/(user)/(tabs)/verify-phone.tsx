@@ -15,12 +15,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import { useToast } from "react-native-toast-notifications";
-import { phoneVerificationService } from "../../src/services/phoneVerificationService";
-import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
-import { colors } from "../../src/constants/theme";
-import app from "../../src/services/firebase";
-import { setUser } from "../../src/store/slices/authSlice";
-import { authStateService } from "../../src/services/authStateService";
+import { phoneVerificationService } from "../../../src/services/phoneVerificationService";
+import { useAppDispatch, useAppSelector } from "../../../src/hooks/useRedux";
+import { colors } from "../../../src/constants/theme";
+import app from "../../../src/services/firebase";
+import { setUser } from "../../../src/store/slices/authSlice";
+import { authStateService } from "../../../src/services/authStateService";
 
 export default function PhoneVerificationScreen() {
   const dispatch = useAppDispatch();

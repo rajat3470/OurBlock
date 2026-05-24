@@ -188,7 +188,7 @@ export default function ProductDetailScreen() {
         )}
       </LinearGradient>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll} style={styles.scrollView}>
         {/* Image */}
         <View style={styles.imageWrap}>
           {images.length > 0 ? (
@@ -307,12 +307,10 @@ export default function ProductDetailScreen() {
             <Text style={styles.priceNote}>Platform fee of Rs 2 is charged per order. No delivery or GST charges.</Text>
           </View>
         </View>
-
-        <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Sticky bottom CTA */}
-      <View style={styles.bottomCta}>
+      {/* Fixed Add to Cart Button above tab bar */}
+      <View style={[styles.fixedButtonContainer, { paddingBottom: insets.bottom }]}>
         {product.stock <= 0 ? (
           <View style={styles.outOfStockBtn}>
             <Text style={styles.outOfStockText}>Out of Stock</Text>
@@ -346,7 +344,7 @@ export default function ProductDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7F8FA" },
+  container: { flex: 1, backgroundColor: "#F7F8FA", flexDirection: "column" },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   notFoundText: { fontSize: 16, color: "#6B7280" },
   headerRow: {
@@ -377,7 +375,8 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.35)",
   },
   cartBadgeText: { fontSize: 13, fontWeight: "700", color: "#FFFFFF" },
-  scroll: { paddingBottom: 32 },
+  scroll: { paddingBottom: 16 },
+  scrollView: { flex: 1 },
   imageWrap: {
     width: "100%",
     height: 280,
@@ -527,15 +526,17 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   bottomCta: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: "#FFFFFF",
     padding: 16,
     borderTopWidth: 1,
     borderTopColor: "#F3F4F6",
-    paddingBottom: 32,
+  },
+  fixedButtonContainer: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
   },
   outOfStockBtn: {
     backgroundColor: "#F3F4F6",

@@ -15,11 +15,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
-import { authStateService } from "../../src/services/authStateService";
-import { userAppService } from "../../src/services/userAppService";
-import { useAppSelector, useAppDispatch } from "../../src/hooks/useRedux";
-import { useAuth } from "../../src/hooks/useAuth";
-import { setUser } from "../../src/store/slices/authSlice";
+import { authStateService } from "../../../src/services/authStateService";
+import { userAppService } from "../../../src/services/userAppService";
+import { useAppSelector, useAppDispatch } from "../../../src/hooks/useRedux";
+import { useAuth } from "../../../src/hooks/useAuth";
+import { setUser } from "../../../src/store/slices/authSlice";
 
 export default function UserProfile() {
   const insets = useSafeAreaInsets();

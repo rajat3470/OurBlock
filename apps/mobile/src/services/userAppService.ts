@@ -36,6 +36,11 @@ export const userAppService = {
     return apiClient.get<Product[]>(`/products/featured?societyId=${societyId}`);
   },
 
+  async getProductsByBusiness(businessId: string): Promise<Product[]> {
+    const res = await apiClient.get<{ success: boolean; data: Product[] }>(`/products?businessId=${businessId}`);
+    return res.data ?? [];
+  },
+
   async getMyOrders(page = 1, limit = 50): Promise<PaginatedResponse<Order>> {
     const res = await apiClient.get<{ success: boolean; data: Order[]; total: number }>(
       `/orders/my?page=${page}&limit=${limit}`

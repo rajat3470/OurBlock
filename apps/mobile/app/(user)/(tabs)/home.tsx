@@ -14,10 +14,10 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useToast } from "react-native-toast-notifications";
-import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
-import { useUserApp } from "../../src/hooks/useUserApp";
-import { userAppService } from "../../src/services/userAppService";
-import { addItem, updateQuantity } from "../../src/store/slices/cartSlice";
+import { useAppDispatch, useAppSelector } from "../../../src/hooks/useRedux";
+import { useUserApp } from "../../../src/hooks/useUserApp";
+import { userAppService } from "../../../src/services/userAppService";
+import { addItem, updateQuantity } from "../../../src/store/slices/cartSlice";
 
 const FILTER_TAGS = ["Near & Fast", "Top Rated", "Great Offers", "New Arrivals"];
 
@@ -723,7 +723,7 @@ export default function UserHome() {
               <TouchableOpacity
                 key={business.id}
                 style={styles.businessCard}
-                onPress={() => router.push("/(user)/businesses")}
+                onPress={() => router.push({ pathname: "/(user)/business", params: { id: business.id } })}
               >
                 <View style={styles.businessImage}>
                     {business.bannerUrl || business.imageUrl ? (
