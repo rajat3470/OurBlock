@@ -1,4 +1,4 @@
-# 🚀 Production API - OurBlock
+# 🚀 Production API - mohallaMitr
 
 **Deployed:** May 4, 2026  
 **Status:** ✅ Live
@@ -347,7 +347,7 @@ export async function getSocieties() {
 curl -X POST https://us-central1-our-block-app.cloudfunctions.net/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "test@ourblock.com",
+    "email": "test@mohallamitr.com",
     "password": "Test123!",
     "displayName": "Test User",
     "phoneNumber": "+1234567890",

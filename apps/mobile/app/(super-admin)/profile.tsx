@@ -59,7 +59,7 @@ export default function SuperAdminProfileScreen() {
   const menuItems: MenuItem[] = [
     { icon: "🔒", label: "Change Password", onPress: () => {} },
     { icon: "🔔", label: "Notification Settings", onPress: () => {} },
-    { icon: "ℹ️", label: "About OurBlock", onPress: () => {} },
+    { icon: "ℹ️", label: "About mohallaMitr", onPress: () => {} },
   ];
 
   return (
@@ -127,7 +127,7 @@ export default function SuperAdminProfileScreen() {
           <Text style={styles.logoutBtnText}>Sign Out</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>OurBlock Admin v1.0.0</Text>
+        <Text style={styles.version}>mohallaMitr Admin v1.0.0</Text>
       </ScrollView>
     </View>
   );

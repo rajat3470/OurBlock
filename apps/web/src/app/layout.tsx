@@ -5,8 +5,8 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'OurBlock - Super Admin Dashboard',
-  description: 'Manage societies, businesses, and users across the OurBlock platform',
+  title: 'mohallaMitr - Super Admin Dashboard',
+  description: 'Manage societies, businesses, and users across the mohallaMitr platform',
 };
 
 export default function RootLayout({

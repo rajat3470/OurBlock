@@ -88,3 +88,37 @@ android/keystore
 *.temp
 tmp/
 temp/
+
+# AI assistant tool directories (not application code)
+.agent/
+.amazonq/
+.augment/
+.bob/
+.claude/
+.cline/
+.clinerules/
+.codebuddy/
+.codex/
+.continue/
+.cospec/
+.crush/
+.cursor/
+.factory/
+.forge/
+.gemini/
+.iflow/
+.junie/
+.kilocode/
+.kiro/
+.lingma/
+.opencode/
+.pi/
+.qoder/
+.qwen/
+.roo/
+.trae/
+.windsurf/
+
+# OpenSpec & SpecKit generated artifacts
+openspec/
+specs/

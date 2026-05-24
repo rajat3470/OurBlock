@@ -1,5 +1,5 @@
 /**
- * API Client for OurBlock Web Admin
+ * API Client for mohallaMitr Web Admin
  * Connects to Firebase Cloud Functions production API
  */
 

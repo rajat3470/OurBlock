@@ -1,7 +1,7 @@
 {
-  "name": "@ourblock/web",
+  "name": "@mohallamitr/web",
   "version": "1.0.0",
-  "description": "OurBlock Web Admin (Super Admin Dashboard)",
+  "description": "mohallaMitr Web Admin (Super Admin Dashboard)",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,7 +12,7 @@
     "clean": "rm -rf .next node_modules"
   },
   "dependencies": {
-    "@ourblock/shared": "*",
+    "@mohallamitr/shared": "*",
     "next": "^14.2.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",

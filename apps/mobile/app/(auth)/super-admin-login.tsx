@@ -7,8 +7,8 @@ export default function SuperAdminLoginScreen() {
       role="superAdmin"
       icon="🔐"
       title="Super Admin"
-      subtitle="Sign in to manage OurBlock"
-      emailPlaceholder="admin@ourblock.com"
+      subtitle="Sign in to manage mohallaMitr"
+      emailPlaceholder="admin@mohallamitr.com"
       successRoute="/(super-admin)/dashboard"
     />
   );

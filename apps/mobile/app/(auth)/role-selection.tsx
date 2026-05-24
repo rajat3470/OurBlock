@@ -87,13 +87,13 @@ export default function RoleSelectionScreen() {
           showsVerticalScrollIndicator={false}
         >
           <LinearGradient colors={["#0F172A", "#1E3A8A"]} style={styles.header}>
-            <Text style={styles.logo}>OurBlock</Text>
+            <Text style={styles.logo}>mohallaMitr</Text>
             <Text style={styles.tagline}>Your Society's Marketplace</Text>
           </LinearGradient>
 
           <Text style={styles.title}>Choose Your Role</Text>
           <Text style={styles.subtitle}>
-            Select how you want to use OurBlock
+            Select how you want to use mohallaMitr
           </Text>
 
           {ROLES.map((role) => {
