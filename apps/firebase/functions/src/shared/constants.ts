@@ -78,6 +78,12 @@ export const DEFAULT_PAGINATION = {
   MAX_LIMIT: 100,
 };
 
+// Order Fees
+export const ORDER_FEES = {
+  PLATFORM_FEE: 2,
+  MINIMUM_ORDER: 50,
+} as const;
+
 // Validation Constraints
 export const VALIDATION_LIMITS = {
   PASSWORD_MIN_LENGTH: 8,

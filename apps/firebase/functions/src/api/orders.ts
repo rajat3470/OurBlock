@@ -1,5 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
+import { computeCouponDiscount } from './coupons';
+import { ORDER_FEES } from '../shared/constants';
 
 const router = Router();
 const db = admin.firestore();
@@ -8,8 +10,7 @@ const auth = admin.auth();
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-const PLATFORM_FEE = 2;    // Rs. 2 per order
-const MINIMUM_ORDER = 50;  // Rs. 50 minimum subtotal
+const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
 
 // ---------------------------------------------------------------------------
 // Mock token lookup (matches owner.ts dev pattern)
@@ -125,7 +126,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const { businessId, items, deliveryAddress, notes, paymentMethod } = req.body;
+    const { businessId, items, deliveryAddress, notes, paymentMethod, couponCode } = req.body;
 
     if (!businessId || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, error: 'businessId and items are required' });
@@ -186,7 +187,23 @@ router.post('/', requireAuth, async (req, res) => {
     }
 
     const platformFee = PLATFORM_FEE;
-    const finalAmount = subTotal + platformFee;
+    let couponDiscount = 0;
+    let appliedCouponCode: string | null = null;
+    if (couponCode) {
+      try {
+        const couponResult = await computeCouponDiscount(db, uid, couponCode, subTotal, businessId);
+        couponDiscount = couponResult.discountAmount;
+        appliedCouponCode = couponResult.code;
+        // Increment coupon usage count
+        const snap = await db.collection('coupons').where('code', '==', couponResult.code).limit(1).get();
+        if (!snap.empty) {
+          await snap.docs[0].ref.update({ usageCount: admin.firestore.FieldValue.increment(1) });
+        }
+      } catch {
+        // Coupon validation failed — proceed without discount
+      }
+    }
+    const finalAmount = subTotal + platformFee - couponDiscount;
 
     const userDoc = await db.collection('users').doc(uid).get();
     const userData = userDoc.data() ?? {};
@@ -200,6 +217,8 @@ router.post('/', requireAuth, async (req, res) => {
       items: validatedItems,
       subTotal,
       platformFee,
+      couponCode: appliedCouponCode,
+      couponDiscount,
       totalAmount: finalAmount,
       finalAmount,
       deliveryAddress,

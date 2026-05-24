@@ -1,3 +1,9 @@
+// Order Fees
+export const ORDER_FEES = {
+  PLATFORM_FEE: 2,
+  MINIMUM_ORDER: 50,
+} as const;
+
 // Business Categories
 export const BUSINESS_CATEGORIES = {
   GROCERY: "grocery",

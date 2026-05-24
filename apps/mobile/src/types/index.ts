@@ -211,6 +211,7 @@ export interface CreateOrderPayload {
   deliveryAddress: Omit<Address, "id" | "userId" | "createdAt" | "updatedAt">;
   notes?: string;
   paymentMethod: "cash" | "upi";
+  couponCode?: string;
 }
 
 export interface OrderItem {
