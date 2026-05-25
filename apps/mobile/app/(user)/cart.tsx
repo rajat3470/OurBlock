@@ -6,9 +6,10 @@ import { router } from "expo-router";
 import { Image } from "expo-image";
 import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
 import { updateQuantity, removeItem, clearCart } from "../../src/store/slices/cartSlice";
+import { ORDER_FEES } from "../../src/constants";
+import { displayQuantity } from "../../src/utils/helpers";
 
-const PLATFORM_FEE = 2;
-const MINIMUM_ORDER = 50;
+const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
 
 export default function CartScreen() {
   const dispatch = useAppDispatch();
@@ -91,7 +92,7 @@ export default function CartScreen() {
                 </View>
                 <View style={styles.itemDetails}>
                   <Text style={styles.itemName} numberOfLines={2}>{item.productName}</Text>
-                  <Text style={styles.itemPrice}>Rs {item.price} × {item.quantity}</Text>
+                  <Text style={styles.itemPrice}>Rs {item.price} × {displayQuantity(item.quantity, item.unit, item.unitStep)}</Text>
                   <Text style={styles.itemLineTotal}>Rs {item.price * item.quantity}</Text>
                 </View>
                 <View style={styles.itemActions}>
@@ -99,7 +100,7 @@ export default function CartScreen() {
                     <TouchableOpacity style={styles.qtyBtn} onPress={() => handleDecrease(item.productId, item.quantity)}>
                       <Text style={styles.qtyBtnText}>−</Text>
                     </TouchableOpacity>
-                    <Text style={styles.qtyCount}>{item.quantity}</Text>
+                    <Text style={styles.qtyCount}>{displayQuantity(item.quantity, item.unit, item.unitStep)}</Text>
                     <TouchableOpacity style={styles.qtyBtn} onPress={() => handleIncrease(item.productId, item.quantity, item.maxQuantity)}>
                       <Text style={styles.qtyBtnText}>+</Text>
                     </TouchableOpacity>
@@ -111,20 +112,12 @@ export default function CartScreen() {
               </View>
             ))}
 
-            <View style={styles.summaryWrap}>
-              <Text style={styles.summaryTitle}>Bill Details</Text>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Subtotal</Text><Text style={styles.summaryValue}>Rs {subTotal}</Text></View>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Platform Fee</Text><Text style={styles.summaryValue}>Rs {PLATFORM_FEE}</Text></View>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Delivery Fee</Text><Text style={styles.summaryValueGreen}>FREE</Text></View>
-              <View style={styles.summaryRow}><Text style={styles.summaryLabel}>GST / Tax</Text><Text style={styles.summaryValueGreen}>None</Text></View>
-              <View style={styles.divider} />
-              <View style={styles.summaryRow}><Text style={styles.summaryLabelBold}>Total Amount</Text><Text style={styles.summaryValueBold}>Rs {finalAmount}</Text></View>
-              {subTotal < MINIMUM_ORDER ? (
-                <View style={styles.minOrderWarn}>
-                  <Text style={styles.minOrderWarnText}>Minimum order is Rs {MINIMUM_ORDER}. Add Rs {MINIMUM_ORDER - subTotal} more to proceed.</Text>
-                </View>
-              ) : null}
-            </View>
+            {subTotal < MINIMUM_ORDER ? (
+              <View style={styles.minOrderWarn}>
+                <Ionicons name="information-circle-outline" size={14} color="#991B1B" />
+                <Text style={styles.minOrderWarnText}>Add Rs {MINIMUM_ORDER - subTotal} more to reach the Rs {MINIMUM_ORDER} minimum.</Text>
+              </View>
+            ) : null}
 
             <View style={{ height: 100 }} />
           </ScrollView>
@@ -196,17 +189,8 @@ const styles = StyleSheet.create({
   qtyCount: { width: 32, textAlign: "center", fontSize: 15, fontWeight: "800", color: "#991B1B" },
   removeBtn: { paddingHorizontal: 4 },
   removeText: { fontSize: 12, color: "#DC2626", fontWeight: "600" },
-  summaryWrap: { margin: 16, backgroundColor: "#FFFFFF", borderRadius: 14, padding: 16, gap: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
-  summaryTitle: { fontSize: 15, fontWeight: "800", color: "#111827", marginBottom: 4 },
-  summaryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  summaryLabel: { fontSize: 13, color: "#4B5563" },
-  summaryValue: { fontSize: 13, fontWeight: "600", color: "#374151" },
-  summaryValueGreen: { fontSize: 13, fontWeight: "700", color: "#15803D" },
-  divider: { height: 1, backgroundColor: "#F3F4F6", marginVertical: 4 },
-  summaryLabelBold: { fontSize: 15, fontWeight: "800", color: "#111827" },
-  summaryValueBold: { fontSize: 15, fontWeight: "800", color: "#DC2626" },
-  minOrderWarn: { marginTop: 8, backgroundColor: "#FEF2F2", borderRadius: 8, padding: 10, borderWidth: 1, borderColor: "#FECACA" },
-  minOrderWarnText: { fontSize: 12, fontWeight: "600", color: "#991B1B" },
+  minOrderWarn: { flexDirection: "row", alignItems: "center", gap: 8, margin: 16, marginBottom: 0, backgroundColor: "#FEF2F2", borderRadius: 10, padding: 12, borderWidth: 1, borderColor: "#FECACA" },
+  minOrderWarnText: { fontSize: 12, fontWeight: "600", color: "#991B1B", flex: 1 },
   bottomCta: { position: "absolute", bottom: 104, left: 16, right: 16, backgroundColor: "#FFFFFF", padding: 16, borderRadius: 20, shadowColor: "#DC2626", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 8 },
   bottomRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   totalLabel: { fontSize: 12, color: "#6B7280" },

@@ -18,10 +18,33 @@ import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
 import { addItem, updateQuantity } from "../../src/store/slices/cartSlice";
 import { userAppService } from "../../src/services/userAppService";
 import { Business, Product } from "../../src/types";
+import { unitStepLabel, displayQuantity, maxCartSteps } from "../../src/utils/helpers";
 import { useUserApp } from "../../src/hooks/useUserApp";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
+
+const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+
+function getBusinessOrderStatus(business: Business): "open" | "paused" | "closed" {
+  if (business.status !== "active") return "closed";
+  let withinHours = true;
+  if (business.operatingHours) {
+    const now = new Date();
+    const dayKey = DAYS[now.getDay()];
+    const hours = business.operatingHours[dayKey];
+    if (!hours || hours.isClosed) {
+      withinHours = false;
+    } else {
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const current = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      withinHours = current >= hours.open && current < hours.close;
+    }
+  }
+  if (!withinHours) return "closed";
+  if (business.isTakingOrders === false) return "paused";
+  return "open";
+}
 
 function getFirstImageUrl(images?: string[]) {
   return images?.find((url) => typeof url === "string" && url.trim().length > 0) ?? null;
@@ -42,6 +65,10 @@ export default function BusinessDetailScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Derive orderable status from business state
+  const bizOrderStatus = business ? getBusinessOrderStatus(business) : "open";
+  const isOrderable = bizOrderStatus === "open";
 
   useEffect(() => {
     if (!businessId) return;
@@ -70,6 +97,8 @@ export default function BusinessDetailScreen() {
     const imageUrl = getFirstImageUrl(product.imageUrls);
     const qty = cartItems.find((i) => i.productId === product.id)?.quantity ?? 0;
     const discount = Number(product.discount || 0);
+    const uLabel = unitStepLabel(product.unit, product.unitStep);
+    const maxSteps = maxCartSteps(product.stock, product.unit, product.unitStep);
 
     return (
       <TouchableOpacity
@@ -107,13 +136,15 @@ export default function BusinessDetailScreen() {
             {product.name}
           </Text>
           <View style={styles.productPriceRow}>
-            <Text style={styles.productPrice}>Rs {product.price}</Text>
+            <Text style={styles.productPrice}>
+              Rs {product.price}{uLabel ? `/${uLabel}` : ""}
+            </Text>
             {product.originalPrice && product.originalPrice > product.price ? (
               <Text style={styles.productOriginalPrice}>Rs {product.originalPrice}</Text>
             ) : null}
           </View>
 
-          {product.stock > 0 ? (
+          {maxSteps > 0 && isOrderable ? (
             qty === 0 ? (
               <TouchableOpacity
                 style={styles.addCartBtn}
@@ -131,7 +162,9 @@ export default function BusinessDetailScreen() {
                       businessName: business?.name ?? "Local Store",
                       price: product.price,
                       quantity: 1,
-                      maxQuantity: product.stock,
+                      maxQuantity: maxSteps,
+                      unit: product.unit,
+                      unitStep: product.unitStep,
                     })
                   );
                   toast.show(`${product.name} added`, { type: "success" });
@@ -150,13 +183,18 @@ export default function BusinessDetailScreen() {
                 >
                   <Text style={styles.miniQtyBtnText}>−</Text>
                 </TouchableOpacity>
-                <Text style={styles.miniQtyCount}>{qty}</Text>
+                <Text style={styles.miniQtyCount}>{displayQuantity(qty, product.unit, product.unitStep)}</Text>
                 <TouchableOpacity
                   style={styles.miniQtyBtn}
                   onPress={(e) => {
                     e.stopPropagation();
-                    if (qty >= product.stock) {
-                      toast.show(`Only ${product.stock} available`, { type: "warning" });
+                    if (qty >= maxSteps) {
+                      toast.show(
+                        product.unit && product.unit !== "piece"
+                          ? `Only ${unitStepLabel(product.unit, product.unitStep) ? `${product.stock}${product.unit}` : product.stock} available`
+                          : `Only ${product.stock} available`,
+                        { type: "warning" }
+                      );
                       return;
                     }
                     dispatch(updateQuantity({ productId: product.id, quantity: qty + 1 }));
@@ -230,6 +268,21 @@ export default function BusinessDetailScreen() {
           style={styles.bannerImage}
           contentFit="cover"
         />
+      ) : null}
+
+      {/* Paused / closed notice banner */}
+      {bizOrderStatus === "paused" ? (
+        <View style={styles.orderNoticeBanner}>
+          <Text style={styles.orderNoticeText}>
+            ⏸ This shop has temporarily paused orders
+          </Text>
+        </View>
+      ) : bizOrderStatus === "closed" ? (
+        <View style={[styles.orderNoticeBanner, styles.orderNoticeClosedBanner]}>
+          <Text style={styles.orderNoticeText}>
+            🕐 This shop is currently closed
+          </Text>
+        </View>
       ) : null}
 
       {/* Products */}
@@ -345,6 +398,22 @@ const styles = StyleSheet.create({
   bannerImage: {
     width: "100%",
     height: 160,
+  },
+  orderNoticeBanner: {
+    backgroundColor: "#FEF3C7",
+    borderLeftWidth: 4,
+    borderLeftColor: "#F59E0B",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  orderNoticeClosedBanner: {
+    backgroundColor: "#FEE2E2",
+    borderLeftColor: "#DC2626",
+  },
+  orderNoticeText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#92400E",
   },
   centeredState: {
     flex: 1,

@@ -16,16 +16,24 @@ import { Business } from "../../../src/types";
 
 const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
 
-function isBusinessOpen(business: Business): boolean {
-  if (business.status !== "active") return false;
-  if (!business.operatingHours) return true; // no hours set → assume open
-  const now = new Date();
-  const dayKey = DAYS[now.getDay()];
-  const hours = business.operatingHours[dayKey];
-  if (!hours || hours.isClosed) return false;
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  const currentTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  return currentTime >= hours.open && currentTime < hours.close;
+function getBusinessStatus(business: Business): "open" | "paused" | "closed" {
+  if (business.status !== "active") return "closed";
+  let withinHours = true;
+  if (business.operatingHours) {
+    const now = new Date();
+    const dayKey = DAYS[now.getDay()];
+    const hours = business.operatingHours[dayKey];
+    if (!hours || hours.isClosed) {
+      withinHours = false;
+    } else {
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const currentTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      withinHours = currentTime >= hours.open && currentTime < hours.close;
+    }
+  }
+  if (!withinHours) return "closed";
+  if (business.isTakingOrders === false) return "paused";
+  return "open";
 }
 
 export default function UserBusinesses() {
@@ -45,6 +53,7 @@ export default function UserBusinesses() {
 
   const renderItem = ({ item }: { item: Business }) => {
     const isFavorite = favoriteBusinessIds.includes(item.id);
+    const bizStatus = getBusinessStatus(item);
     return (
       <TouchableOpacity
         style={styles.card}
@@ -58,13 +67,25 @@ export default function UserBusinesses() {
           <View style={styles.cardBody}>
             <View style={styles.nameRow}>
               <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-              {isBusinessOpen(item) ? (
+              {bizStatus === "open" && (
                 <View style={styles.badgeOpen}><Text style={styles.badgeOpenText}>Open</Text></View>
-              ) : (
+              )}
+              {bizStatus === "paused" && (
+                <View style={styles.badgePaused}><Text style={styles.badgePausedText}>Paused</Text></View>
+              )}
+              {bizStatus === "closed" && (
                 <View style={styles.badgeClosed}><Text style={styles.badgeClosedText}>Closed</Text></View>
               )}
             </View>
-            <Text style={styles.meta}>{item.category}</Text>
+            <View style={styles.metaRow}>
+              <Text style={styles.meta}>{item.category}</Text>
+              {item.estimatedDeliveryTime && (
+                <>
+                  <Text style={styles.metaDot}>·</Text>
+                  <Text style={styles.metaDelivery}>~{item.estimatedDeliveryTime}</Text>
+                </>
+              )}
+            </View>
             <Text style={styles.address} numberOfLines={1}>{item.address}</Text>
           </View>
         </View>
@@ -221,6 +242,13 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   badgeOpenText: { fontSize: 11, fontWeight: "700", color: "#065F46" },
+  badgePaused: {
+    backgroundColor: "#FEF3C7",
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  badgePausedText: { fontSize: 11, fontWeight: "700", color: "#92400E" },
   badgeClosed: {
     backgroundColor: "#FEE2E2",
     borderRadius: 6,
@@ -235,6 +263,15 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textTransform: "capitalize",
   },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+    gap: 4,
+    flexWrap: "wrap",
+  },
+  metaDot: { fontSize: 12, color: "#9CA3AF" },
+  metaDelivery: { fontSize: 12, color: "#6B7280", fontWeight: "500" },
   address: {
     marginTop: 2,
     fontSize: 12,

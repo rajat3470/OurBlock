@@ -21,13 +21,19 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { Product } from "../../src/types";
+import { type ProductUnit } from "../../src/utils/helpers";
 
 interface ProductForm {
   name: string;
   category: string;
+  menuSection: string;
+  isVeg: boolean;
   price: string;
   originalPrice: string;
-  stock: number;
+  stock: number;       // used for piece-unit integer stock
+  stockText: string;   // text input for weight-unit stock (decimal)
+  unit: ProductUnit;
+  unitStep: string;    // text representation, e.g. "100", "0.25"
   description: string;
   imageUri: string | null;
   additionalImageUris: string[];
@@ -63,16 +69,63 @@ const CATEGORIES = [
   { label: "Household", value: "household" },
   { label: "Medicines", value: "medicines" },
   { label: "Electronics", value: "electronics" },
-  { label: "Clothing", value: "clothing" },
   { label: "Other", value: "other" },
 ];
+
+const UNIT_OPTIONS: Array<{ label: string; value: ProductUnit }> = [
+  { label: "Piece", value: "piece" },
+  { label: "g (grams)", value: "g" },
+  { label: "kg", value: "kg" },
+  { label: "ml", value: "ml" },
+  { label: "L (litres)", value: "L" },
+];
+
+const UNIT_STEP_PRESETS: Record<Exclude<ProductUnit, "piece">, Array<{ label: string; value: string }>> = {
+  g: [
+    { label: "100g", value: "100" },
+    { label: "250g", value: "250" },
+    { label: "500g", value: "500" },
+    { label: "1kg", value: "1000" },
+  ],
+  kg: [
+    { label: "250g", value: "0.25" },
+    { label: "500g", value: "0.5" },
+    { label: "1kg", value: "1" },
+    { label: "2kg", value: "2" },
+  ],
+  ml: [
+    { label: "100ml", value: "100" },
+    { label: "250ml", value: "250" },
+    { label: "500ml", value: "500" },
+    { label: "1L", value: "1000" },
+  ],
+  L: [
+    { label: "250ml", value: "0.25" },
+    { label: "500ml", value: "0.5" },
+    { label: "1L", value: "1" },
+    { label: "2L", value: "2" },
+  ],
+};
+
+const DEFAULT_UNIT_STEP: Record<ProductUnit, string> = {
+  piece: "1",
+  g: "100",
+  kg: "0.25",
+  ml: "100",
+  L: "0.5",
+};
 
 const EMPTY_FORM: ProductForm = {
   name: "",
   category: "general",
+  menuSection: "",
+  isVeg: true,
   price: "",
   originalPrice: "",
   stock: 1,
+  stockText: "0",
+  unit: "piece",
+  unitStep: "1",
   description: "",
   imageUri: null,
   additionalImageUris: [],
@@ -305,6 +358,15 @@ export default function BusinessOwnerProducts() {
       return;
     }
 
+    // Validate unit step for weight units
+    if (form.unit !== "piece") {
+      const step = parseFloat(form.unitStep);
+      if (!step || step <= 0) {
+        Alert.alert("Missing Field", "Please select a unit step size (e.g. 100g, 500g).");
+        return;
+      }
+    }
+
     const price = parseFloat(form.price);
     const originalPrice = form.originalPrice.trim() ? parseFloat(form.originalPrice) : undefined;
 
@@ -316,7 +378,9 @@ export default function BusinessOwnerProducts() {
       Alert.alert("Invalid Input", "Please enter a valid original price.");
       return;
     }
-    if (form.stock < 0) {
+
+    const stockNum = form.unit === "piece" ? form.stock : parseFloat(form.stockText) || 0;
+    if (stockNum < 0) {
       Alert.alert("Invalid Input", "Stock cannot be negative.");
       return;
     }
@@ -337,10 +401,14 @@ export default function BusinessOwnerProducts() {
       await createProduct({
         name: form.name.trim(),
         category: form.category || "general",
+        menuSection: form.menuSection.trim() || undefined,
+        isVeg: form.isVeg,
         description: form.description.trim() || undefined,
         price,
         originalPrice,
-        stock: form.stock,
+        stock: stockNum,
+        unit: form.unit !== "piece" ? form.unit : undefined,
+        unitStep: form.unit !== "piece" ? parseFloat(form.unitStep) || undefined : undefined,
         status: "active",
         imageUrls,
       });
@@ -438,9 +506,21 @@ export default function BusinessOwnerProducts() {
           </View>
 
           <View style={styles.cardInfo}>
-            <Text style={styles.productName} numberOfLines={2}>{item.name ?? "—"}</Text>
-            <View style={styles.categoryChip}>
-              <Text style={styles.categoryChipText}>{item.category ?? "general"}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <Text style={styles.productName} numberOfLines={2}>{item.name ?? "—"}</Text>
+              {item.isVeg !== undefined && (
+                <View style={item.isVeg ? styles.vegDot : styles.nonVegDot} />
+              )}
+            </View>
+            <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+              <View style={styles.categoryChip}>
+                <Text style={styles.categoryChipText}>{item.category ?? "general"}</Text>
+              </View>
+              {item.menuSection ? (
+                <View style={[styles.categoryChip, { backgroundColor: "#EFF6FF" }]}>
+                  <Text style={[styles.categoryChipText, { color: "#1D4ED8" }]}>{item.menuSection}</Text>
+                </View>
+              ) : null}
             </View>
             <View style={styles.priceRow}>
               <Text style={styles.productPrice}>₹{price}</Text>
@@ -733,6 +813,83 @@ export default function BusinessOwnerProducts() {
                 )}
               </View>
 
+              {/* Unit / Sold In */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Sold In (Unit)</Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                  {UNIT_OPTIONS.map((opt) => (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[
+                        styles.dietChip,
+                        form.unit === opt.value && styles.dietChipVegActive,
+                      ]}
+                      onPress={() => {
+                        const newStep = DEFAULT_UNIT_STEP[opt.value];
+                        setForm((p) => ({
+                          ...p,
+                          unit: opt.value,
+                          unitStep: newStep,
+                          stockText: "0",
+                        }));
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Text
+                        style={[
+                          styles.dietChipText,
+                          form.unit === opt.value && { color: "#166534", fontWeight: "700" },
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Unit Step presets — only for non-piece units */}
+              {form.unit !== "piece" && (
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>
+                    Sell in steps of{" "}
+                    <Text style={styles.optional}>(per add tap)</Text>
+                  </Text>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                    {UNIT_STEP_PRESETS[form.unit as Exclude<ProductUnit, "piece">].map((preset) => (
+                      <TouchableOpacity
+                        key={preset.value}
+                        style={[
+                          styles.quickAddBtn,
+                          form.unitStep === preset.value && {
+                            backgroundColor: "#16A34A",
+                            borderColor: "#16A34A",
+                          },
+                        ]}
+                        onPress={() => setForm((p) => ({ ...p, unitStep: preset.value }))}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.quickAddBtnText,
+                            form.unitStep === preset.value && { color: "#FFFFFF" },
+                          ]}
+                        >
+                          {preset.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <Text style={styles.charCount}>
+                    Price you enter = price per {
+                      UNIT_STEP_PRESETS[form.unit as Exclude<ProductUnit, "piece">].find(
+                        (p) => p.value === form.unitStep
+                      )?.label ?? form.unitStep + form.unit
+                    }
+                  </Text>
+                </View>
+              )}
+
               {/* Price row */}
               <View style={styles.priceFieldRow}>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
@@ -780,49 +937,73 @@ export default function BusinessOwnerProducts() {
 
               {/* Stock counter */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Stock Quantity</Text>
-                {/* Main −1 / value / +1 row */}
-                <View style={styles.counterRow}>
-                  <TouchableOpacity
-                    style={[styles.counterBtn, form.stock <= 0 && styles.counterBtnDisabled]}
-                    onPress={() => setForm((p) => ({ ...p, stock: Math.max(0, p.stock - 1) }))}
-                    disabled={form.stock <= 0}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.counterBtnText}>−</Text>
-                  </TouchableOpacity>
-                  <TextInput
-                    style={styles.counterInput}
-                    value={String(form.stock)}
-                    onChangeText={(v) => {
-                      const n = parseInt(v, 10);
-                      setForm((p) => ({ ...p, stock: Number.isNaN(n) ? 0 : Math.max(0, n) }));
-                    }}
-                    keyboardType="number-pad"
-                    selectTextOnFocus
-                  />
-                  <TouchableOpacity
-                    style={styles.counterBtn}
-                    onPress={() => setForm((p) => ({ ...p, stock: p.stock + 1 }))}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.counterBtnText}>+</Text>
-                  </TouchableOpacity>
-                </View>
-                {/* Quick-add jump buttons */}
-                <View style={styles.quickAddRow}>
-                  <Text style={styles.quickAddLabel}>Quick add:</Text>
-                  {[5, 10, 25, 50].map((n) => (
-                    <TouchableOpacity
-                      key={n}
-                      style={styles.quickAddBtn}
-                      onPress={() => setForm((p) => ({ ...p, stock: p.stock + n }))}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.quickAddBtnText}>+{n}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <Text style={styles.fieldLabel}>
+                  {form.unit === "piece" ? "Stock Quantity" : `Stock Available (${form.unit})`}
+                </Text>
+
+                {form.unit === "piece" ? (
+                  <>
+                    {/* Integer counter for piece units */}
+                    <View style={styles.counterRow}>
+                      <TouchableOpacity
+                        style={[styles.counterBtn, form.stock <= 0 && styles.counterBtnDisabled]}
+                        onPress={() => setForm((p) => ({ ...p, stock: Math.max(0, p.stock - 1) }))}
+                        disabled={form.stock <= 0}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.counterBtnText}>−</Text>
+                      </TouchableOpacity>
+                      <TextInput
+                        style={styles.counterInput}
+                        value={String(form.stock)}
+                        onChangeText={(v) => {
+                          const n = parseInt(v, 10);
+                          setForm((p) => ({ ...p, stock: Number.isNaN(n) ? 0 : Math.max(0, n) }));
+                        }}
+                        keyboardType="number-pad"
+                        selectTextOnFocus
+                      />
+                      <TouchableOpacity
+                        style={styles.counterBtn}
+                        onPress={() => setForm((p) => ({ ...p, stock: p.stock + 1 }))}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.counterBtnText}>+</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.quickAddRow}>
+                      <Text style={styles.quickAddLabel}>Quick add:</Text>
+                      {[5, 10, 25, 50].map((n) => (
+                        <TouchableOpacity
+                          key={n}
+                          style={styles.quickAddBtn}
+                          onPress={() => setForm((p) => ({ ...p, stock: p.stock + n }))}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.quickAddBtnText}>+{n}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    {/* Decimal input for weight units */}
+                    <TextInput
+                      style={styles.input}
+                      value={form.stockText}
+                      onChangeText={(v) =>
+                        setForm((p) => ({ ...p, stockText: v, stock: parseFloat(v) || 0 }))
+                      }
+                      placeholder={`e.g. 5 (means 5 ${form.unit})`}
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="decimal-pad"
+                      selectTextOnFocus
+                    />
+                    <Text style={styles.charCount}>
+                      Enter total {form.unit} you have in stock today
+                    </Text>
+                  </>
+                )}
               </View>
 
               {/* Description */}
@@ -840,6 +1021,42 @@ export default function BusinessOwnerProducts() {
                   maxLength={500}
                 />
                 <Text style={styles.charCount}>{form.description.length}/500</Text>
+              </View>
+
+              {/* Menu Section */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Menu Section (optional)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form.menuSection}
+                  onChangeText={(v) => setForm((p) => ({ ...p, menuSection: v }))}
+                  placeholder="e.g. Starters, Main Course, Beverages"
+                  placeholderTextColor="#94A3B8"
+                  maxLength={40}
+                />
+              </View>
+
+              {/* Veg / Non-Veg */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Dietary Type</Text>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <TouchableOpacity
+                    style={[styles.dietChip, form.isVeg && styles.dietChipVegActive]}
+                    onPress={() => setForm((p) => ({ ...p, isVeg: true }))}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.vegDot} />
+                    <Text style={[styles.dietChipText, form.isVeg && { color: "#166534", fontWeight: "700" }]}>Veg</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.dietChip, !form.isVeg && styles.dietChipNonVegActive]}
+                    onPress={() => setForm((p) => ({ ...p, isVeg: false }))}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.nonVegDot} />
+                    <Text style={[styles.dietChipText, !form.isVeg && { color: "#991B1B", fontWeight: "700" }]}>Non-Veg</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Save button at bottom */}
@@ -1461,6 +1678,48 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 0.3,
+  },
+
+  // Diet chips
+  dietChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#F8FAFC",
+  },
+  dietChipVegActive: {
+    backgroundColor: "#DCFCE7",
+    borderColor: "#16A34A",
+  },
+  dietChipNonVegActive: {
+    backgroundColor: "#FEE2E2",
+    borderColor: "#DC2626",
+  },
+  dietChipText: {
+    fontSize: 13,
+    color: "#64748B",
+    fontWeight: "600",
+  },
+  vegDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#16A34A",
+    borderWidth: 1.5,
+    borderColor: "#15803D",
+  },
+  nonVegDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#DC2626",
+    borderWidth: 1.5,
+    borderColor: "#B91C1C",
   },
 
   // Additional images

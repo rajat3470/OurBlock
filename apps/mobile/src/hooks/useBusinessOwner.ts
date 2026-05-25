@@ -11,11 +11,12 @@ import {
   setOrders,
   updateOrder,
   setStats,
+  setAnalytics,
   setSelectedOrderId,
   setSelectedProductId,
 } from "@store/slices/businessOwnerSlice";
 import { businessOwnerService } from "@services/businessOwnerService";
-import { Product, Order } from "@/types";
+import { Business, Product, Order } from "@/types";
 
 /** Extract a human-readable message from any thrown value (including AxiosError). */
 function extractErrorMessage(err: unknown, fallback: string): string {
@@ -181,6 +182,26 @@ export const useBusinessOwner = () => {
     }
   }, [dispatch]);
 
+  const loadAnalytics = useCallback(async () => {
+    try {
+      const data = await businessOwnerService.getAnalytics();
+      dispatch(setAnalytics(data));
+    } catch { /* non-blocking */ }
+  }, [dispatch]);
+
+  const toggleTakingOrders = useCallback(async (taking: boolean) => {
+    try {
+      await businessOwnerService.toggleTakingOrders(taking);
+      // Optimistically update the profile in Redux
+      const profile = state.businessProfile;
+      if (profile) dispatch(setBusinessProfile({ ...profile, isTakingOrders: taking } as Business));
+    } catch (err: unknown) {
+      const message = extractErrorMessage(err, "Failed to update order availability");
+      dispatch(setError(message));
+      throw err;
+    }
+  }, [dispatch, state.businessProfile]);
+
   const selectOrder = useCallback(
     (orderId: string | null) => {
       dispatch(setSelectedOrderId(orderId));
@@ -206,6 +227,8 @@ export const useBusinessOwner = () => {
     changeOrderStatus,
     rejectOrder,
     loadStats,
+    loadAnalytics,
+    toggleTakingOrders,
     selectOrder,
     selectProduct,
   };

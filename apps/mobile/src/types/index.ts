@@ -70,10 +70,8 @@ export enum BusinessCategory {
   PHARMACY = "pharmacy",
   RESTAURANT = "restaurant",
   ELECTRONICS = "electronics",
-  CLOTHING = "clothing",
   HARDWARE = "hardware",
   CAFE = "cafe",
-  SALON = "salon",
   GYM = "gym",
   OTHER = "other",
 }
@@ -95,6 +93,13 @@ export interface Business {
   operatingHours?: OperatingHours;
   status: "active" | "inactive" | "suspended";
   isVerified: boolean;
+  // Real-time availability
+  isTakingOrders?: boolean;        // owner can pause orders mid-day
+  minimumOrderAmount?: number;     // per-business override (fallback to global Rs 50)
+  estimatedDeliveryTime?: string;  // e.g. "30-40 mins"
+  preparationTime?: string;        // e.g. "15-20 mins" kitchen prep time
+  deliveryFee?: number;            // 0 = free
+  tags?: string[];                 // cuisine/style tags e.g. ["Chinese", "Veg"]
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -139,17 +144,24 @@ export interface DayHours {
 }
 
 // Product Types
+export type ProductUnit = "piece" | "g" | "kg" | "ml" | "L";
+
 export interface Product {
   id: string;
   businessId: string;
   name: string;
   description?: string;
   category: string;
+  menuSection?: string;         // e.g. "Starters", "Main Course", "Beverages"
+  isVeg?: boolean;              // true = veg (green dot), false = non-veg (red dot)
+  tags?: string[];              // e.g. ["bestseller", "recommended", "new", "spicy"]
   price: number;
   originalPrice?: number;
   discount?: number; // percentage
   imageUrls: string[];
   stock: number;
+  unit?: ProductUnit;    // unit of measure — default "piece"
+  unitStep?: number;    // purchasable increment in that unit (e.g. 100 for 100g steps)
   rating?: number;
   totalReviews?: number;
   status: "active" | "inactive";
@@ -194,7 +206,7 @@ export interface Order {
   deliveryAddress: Address;
   status: OrderStatus;
   paymentMethod: "cash" | "card" | "upi" | "wallet";
-  paymentStatus: "pending" | "completed" | "failed";
+  paymentStatus: "pending" | "completed" | "failed" | "cod";
   notes?: string;
   estimatedDeliveryTime?: Date;
   deliveredAt?: Date;
@@ -211,6 +223,7 @@ export interface CreateOrderPayload {
   deliveryAddress: Omit<Address, "id" | "userId" | "createdAt" | "updatedAt">;
   notes?: string;
   paymentMethod: "cash" | "upi";
+  couponCode?: string;
 }
 
 export interface OrderItem {

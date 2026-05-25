@@ -4,16 +4,43 @@ import { Stack } from "expo-router";
 import { Provider } from "react-redux";
 import { ToastProvider } from "react-native-toast-notifications";
 import { useFonts, Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, Poppins_800ExtraBold } from "@expo-google-fonts/poppins";
+import * as Notifications from "expo-notifications";
+import * as Device from "expo-device";
 import { store } from "../src/store/index";
 import { useAppDispatch, useAppSelector } from "../src/hooks/useRedux";
 import { logout, setAuth, setHydrated } from "../src/store/slices/authSlice";
 import { authStateService } from "../src/services/authStateService";
 import { authService } from "../src/services/authService";
+import { apiClient } from "../src/services/apiClient";
 import { colors } from "../src/constants/theme";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+async function registerForPushNotificationsAsync(): Promise<string | null> {
+  if (!Device.isDevice) return null; // simulator — skip
+  const { status: existing } = await Notifications.getPermissionsAsync();
+  let finalStatus = existing;
+  if (existing !== "granted") {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+  if (finalStatus !== "granted") return null;
+  const tokenData = await Notifications.getExpoPushTokenAsync();
+  return tokenData.data;
+}
 
 function AuthBootstrap({ children }: { children: React.ReactNode }) {
   const dispatch = useAppDispatch();
   const isHydrated = useAppSelector((state) => state.auth.isHydrated);
+  const authUser = useAppSelector((state) => state.auth.user);
 
   useEffect(() => {
     const hydrate = async () => {
@@ -38,6 +65,19 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
 
     hydrate();
   }, [dispatch]);
+
+  // Register push token once authenticated
+  useEffect(() => {
+    if (!authUser) return;
+    registerForPushNotificationsAsync()
+      .then((token) => {
+        if (token) {
+          apiClient.put("/auth/push-token", { pushToken: token }).catch(() => { /* non-blocking */ });
+        }
+      })
+      .catch(() => { /* non-blocking */ });
+  }, [authUser?.id]);
+
 
   if (!isHydrated) {
     return (

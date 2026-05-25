@@ -1,13 +1,17 @@
+// Order Fees
+export const ORDER_FEES = {
+  PLATFORM_FEE: 2,
+  MINIMUM_ORDER: 50,
+} as const;
+
 // Business Categories
 export const BUSINESS_CATEGORIES = {
   GROCERY: "grocery",
   PHARMACY: "pharmacy",
   RESTAURANT: "restaurant",
   ELECTRONICS: "electronics",
-  CLOTHING: "clothing",
   HARDWARE: "hardware",
   CAFE: "cafe",
-  SALON: "salon",
   GYM: "gym",
   OTHER: "other",
 };
@@ -17,10 +21,8 @@ export const BUSINESS_CATEGORY_LABELS = {
   pharmacy: "💊 Pharmacy",
   restaurant: "🍽️ Restaurant",
   electronics: "📱 Electronics",
-  clothing: "👕 Clothing",
   hardware: "🔨 Hardware",
   cafe: "☕ Cafe",
-  salon: "💇 Salon",
   gym: "🏋️ Gym",
   other: "📦 Other",
 };

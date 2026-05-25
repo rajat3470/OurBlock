@@ -54,7 +54,7 @@ const emptyOwner = { firstName: '', lastName: '', email: '', phone: '' };
 
 interface OwnerResult { email: string; temporaryPassword: string; }
 
-const CATEGORIES = ['Grocery', 'Restaurant', 'Pharmacy', 'Electronics', 'Clothing', 'Beauty & Salon', 'Fitness', 'Education', 'Services', 'Other'];
+const CATEGORIES = ['Grocery', 'Restaurant', 'Pharmacy', 'Electronics', 'Fitness', 'Education', 'Services', 'Other'];
 
 function Row({ label, value }: { label: string; value: string }) {
   return (

@@ -9,11 +9,31 @@ export interface BusinessOwnerStats {
   todayRevenue: number;
 }
 
+export interface DailyRevenue {
+  date: string;
+  revenue: number;
+  orders: number;
+}
+
+export interface PopularItem {
+  productId: string;
+  name: string;
+  count: number;
+  revenue: number;
+}
+
+export interface BusinessAnalytics {
+  daily: DailyRevenue[];
+  popularItems: PopularItem[];
+  totalRevenue7d: number;
+}
+
 interface BusinessOwnerState {
   businessProfile: Business | null;
   products: Product[];
   orders: Order[];
   stats: BusinessOwnerStats | null;
+  analytics: BusinessAnalytics | null;
   selectedOrderId: string | null;
   selectedProductId: string | null;
   isLoading: boolean;
@@ -25,6 +45,7 @@ const initialState: BusinessOwnerState = {
   products: [],
   orders: [],
   stats: null,
+  analytics: null,
   selectedOrderId: null,
   selectedProductId: null,
   isLoading: false,
@@ -72,6 +93,10 @@ const businessOwnerSlice = createSlice({
       state.stats = action.payload;
       state.error = null;
     },
+    setAnalytics(state, action: PayloadAction<BusinessAnalytics>) {
+      state.analytics = action.payload;
+      state.error = null;
+    },
     setSelectedOrderId(state, action: PayloadAction<string | null>) {
       state.selectedOrderId = action.payload;
     },
@@ -101,6 +126,7 @@ export const {
   setOrders,
   updateOrder,
   setStats,
+  setAnalytics,
   setSelectedOrderId,
   setSelectedProductId,
   setError,

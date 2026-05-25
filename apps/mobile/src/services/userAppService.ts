@@ -107,4 +107,56 @@ export const userAppService = {
   async verifyPhone(code: string, verificationId: string): Promise<{ success: boolean }> {
     return apiClient.post("/auth/verify-phone", { code, verificationId });
   },
+
+  // Coupons
+  async validateCoupon(payload: {
+    code: string;
+    businessId: string;
+    subTotal: number;
+  }): Promise<{ code: string; discountAmount: number; finalTotal: number }> {
+    const res = await apiClient.post<{ success: boolean; data: { code: string; discountAmount: number; finalTotal: number } }>(
+      "/coupons/validate",
+      payload
+    );
+    return (res as any).data ?? res;
+  },
+
+  async getActiveCoupons(): Promise<any[]> {
+    const res = await apiClient.get<{ success: boolean; data: any[] }>("/coupons");
+    return (res as any).data ?? [];
+  },
+
+  // Refunds
+  async submitRefund(payload: {
+    orderId: string;
+    reason: string;
+    comment: string;
+  }): Promise<{ id: string }> {
+    const res = await apiClient.post<{ success: boolean; data: { id: string } }>("/refunds", payload);
+    return (res as any).data ?? res;
+  },
+
+  async getMyRefunds(): Promise<any[]> {
+    const res = await apiClient.get<{ success: boolean; data: any[] }>("/refunds/my");
+    return (res as any).data ?? [];
+  },
+
+  // Reviews
+  async submitReview(payload: {
+    orderId: string;
+    businessId?: string;
+    productId?: string;
+    rating: number;
+    title?: string;
+    comment: string;
+    imageUrls?: string[];
+  }): Promise<{ id: string }> {
+    const res = await apiClient.post<{ success: boolean; data: { id: string } }>("/reviews", payload);
+    return (res as any).data ?? res;
+  },
+
+  async getBusinessReviews(businessId: string): Promise<any[]> {
+    const res = await apiClient.get<{ success: boolean; data: any[] }>(`/reviews?businessId=${businessId}`);
+    return (res as any).data ?? [];
+  },
 };

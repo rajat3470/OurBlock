@@ -106,15 +106,6 @@ const HOME_BUSINESS_SEEDS = [
     rating: 4.5,
     totalReviews: 154,
   },
-  {
-    name: 'StyleNest Boutique',
-    category: 'clothing',
-    description: 'Everyday fashion and accessories for all.',
-    addressSuffix: 'Lifestyle Lane, Tower 2',
-    phone: '9876501005',
-    rating: 4.3,
-    totalReviews: 121,
-  },
 ];
 
 const HOME_PRODUCT_SEEDS: Record<string, Array<{
@@ -149,12 +140,6 @@ const HOME_PRODUCT_SEEDS: Record<string, Array<{
     { name: 'Cappuccino', category: 'Beverages', price: 119, originalPrice: 139, stock: 100, rating: 4.6, totalReviews: 97 },
     { name: 'Veg Sandwich', category: 'Snacks', price: 149, originalPrice: 179, stock: 72, rating: 4.4, totalReviews: 63 },
     { name: 'Blueberry Muffin', category: 'Bakery', price: 89, originalPrice: 109, stock: 54, rating: 4.2, totalReviews: 44 },
-  ],
-  clothing: [
-    { name: 'Cotton T-Shirt', category: 'Men', price: 599, originalPrice: 799, stock: 40, rating: 4.3, totalReviews: 35 },
-    { name: 'Summer Dress', category: 'Women', price: 1199, originalPrice: 1499, stock: 25, rating: 4.5, totalReviews: 41 },
-    { name: 'Kids Joggers', category: 'Kids', price: 499, originalPrice: 649, stock: 30, rating: 4.4, totalReviews: 28 },
-    { name: 'Classic Backpack', category: 'Accessories', price: 899, originalPrice: 1099, stock: 22, rating: 4.2, totalReviews: 19 },
   ],
 };
 
@@ -1053,6 +1038,22 @@ router.post('/refresh-token', async (req, res) => {
         expiresIn: parseInt(data.expires_in, 10),
       },
     });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PUT /auth/push-token — store Expo push token for the authenticated user
+router.put('/push-token', async (req, res) => {
+  const uid = (req as any).user?.uid;
+  if (!uid) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  const { pushToken } = req.body;
+  if (!pushToken || typeof pushToken !== 'string') {
+    return res.status(400).json({ success: false, error: 'pushToken is required' });
+  }
+  try {
+    await admin.firestore().collection('users').doc(uid).set({ pushToken }, { merge: true });
+    return res.json({ success: true });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }

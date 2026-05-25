@@ -1,15 +1,70 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
+import * as https from 'https';
+import { computeCouponDiscount } from './coupons';
+import { ORDER_FEES } from '../shared/constants';
 
 const router = Router();
 const db = admin.firestore();
 const auth = admin.auth();
 
 // ---------------------------------------------------------------------------
+// Push notification helper (Expo Push API)
+// ---------------------------------------------------------------------------
+const STATUS_MESSAGES: Record<string, { title: string; body: (name?: string) => string }> = {
+  confirmed:  { title: '✅ Order Confirmed', body: (n) => `${n || 'Your order'} has been confirmed and is being prepared.` },
+  preparing:  { title: '👨‍🍳 Being Prepared', body: (n) => `${n || 'Your order'} is now being prepared.` },
+  ready:      { title: '🎉 Ready for Pickup', body: (n) => `${n || 'Your order'} is ready! Delivery is on the way.` },
+  out_for_delivery: { title: '🚚 Out for Delivery', body: (n) => `${n || 'Your order'} is on its way to you!` },
+  delivered:  { title: '✅ Order Delivered', body: (n) => `${n || 'Your order'} has been delivered. Enjoy your order!` },
+  cancelled:  { title: '❌ Order Cancelled', body: (n) => `${n || 'Your order'} has been cancelled.` },
+};
+
+async function sendPushNotification(pushToken: string, title: string, body: string): Promise<void> {
+  if (!pushToken.startsWith('ExponentPushToken[')) return;
+  const payload = JSON.stringify({
+    to: pushToken,
+    sound: 'default',
+    title,
+    body,
+    data: {},
+  });
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'exp.host',
+      path: '/--/api/v2/push/send',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    };
+    const req = https.request(options, () => resolve());
+    req.on('error', () => resolve()); // non-blocking; ignore errors
+    req.write(payload);
+    req.end();
+  });
+}
+
+async function notifyOrderStatusChange(
+  userId: string,
+  status: string,
+  orderNote?: string
+): Promise<void> {
+  try {
+    const userDoc = await db.collection('users').doc(userId).get();
+    const pushToken = userDoc.data()?.pushToken;
+    if (!pushToken) return;
+    const msg = STATUS_MESSAGES[status];
+    if (!msg) return;
+    await sendPushNotification(pushToken, msg.title, msg.body(orderNote));
+  } catch { /* non-blocking */ }
+}
+
+// ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-const PLATFORM_FEE = 2;    // Rs. 2 per order
-const MINIMUM_ORDER = 50;  // Rs. 50 minimum subtotal
+const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
 
 // ---------------------------------------------------------------------------
 // Mock token lookup (matches owner.ts dev pattern)
@@ -125,7 +180,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const { businessId, items, deliveryAddress, notes, paymentMethod } = req.body;
+    const { businessId, items, deliveryAddress, notes, paymentMethod, couponCode } = req.body;
 
     if (!businessId || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, error: 'businessId and items are required' });
@@ -137,6 +192,11 @@ router.post('/', requireAuth, async (req, res) => {
     const bizDoc = await db.collection('businesses').doc(businessId).get();
     if (!bizDoc.exists) return res.status(404).json({ success: false, error: 'Business not found' });
     const business = { id: bizDoc.id, ...bizDoc.data() } as any;
+
+    // Check business is accepting orders
+    if (business.isTakingOrders === false) {
+      return res.status(400).json({ success: false, error: `${business.name} is not accepting orders right now. Please try again later.` });
+    }
 
     const validatedItems: any[] = [];
     let subTotal = 0;
@@ -178,15 +238,33 @@ router.post('/', requireAuth, async (req, res) => {
       });
     }
 
-    if (subTotal < MINIMUM_ORDER) {
+    // Use per-business minimum order amount if set, otherwise fall back to global
+    const effectiveMinimum = Number(business.minimumOrderAmount ?? MINIMUM_ORDER);
+    if (subTotal < effectiveMinimum) {
       return res.status(400).json({
         success: false,
-        error: `Minimum order amount is Rs. ${MINIMUM_ORDER}. Your subtotal is Rs. ${subTotal}.`,
+        error: `Minimum order amount is Rs. ${effectiveMinimum}. Your subtotal is Rs. ${subTotal}.`,
       });
     }
 
     const platformFee = PLATFORM_FEE;
-    const finalAmount = subTotal + platformFee;
+    let couponDiscount = 0;
+    let appliedCouponCode: string | null = null;
+    if (couponCode) {
+      try {
+        const couponResult = await computeCouponDiscount(db, uid, couponCode, subTotal, businessId);
+        couponDiscount = couponResult.discountAmount;
+        appliedCouponCode = couponResult.code;
+        // Increment coupon usage count
+        const snap = await db.collection('coupons').where('code', '==', couponResult.code).limit(1).get();
+        if (!snap.empty) {
+          await snap.docs[0].ref.update({ usageCount: admin.firestore.FieldValue.increment(1) });
+        }
+      } catch {
+        // Coupon validation failed — proceed without discount
+      }
+    }
+    const finalAmount = subTotal + platformFee - couponDiscount;
 
     const userDoc = await db.collection('users').doc(uid).get();
     const userData = userDoc.data() ?? {};
@@ -200,12 +278,14 @@ router.post('/', requireAuth, async (req, res) => {
       items: validatedItems,
       subTotal,
       platformFee,
+      couponCode: appliedCouponCode,
+      couponDiscount,
       totalAmount: finalAmount,
       finalAmount,
       deliveryAddress,
       status: 'pending',
       paymentMethod: paymentMethod || 'cash',
-      paymentStatus: 'pending',
+      paymentStatus: (paymentMethod === 'cash' || !paymentMethod) ? 'cod' : 'pending',
       notes: notes ?? '',
       trackingUpdates: [
         { status: 'pending', timestamp: new Date().toISOString(), notes: 'Order placed' },
@@ -256,6 +336,10 @@ router.put('/:id/status', requireAuth, async (req, res) => {
     });
 
     const updatedDoc = await db.collection('orders').doc(req.params.id).get();
+
+    // Fire-and-forget push notification to the customer
+    notifyOrderStatusChange(orderData.userId, status, orderData.businessName ?? undefined);
+
     return res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });

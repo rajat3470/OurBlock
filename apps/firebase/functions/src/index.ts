@@ -23,6 +23,9 @@ import productRoutes from './api/products';
 import orderRoutes from './api/orders';
 import userRoutes from './api/users';
 import ownerRoutes from './api/owner';
+import reviewRoutes from './api/reviews';
+import couponRoutes from './api/coupons';
+import refundRoutes from './api/refunds';
 
 // Use routes
 app.use('/auth', authRoutes);
@@ -33,6 +36,9 @@ app.use('/products', productRoutes);
 app.use('/orders', orderRoutes);
 app.use('/users', userRoutes);
 app.use('/owner', ownerRoutes);
+app.use('/reviews', reviewRoutes);
+app.use('/coupons', couponRoutes);
+app.use('/refunds', refundRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

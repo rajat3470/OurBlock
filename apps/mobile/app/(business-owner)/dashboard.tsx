@@ -7,6 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   TouchableOpacity,
+  Switch,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -45,13 +46,19 @@ export default function BusinessOwnerDashboard() {
     orders,
     products,
     stats,
+    analytics,
     isLoading,
     loadBusinessProfile,
     loadStats,
     loadOrders,
     loadProducts,
+    loadAnalytics,
+    toggleTakingOrders,
   } = useBusinessOwner();
   const [refreshing, setRefreshing] = useState(false);
+  const [toggleLoading, setToggleLoading] = useState(false);
+
+  const isTakingOrders = businessProfile?.isTakingOrders !== false;
 
   const loadAll = useCallback(async () => {
     try {
@@ -60,9 +67,10 @@ export default function BusinessOwnerDashboard() {
         loadStats(),
         loadOrders(),
         loadProducts(),
+        loadAnalytics(),
       ]);
     } catch { /* handled in Redux slice */ }
-  }, [loadBusinessProfile, loadStats, loadOrders, loadProducts]);
+  }, [loadBusinessProfile, loadStats, loadOrders, loadProducts, loadAnalytics]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -70,6 +78,11 @@ export default function BusinessOwnerDashboard() {
     setRefreshing(true);
     await loadAll().finally(() => setRefreshing(false));
   };
+
+  async function handleToggleTakingOrders(val: boolean) {
+    setToggleLoading(true);
+    try { await toggleTakingOrders(val); } catch { /* ignore */ } finally { setToggleLoading(false); }
+  }
 
   const approvedProducts  = products.filter((p) => (p.approvalStatus ?? "pending") === "approved").length;
   const pendingProducts   = products.filter((p) => (p.approvalStatus ?? "pending") === "pending").length;
@@ -79,6 +92,9 @@ export default function BusinessOwnerDashboard() {
   const activeOrders    = orders.filter((o) => o.status !== OrderStatus.DELIVERED && o.status !== OrderStatus.CANCELLED).length;
   const deliveredOrders = orders.filter((o) => o.status === OrderStatus.DELIVERED).length;
   const totalOrders     = stats?.totalOrders ?? orders.length;
+
+  // Revenue chart helpers
+  const maxRevenue = analytics?.daily?.reduce((m, d) => Math.max(m, d.revenue), 0) ?? 1;
 
   const recentOrders = [...orders].slice(0, 6);
   const loading = isLoading && !stats && orders.length === 0 && products.length === 0;
@@ -114,20 +130,37 @@ export default function BusinessOwnerDashboard() {
                 {businessProfile?.name || "Your Business"}
               </Text>
             </View>
-            <View
-              style={[
-                styles.verifiedPill,
-                businessProfile?.isVerified ? styles.verifiedPillLive : styles.verifiedPillPending,
-              ]}
-            >
-              <Text
+            <View style={{ alignItems: "flex-end", gap: 8 }}>
+              <View
                 style={[
-                  styles.verifiedPillText,
-                  { color: businessProfile?.isVerified ? "#FFFFFF" : "#92400E" },
+                  styles.verifiedPill,
+                  businessProfile?.isVerified ? styles.verifiedPillLive : styles.verifiedPillPending,
                 ]}
               >
-                {businessProfile?.isVerified ? "✓ Live" : "⏳ Pending"}
-              </Text>
+                <Text
+                  style={[
+                    styles.verifiedPillText,
+                    { color: businessProfile?.isVerified ? "#FFFFFF" : "#92400E" },
+                  ]}
+                >
+                  {businessProfile?.isVerified ? "✓ Live" : "⏳ Pending"}
+                </Text>
+              </View>
+              {/* Pause / Resume toggle */}
+              <View style={styles.pauseRow}>
+                <Text style={styles.pauseLabel}>{isTakingOrders ? "Taking Orders" : "Paused"}</Text>
+                {toggleLoading ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" style={{ marginLeft: 8 }} />
+                ) : (
+                  <Switch
+                    value={isTakingOrders}
+                    onValueChange={handleToggleTakingOrders}
+                    trackColor={{ false: "rgba(255,255,255,0.3)", true: "#4ADE80" }}
+                    thumbColor={isTakingOrders ? "#FFFFFF" : "#FECACA"}
+                    ios_backgroundColor="rgba(255,255,255,0.3)"
+                  />
+                )}
+              </View>
             </View>
           </View>
 
@@ -160,6 +193,56 @@ export default function BusinessOwnerDashboard() {
           </View>
         ) : (
           <>
+            {/* ── Revenue Chart ──────────────────────────────────────── */}
+            {analytics && analytics.daily.length > 0 ? (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Revenue — Last 7 Days</Text>
+                  <Text style={styles.sectionSubtitle}>₹{analytics.totalRevenue7d.toFixed(0)}</Text>
+                </View>
+                <View style={styles.chartWrap}>
+                  {analytics.daily.map((d) => {
+                    const ratio = maxRevenue > 0 ? d.revenue / maxRevenue : 0;
+                    const barH = Math.max(4, Math.round(ratio * 90));
+                    const label = d.date.slice(5); // "MM-DD"
+                    return (
+                      <View key={d.date} style={styles.chartBar}>
+                        <Text style={styles.chartBarValue}>{d.revenue > 0 ? `₹${d.revenue}` : ""}</Text>
+                        <View style={styles.chartBarTrack}>
+                          <View style={[styles.chartBarFill, { height: barH, backgroundColor: d.revenue > 0 ? "#16A34A" : "#E2E8F0" }]} />
+                        </View>
+                        <Text style={styles.chartBarLabel}>{label}</Text>
+                        <Text style={styles.chartBarOrders}>{d.orders > 0 ? `${d.orders}` : ""}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
+
+            {/* ── Popular Items ─────────────────────────────────────── */}
+            {analytics && analytics.popularItems.length > 0 ? (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Popular Items</Text>
+                </View>
+                {analytics.popularItems.map((item, idx) => (
+                  <View key={item.productId} style={styles.popularRow}>
+                    <View style={[styles.popularRank, { backgroundColor: idx === 0 ? "#FEF3C7" : "#F1F5F9" }]}>
+                      <Text style={[styles.popularRankText, { color: idx === 0 ? "#D97706" : "#64748B" }]}>
+                        #{idx + 1}
+                      </Text>
+                    </View>
+                    <Text style={styles.popularName} numberOfLines={1}>{item.name}</Text>
+                    <View style={styles.popularRight}>
+                      <Text style={styles.popularCount}>{item.count} sold</Text>
+                      <Text style={styles.popularRevenue}>₹{item.revenue}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
             {/* ── Product Pipeline ─────────────────────────────────────── */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -357,6 +440,113 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: "rgba(255,255,255,0.15)",
     marginVertical: 4,
+  },
+
+  // ── Pause toggle row
+  pauseRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    gap: 6,
+  },
+  pauseLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+
+  // ── Revenue Chart
+  sectionSubtitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#16A34A",
+  },
+  chartWrap: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+    gap: 4,
+  },
+  chartBar: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4,
+  },
+  chartBarValue: {
+    fontSize: 8,
+    fontWeight: "600",
+    color: "#64748B",
+    textAlign: "center",
+    minHeight: 12,
+  },
+  chartBarTrack: {
+    width: "100%",
+    height: 96,
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  chartBarFill: {
+    width: "70%",
+    borderRadius: 4,
+    minHeight: 4,
+  },
+  chartBarLabel: {
+    fontSize: 9,
+    fontWeight: "600",
+    color: "#94A3B8",
+    textAlign: "center",
+  },
+  chartBarOrders: {
+    fontSize: 9,
+    color: "#16A34A",
+    fontWeight: "600",
+    minHeight: 12,
+  },
+
+  // ── Popular Items
+  popularRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+    gap: 12,
+  },
+  popularRank: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  popularRankText: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  popularName: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#0F172A",
+  },
+  popularRight: {
+    alignItems: "flex-end",
+    gap: 2,
+  },
+  popularCount: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#64748B",
+  },
+  popularRevenue: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#16A34A",
   },
 
   loaderWrap: {

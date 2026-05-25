@@ -17,6 +17,7 @@ import { router } from "expo-router";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { useAuth } from "../../src/hooks/useAuth";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
+import { businessOwnerService } from "../../src/services/businessOwnerService";
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value?: string | null }) {
   if (!value) return null;
@@ -42,9 +43,29 @@ export default function BusinessOwnerProfile() {
   const [passwordError, setPasswordError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  // Business settings state
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsMinOrder, setSettingsMinOrder] = useState("");
+  const [settingsDeliveryTime, setSettingsDeliveryTime] = useState("");
+  const [settingsPrepTime, setSettingsPrepTime] = useState("");
+  const [settingsDeliveryFee, setSettingsDeliveryFee] = useState("");
+  const [settingsTags, setSettingsTags] = useState("");
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
   useEffect(() => {
     loadBusinessProfile().catch(() => null);
   }, [loadBusinessProfile]);
+
+  // Populate settings fields when businessProfile loads
+  useEffect(() => {
+    if (businessProfile) {
+      setSettingsMinOrder(String(businessProfile.minimumOrderAmount ?? ""));
+      setSettingsDeliveryTime(businessProfile.estimatedDeliveryTime ?? "");
+      setSettingsPrepTime(businessProfile.preparationTime ?? "");
+      setSettingsDeliveryFee(String(businessProfile.deliveryFee ?? ""));
+      setSettingsTags(Array.isArray(businessProfile.tags) ? businessProfile.tags.join(", ") : "");
+    }
+  }, [businessProfile]);
 
   const handleLogout = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -58,6 +79,30 @@ export default function BusinessOwnerProfile() {
         },
       },
     ]);
+  };
+
+  const handleSaveSettings = async () => {
+    setIsSavingSettings(true);
+    try {
+      const minOrder = settingsMinOrder.trim() !== "" ? Number(settingsMinOrder) : undefined;
+      const fee = settingsDeliveryFee.trim() !== "" ? Number(settingsDeliveryFee) : undefined;
+      const tags = settingsTags.trim()
+        ? settingsTags.split(",").map((t) => t.trim()).filter(Boolean)
+        : undefined;
+      await businessOwnerService.updateBusinessSettings({
+        minimumOrderAmount: minOrder,
+        estimatedDeliveryTime: settingsDeliveryTime.trim() || undefined,
+        preparationTime: settingsPrepTime.trim() || undefined,
+        deliveryFee: fee,
+        tags,
+      });
+      await loadBusinessProfile().catch(() => null);
+      Alert.alert("Saved", "Business settings updated.");
+    } catch (err: any) {
+      Alert.alert("Error", err?.response?.data?.error || err?.message || "Failed to save settings.");
+    } finally {
+      setIsSavingSettings(false);
+    }
   };
 
   const handleChangePassword = async () => {
@@ -159,6 +204,88 @@ export default function BusinessOwnerProfile() {
               </View>
             </View>
           )}
+
+          {/* ── Business Settings ───────────────────────────────────────── */}
+          {businessProfile ? (
+            <View style={styles.section}>
+              <TouchableOpacity
+                style={styles.sectionRow}
+                onPress={() => setShowSettings((prev) => !prev)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.sectionRowIcon}>⚙️</Text>
+                <Text style={styles.sectionRowLabel}>Business Settings</Text>
+                <Text style={styles.sectionRowChevron}>
+                  {showSettings ? "▲" : "▼"}
+                </Text>
+              </TouchableOpacity>
+
+              {showSettings && (
+                <View style={styles.changePasswordForm}>
+                  <Text style={styles.fieldLabel}>Minimum Order Amount (Rs)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 100"
+                    value={settingsMinOrder}
+                    onChangeText={setSettingsMinOrder}
+                    keyboardType="numeric"
+                    placeholderTextColor="#94A3B8"
+                  />
+
+                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Estimated Delivery Time</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 30-40 mins"
+                    value={settingsDeliveryTime}
+                    onChangeText={setSettingsDeliveryTime}
+                    placeholderTextColor="#94A3B8"
+                  />
+
+                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Preparation Time</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 15-20 mins"
+                    value={settingsPrepTime}
+                    onChangeText={setSettingsPrepTime}
+                    placeholderTextColor="#94A3B8"
+                  />
+
+                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Delivery Fee (Rs, 0 = free)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 30"
+                    value={settingsDeliveryFee}
+                    onChangeText={setSettingsDeliveryFee}
+                    keyboardType="numeric"
+                    placeholderTextColor="#94A3B8"
+                  />
+
+                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Cuisine Tags (comma-separated)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. Chinese, Veg, Fast Food"
+                    value={settingsTags}
+                    onChangeText={setSettingsTags}
+                    placeholderTextColor="#94A3B8"
+                    autoCapitalize="words"
+                  />
+
+                  <TouchableOpacity
+                    style={[styles.savePasswordBtn, isSavingSettings ? styles.savePasswordBtnDisabled : null]}
+                    onPress={handleSaveSettings}
+                    disabled={isSavingSettings}
+                    activeOpacity={0.8}
+                  >
+                    {isSavingSettings ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.savePasswordBtnText}>Save Settings</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          ) : null}
 
           {/* ── Change Password ─────────────────────────────────────────── */}
           <View style={styles.section}>

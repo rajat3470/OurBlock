@@ -34,7 +34,6 @@ const CATEGORY_ICON: Record<string, string> = {
   restaurant: "🍛",
   pharmacy: "💊",
   cafe: "☕",
-  clothing: "👕",
   electronics: "📱",
   dessert: "🍰",
   snacks: "🍟",

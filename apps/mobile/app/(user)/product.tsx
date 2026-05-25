@@ -17,9 +17,32 @@ import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
 import { addItem, updateQuantity } from "../../src/store/slices/cartSlice";
 import { userAppService } from "../../src/services/userAppService";
 import { Product, Business } from "../../src/types";
+import { unitStepLabel, displayQuantity, maxCartSteps, stockBadgeInfo } from "../../src/utils/helpers";
 
 function getFirstImageUrl(images?: string[]) {
   return images?.find((url) => typeof url === "string" && url.trim().length > 0) ?? null;
+}
+
+const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+
+function getBusinessOrderStatus(business: Business): "open" | "paused" | "closed" {
+  if (business.status !== "active") return "closed";
+  let withinHours = true;
+  if (business.operatingHours) {
+    const now = new Date();
+    const dayKey = DAYS[now.getDay()];
+    const hours = business.operatingHours[dayKey];
+    if (!hours || hours.isClosed) {
+      withinHours = false;
+    } else {
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const current = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      withinHours = current >= hours.open && current < hours.close;
+    }
+  }
+  if (!withinHours) return "closed";
+  if (business.isTakingOrders === false) return "paused";
+  return "open";
 }
 
 export default function ProductDetailScreen() {
@@ -78,6 +101,12 @@ export default function ProductDetailScreen() {
   const cartTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
   const qty = cartItem?.quantity ?? 0;
+  const bizOrderStatus = business ? getBusinessOrderStatus(business) : "open";
+  const isOrderable = bizOrderStatus === "open";
+
+  // Weight-aware derived values
+  const maxSteps = product ? maxCartSteps(product.stock, product.unit, product.unitStep) : 0;
+  const uLabel = product ? unitStepLabel(product.unit, product.unitStep) : "";
 
   function handleAddToCart() {
     if (!product) return;
@@ -99,7 +128,9 @@ export default function ProductDetailScreen() {
         businessName: business?.name ?? "Local Store",
         price: product.price,
         quantity: 1,
-        maxQuantity: product.stock,
+        maxQuantity: maxSteps,
+        unit: product.unit,
+        unitStep: product.unitStep,
       })
     );
     toast.show(`${product.name} added to cart`, { type: "success" });
@@ -107,8 +138,9 @@ export default function ProductDetailScreen() {
 
   function handleIncrease() {
     if (!product || !cartItem) return;
-    if (cartItem.quantity >= product.stock) {
-      toast.show(`Only ${product.stock} in stock`, { type: "warning" });
+    if (cartItem.quantity >= maxSteps) {
+      const stockLabel = uLabel ? `${product.stock}${product.unit}` : `${product.stock}`;
+      toast.show(`Only ${stockLabel} in stock`, { type: "warning" });
       return;
     }
     dispatch(updateQuantity({ productId: product.id, quantity: cartItem.quantity + 1 }));
@@ -181,6 +213,7 @@ export default function ProductDetailScreen() {
             style={styles.cartBadgeBtn}
             onPress={() => router.push("/(user)/cart")}
           >
+            <Ionicons name="cart" size={16} color="#FFFFFF" />
             <Text style={styles.cartBadgeText}>{cartCount}</Text>
           </TouchableOpacity>
         ) : (
@@ -240,7 +273,9 @@ export default function ProductDetailScreen() {
           ) : null}
 
           <View style={styles.priceRow}>
-            <Text style={styles.price}>Rs {product.price}</Text>
+            <Text style={styles.price}>
+              Rs {product.price}{uLabel ? `/${uLabel}` : ""}
+            </Text>
             {discount > 0 ? (
               <Text style={styles.originalPrice}>Rs {originalPrice}</Text>
             ) : null}
@@ -251,23 +286,22 @@ export default function ProductDetailScreen() {
             ) : null}
           </View>
 
-          <View style={styles.stockRow}>
-            <View
-              style={[
-                styles.stockBadge,
-                product.stock <= 5 ? styles.stockLow : styles.stockOk,
-              ]}
-            >
-              <Text style={styles.stockText}>
-                {product.stock <= 0
-                  ? "Out of Stock"
-                  : product.stock <= 5
-                  ? `Only ${product.stock} left`
-                  : "In Stock"}
-              </Text>
-            </View>
-            <Text style={styles.categoryTag}>{product.category}</Text>
-          </View>
+          {(() => {
+            const badge = stockBadgeInfo(product.stock, product.unit, product.unitStep);
+            return (
+              <View style={styles.stockRow}>
+                <View
+                  style={[
+                    styles.stockBadge,
+                    badge.isOut ? styles.stockLow : badge.isLow ? styles.stockLow : styles.stockOk,
+                  ]}
+                >
+                  <Text style={styles.stockText}>{badge.label}</Text>
+                </View>
+                <Text style={styles.categoryTag}>{product.category}</Text>
+              </View>
+            );
+          })()}
 
           {product.description ? (
             <View style={styles.descWrap}>
@@ -292,7 +326,9 @@ export default function ProductDetailScreen() {
           <View style={styles.priceSummaryWrap}>
             <Text style={styles.priceSummaryTitle}>Price Details</Text>
             <View style={styles.priceSummaryRow}>
-              <Text style={styles.priceSummaryLabel}>Product Price</Text>
+              <Text style={styles.priceSummaryLabel}>
+                {uLabel ? `Price per ${uLabel}` : "Product Price"}
+              </Text>
               <Text style={styles.priceSummaryValue}>Rs {product.price}</Text>
             </View>
             <View style={styles.priceSummaryRow}>
@@ -301,7 +337,9 @@ export default function ProductDetailScreen() {
             </View>
             <View style={styles.priceDivider} />
             <View style={styles.priceSummaryRow}>
-              <Text style={styles.priceSummaryLabelBold}>Total (1 item)</Text>
+              <Text style={styles.priceSummaryLabelBold}>
+                {uLabel ? `Total (1 × ${uLabel})` : "Total (1 item)"}
+              </Text>
               <Text style={styles.priceSummaryValueBold}>Rs {product.price + 2}</Text>
             </View>
             <Text style={styles.priceNote}>Platform fee of Rs 2 is charged per order. No delivery or GST charges.</Text>
@@ -311,9 +349,15 @@ export default function ProductDetailScreen() {
 
       {/* Fixed Add to Cart Button above tab bar */}
       <View style={[styles.fixedButtonContainer, { paddingBottom: insets.bottom }]}>
-        {product.stock <= 0 ? (
+        {maxSteps <= 0 ? (
           <View style={styles.outOfStockBtn}>
             <Text style={styles.outOfStockText}>Out of Stock</Text>
+          </View>
+        ) : !isOrderable ? (
+          <View style={[styles.outOfStockBtn, styles.shopNotOrderableBtn]}>
+            <Text style={styles.outOfStockText}>
+              {bizOrderStatus === "paused" ? "⏸ Shop Paused" : "🕐 Shop Closed"}
+            </Text>
           </View>
         ) : qty === 0 ? (
           <TouchableOpacity style={styles.addToCartBtn} onPress={handleAddToCart}>
@@ -325,7 +369,7 @@ export default function ProductDetailScreen() {
               <TouchableOpacity style={styles.qtyBtn} onPress={handleDecrease}>
                 <Text style={styles.qtyBtnText}>−</Text>
               </TouchableOpacity>
-              <Text style={styles.qtyCount}>{qty}</Text>
+              <Text style={styles.qtyCount}>{displayQuantity(qty, product.unit, product.unitStep)}</Text>
               <TouchableOpacity style={styles.qtyBtn} onPress={handleIncrease}>
                 <Text style={styles.qtyBtnText}>+</Text>
               </TouchableOpacity>
@@ -367,6 +411,9 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
   headerRight: { width: 64 },
   cartBadgeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 20,
     paddingHorizontal: 12,
@@ -543,6 +590,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: "center",
+  },
+  shopNotOrderableBtn: {
+    backgroundColor: "#FEF3C7",
   },
   outOfStockText: { fontSize: 16, fontWeight: "700", color: "#9CA3AF" },
   addToCartBtn: {

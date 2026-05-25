@@ -13,7 +13,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useUserApp } from "../../../src/hooks/useUserApp";
+import { useAppDispatch, useAppSelector } from "../../../src/hooks/useRedux";
+import { addItem, clearCart } from "../../../src/store/slices/cartSlice";
 import { Order, OrderStatus } from "../../../src/types";
+import { useToast } from "react-native-toast-notifications";
+import RatingModal from "../../../src/components/RatingModal";
+import RefundModal from "../../../src/components/RefundModal";
 
 type FilterKey = "all" | "active" | "completed";
 
@@ -61,6 +66,48 @@ export default function UserOrders() {
   const insets = useSafeAreaInsets();
   const { orders, isLoading, loadMyOrders, cancelOrder } = useUserApp();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+  const dispatch = useAppDispatch();
+  const cartBusinessId = useAppSelector((state) => state.cart.businessId);
+  const toast = useToast();
+  const [ratingOrder, setRatingOrder] = useState<Order | null>(null);
+  const [refundOrder, setRefundOrder] = useState<Order | null>(null);
+
+  function handleReorder(order: Order) {
+    const bizId = order.businessId;
+    const bizName = (order as any).businessName ?? "Shop";
+
+    function doReorder() {
+      dispatch(clearCart());
+      (order.items as any[]).forEach((item) => {
+        dispatch(
+          addItem({
+            productId: item.productId,
+            productName: item.productName ?? "Product",
+            productImage: item.productImage ?? null,
+            businessId: bizId,
+            businessName: bizName,
+            price: item.price,
+            quantity: item.quantity,
+            maxQuantity: item.stock ?? 99,
+          })
+        );
+      });
+      router.push("/(user)/cart");
+    }
+
+    if (cartBusinessId && cartBusinessId !== bizId) {
+      Alert.alert(
+        "Replace Cart?",
+        "You have items from another shop. Reordering will clear your current cart.",
+        [
+          { text: "Keep Cart", style: "cancel" },
+          { text: "Reorder", style: "destructive", onPress: doReorder },
+        ]
+      );
+    } else {
+      doReorder();
+    }
+  }
 
   useEffect(() => {
     loadMyOrders().catch(() => null);
@@ -145,13 +192,50 @@ export default function UserOrders() {
             </Text>
           </View>
           <View style={styles.rowBottomRight}>
-            <Text style={styles.paymentText}>{item.paymentStatus}</Text>
+            <Text style={styles.paymentText}>
+              {item.paymentStatus === "cod"
+                ? "Cash on Delivery"
+                : item.paymentStatus === "completed"
+                ? "Paid"
+                : item.paymentStatus === "failed"
+                ? "Payment Failed"
+                : "Pending"}
+            </Text>
             {canCancel ? (
               <TouchableOpacity
                 style={styles.cancelBtn}
                 onPress={() => handleCancel(item.id)}
               >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+            ) : null}
+            {(item.status === OrderStatus.DELIVERED ||
+              item.status === OrderStatus.CANCELLED ||
+              (item.status as string) === "rejected") ? (
+              <TouchableOpacity
+                style={styles.reorderBtn}
+                onPress={() => handleReorder(item)}
+              >
+                <Ionicons name="refresh" size={12} color="#DC2626" />
+                <Text style={styles.reorderBtnText}>Reorder</Text>
+              </TouchableOpacity>
+            ) : null}
+            {item.status === OrderStatus.DELIVERED ? (
+              <TouchableOpacity
+                style={styles.rateBtn}
+                onPress={() => setRatingOrder(item)}
+              >
+                <Ionicons name="star-outline" size={12} color="#D97706" />
+                <Text style={styles.rateBtnText}>Rate</Text>
+              </TouchableOpacity>
+            ) : null}
+            {item.status === OrderStatus.DELIVERED && !(item as any).refundRequested ? (
+              <TouchableOpacity
+                style={styles.refundBtn}
+                onPress={() => setRefundOrder(item)}
+              >
+                <Ionicons name="return-up-back-outline" size={12} color="#7C3AED" />
+                <Text style={styles.refundBtnText}>Refund</Text>
               </TouchableOpacity>
             ) : null}
           </View>
@@ -227,6 +311,35 @@ export default function UserOrders() {
           }
         />
       )}
+
+      {ratingOrder ? (
+        <RatingModal
+          visible
+          orderId={ratingOrder.id}
+          businessId={ratingOrder.businessId}
+          businessName={(ratingOrder as any).businessName ?? "Shop"}
+          onClose={() => setRatingOrder(null)}
+          onSubmitted={() => {
+            setRatingOrder(null);
+            toast.show("Review submitted. Thank you!", { type: "success" });
+          }}
+        />
+      ) : null}
+
+      {refundOrder ? (
+        <RefundModal
+          visible
+          orderId={refundOrder.id}
+          orderAmount={(refundOrder as any).finalAmount ?? 0}
+          businessName={(refundOrder as any).businessName ?? "Shop"}
+          onClose={() => setRefundOrder(null)}
+          onSubmitted={() => {
+            setRefundOrder(null);
+            toast.show("Refund request submitted! We'll get back to you soon.", { type: "success", duration: 4000 });
+            loadMyOrders().catch(() => null);
+          }}
+        />
+      ) : null}
     </View>
   );
 }
@@ -348,6 +461,42 @@ const styles = StyleSheet.create({
     borderColor: "#FECACA",
   },
   cancelBtnText: { fontSize: 11, fontWeight: "700", color: "#991B1B" },
+  reorderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FEF2F2",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  reorderBtnText: { fontSize: 11, fontWeight: "700", color: "#DC2626" },
+  rateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FFFBEB",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+  },
+  rateBtnText: { fontSize: 11, fontWeight: "700", color: "#D97706" },
+  refundBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F5F3FF",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "#DDD6FE",
+  },
+  refundBtnText: { fontSize: 11, fontWeight: "700", color: "#7C3AED" },
   emptyWrap: { alignItems: "center", paddingVertical: 50, gap: 8 },
   emptyIconWrap: {
     width: 84,

@@ -58,6 +58,77 @@ export const truncateString = (str: string, length: number): string => {
   return str.length > length ? str.substring(0, length) + "..." : str;
 };
 
+// ─── Weight / unit utilities ────────────────────────────────────────────────
+
+export type ProductUnit = "piece" | "g" | "kg" | "ml" | "L";
+
+/**
+ * Short label for one purchasable step.
+ * e.g. unit="g", unitStep=100 → "100g"
+ *      unit="kg", unitStep=0.25 → "0.25kg"
+ *      unit="piece" → ""
+ */
+export function unitStepLabel(unit?: ProductUnit | string, unitStep?: number): string {
+  if (!unit || unit === "piece") return "";
+  const step = unitStep ?? 1;
+  if (unit === "g") return step >= 1000 ? `${step / 1000}kg` : `${step}g`;
+  if (unit === "kg") return `${step}kg`;
+  if (unit === "ml") return step >= 1000 ? `${step / 1000}L` : `${step}ml`;
+  if (unit === "L") return `${step}L`;
+  return "";
+}
+
+/**
+ * Display total quantity in cart.
+ * e.g. qty=3, unit="g", unitStep=100 → "300g"
+ *      qty=3, unit="kg", unitStep=0.5 → "1.5kg"
+ *      qty=3, unit="piece" → "3"
+ */
+export function displayQuantity(qty: number, unit?: ProductUnit | string, unitStep?: number): string {
+  if (!unit || unit === "piece") return `${qty}`;
+  const total = qty * (unitStep ?? 1);
+  if (unit === "g") return total >= 1000 ? `${+(total / 1000).toFixed(2)}kg` : `${total}g`;
+  if (unit === "kg") return `${+total.toFixed(2)}kg`;
+  if (unit === "ml") return total >= 1000 ? `${+(total / 1000).toFixed(2)}L` : `${total}ml`;
+  if (unit === "L") return `${+total.toFixed(2)}L`;
+  return `${qty}`;
+}
+
+/**
+ * Maximum number of steps a customer can add to cart.
+ * For weight items: Math.floor(stock / unitStep).
+ */
+export function maxCartSteps(stock: number, unit?: ProductUnit | string, unitStep?: number): number {
+  if (!unit || unit === "piece") return stock;
+  return Math.floor(stock / (unitStep ?? 1));
+}
+
+/**
+ * Stock badge info for display.
+ * Returns label, whether stock is low, and whether it's out.
+ */
+export function stockBadgeInfo(
+  stock: number,
+  unit?: ProductUnit | string,
+  unitStep?: number
+): { label: string; isLow: boolean; isOut: boolean } {
+  const steps = maxCartSteps(stock, unit, unitStep);
+  if (steps <= 0) return { label: "Out of Stock", isLow: false, isOut: true };
+  if (!unit || unit === "piece") {
+    return {
+      label: steps <= 5 ? `Only ${steps} left` : "In Stock",
+      isLow: steps <= 5,
+      isOut: false,
+    };
+  }
+  let display: string;
+  if (unit === "g") display = stock < 1000 ? `${stock}g` : `${+(stock / 1000).toFixed(2)}kg`;
+  else if (unit === "kg") display = `${+stock.toFixed(2)}kg`;
+  else if (unit === "ml") display = stock < 1000 ? `${stock}ml` : `${+(stock / 1000).toFixed(2)}L`;
+  else display = `${+stock.toFixed(2)}L`;
+  return { label: `${display} left`, isLow: steps <= 3, isOut: false };
+}
+
 export const capitalizeFirstLetter = (str: string): string => {
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
