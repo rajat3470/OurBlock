@@ -159,4 +159,12 @@ export const userAppService = {
     const res = await apiClient.get<{ success: boolean; data: any[] }>(`/reviews?businessId=${businessId}`);
     return (res as any).data ?? [];
   },
+
+  async claimAdReward(): Promise<{ couponCode: string; discountAmount: number; expiresAt: string }> {
+    const res = await apiClient.post<{ success: boolean; couponCode: string; discountAmount: number; expiresAt: string }>(
+      "/ads/claim-reward",
+      {}
+    );
+    return { couponCode: res.couponCode, discountAmount: res.discountAmount, expiresAt: res.expiresAt };
+  },
 };

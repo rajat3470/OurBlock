@@ -5,6 +5,7 @@ import superAdminReducer from "./slices/superAdminSlice";
 import businessOwnerReducer from "./slices/businessOwnerSlice";
 import userAppReducer from "./slices/userAppSlice";
 import cartReducer from "./slices/cartSlice";
+import featureFlagsReducer from "./slices/featureFlagsSlice";
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     businessOwner: businessOwnerReducer,
     userApp: userAppReducer,
     cart: cartReducer,
+    featureFlags: featureFlagsReducer,
   },
 });
 

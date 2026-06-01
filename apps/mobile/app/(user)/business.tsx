@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useToast } from "react-native-toast-notifications";
 import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
+import { useFeatureFlags } from "../../src/hooks/useFeatureFlags";
+import { NativeAdCard } from "../../src/components/NativeAdCard";
 import { addItem, updateQuantity } from "../../src/store/slices/cartSlice";
 import { userAppService } from "../../src/services/userAppService";
 import { Business, Product } from "../../src/types";
@@ -50,6 +52,10 @@ function getFirstImageUrl(images?: string[]) {
   return images?.find((url) => typeof url === "string" && url.trim().length > 0) ?? null;
 }
 
+type ListRow =
+  | { type: "ad"; id: string }
+  | { type: "row"; id: string; products: Product[] };
+
 export default function BusinessDetailScreen() {
   const toast = useToast();
   const dispatch = useAppDispatch();
@@ -61,6 +67,7 @@ export default function BusinessDetailScreen() {
   const cartCount = useAppSelector((state) => state.cart.items.reduce((acc, i) => acc + i.quantity, 0));
 
   const { businesses } = useUserApp();
+  const { isNativeListingEnabled, values: ffValues } = useFeatureFlags();
   const [business, setBusiness] = useState<Business | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -93,7 +100,7 @@ export default function BusinessDetailScreen() {
       });
   }, [businessId]);
 
-  const renderProduct = ({ item: product }: { item: Product }) => {
+  const renderProduct = (product: Product) => {
     const imageUrl = getFirstImageUrl(product.imageUrls);
     const qty = cartItems.find((i) => i.productId === product.id)?.quantity ?? 0;
     const discount = Number(product.discount || 0);
@@ -210,6 +217,34 @@ export default function BusinessDetailScreen() {
     );
   };
 
+  const displayRows = useMemo<ListRow[]>(() => {
+    if (products.length === 0) return [];
+    const density = isNativeListingEnabled ? ffValues.adsDensityEveryNthCard : 0;
+    const rows: ListRow[] = [];
+    let count = 0;
+    for (let i = 0; i < products.length; i += 2) {
+      if (density > 0 && count > 0 && count % density === 0) {
+        rows.push({ type: "ad", id: `ad-${i}` });
+      }
+      const pair = products.slice(i, i + 2);
+      rows.push({ type: "row", id: products[i].id, products: pair });
+      count += pair.length;
+    }
+    return rows;
+  }, [products, isNativeListingEnabled, ffValues.adsDensityEveryNthCard]);
+
+  const renderRow = ({ item }: { item: ListRow }) => {
+    if (item.type === "ad") {
+      return <NativeAdCard style={{ marginHorizontal: 16, marginBottom: 12 }} />;
+    }
+    return (
+      <View style={styles.columnWrapper}>
+        {item.products.map((p) => renderProduct(p))}
+        {item.products.length === 1 ? <View style={{ width: CARD_WIDTH }} /> : null}
+      </View>
+    );
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -320,15 +355,13 @@ export default function BusinessDetailScreen() {
         </View>
       ) : (
         <FlatList
-          data={products}
+          data={displayRows}
           keyExtractor={(item) => item.id}
-          renderItem={renderProduct}
-          numColumns={2}
+          renderItem={renderRow}
           contentContainerStyle={[
             styles.listContent,
             { paddingBottom: insets.bottom + 16 },
           ]}
-          columnWrapperStyle={styles.columnWrapper}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             <Text style={styles.productsHeader}>
@@ -449,7 +482,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 4,
   },
-  columnWrapper: { gap: 12, marginBottom: 12 },
+  columnWrapper: { flexDirection: "row", gap: 12, marginBottom: 12 },
   productCard: {
     width: CARD_WIDTH,
     backgroundColor: "#FFFFFF",

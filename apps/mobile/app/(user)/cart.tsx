@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { useState } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,6 +9,9 @@ import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
 import { updateQuantity, removeItem, clearCart } from "../../src/store/slices/cartSlice";
 import { ORDER_FEES } from "../../src/constants";
 import { displayQuantity } from "../../src/utils/helpers";
+import { useFeatureFlags } from "../../src/hooks/useFeatureFlags";
+import { useRewardedAd } from "../../src/hooks/useRewardedAd";
+import { userAppService } from "../../src/services/userAppService";
 
 const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
 
@@ -16,9 +20,24 @@ export default function CartScreen() {
   const cartItems = useAppSelector((state) => state.cart.items);
   const insets = useSafeAreaInsets();
 
+  const { isRewardedEnabled, values: ffValues } = useFeatureFlags();
+  const { adState, showRewardedAd } = useRewardedAd();
+  const [adReward, setAdReward] = useState<{ couponCode: string; discountAmount: number } | null>(null);
+
   const subTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const finalAmount = subTotal + PLATFORM_FEE;
   const canCheckout = cartItems.length > 0 && subTotal >= MINIMUM_ORDER;
+
+  async function handleWatchAd() {
+    const earned = await showRewardedAd();
+    if (!earned) return;
+    try {
+      const reward = await userAppService.claimAdReward();
+      setAdReward({ couponCode: reward.couponCode, discountAmount: reward.discountAmount });
+    } catch (err: any) {
+      Alert.alert("Reward", err?.message ?? "Could not issue reward. Try again later.");
+    }
+  }
 
   function handleIncrease(productId: string, current: number, max: number) {
     if (current >= max) {
@@ -119,6 +138,45 @@ export default function CartScreen() {
               </View>
             ) : null}
 
+            {isRewardedEnabled && !adReward && (
+              <TouchableOpacity
+                style={styles.adRewardBanner}
+                onPress={handleWatchAd}
+                disabled={adState === "loading" || adState === "showing"}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={["#FEF3C7", "#FDE68A"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.adRewardGradient}
+                >
+                  <View style={styles.adRewardIconWrap}>
+                    <Ionicons name="play-circle-outline" size={26} color="#92400E" />
+                  </View>
+                  <View style={styles.adRewardTextWrap}>
+                    <Text style={styles.adRewardTitle}>Watch an ad, save Rs {ffValues.adsRewardedMinRs}–{ffValues.adsRewardedMaxRs}</Text>
+                    <Text style={styles.adRewardSub}>Earn a coupon for your next order</Text>
+                  </View>
+                  {adState === "loading" ? (
+                    <ActivityIndicator size="small" color="#92400E" />
+                  ) : (
+                    <Ionicons name="chevron-forward" size={18} color="#92400E" />
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+
+            {adReward && (
+              <View style={styles.adRewardEarned}>
+                <Ionicons name="checkmark-circle" size={22} color="#15803D" />
+                <View style={styles.adRewardEarnedText}>
+                  <Text style={styles.adRewardEarnedTitle}>Coupon earned! Save Rs {adReward.discountAmount}</Text>
+                  <Text style={styles.adRewardEarnedCode}>Use code <Text style={styles.adRewardCode}>{adReward.couponCode}</Text> at checkout</Text>
+                </View>
+              </View>
+            )}
+
             <View style={{ height: 100 }} />
           </ScrollView>
 
@@ -198,4 +256,15 @@ const styles = StyleSheet.create({
   checkoutBtn: { backgroundColor: "#DC2626", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 20 },
   checkoutBtnDisabled: { backgroundColor: "#D1D5DB" },
   checkoutText: { fontSize: 15, fontWeight: "800", color: "#FFFFFF" },
+  adRewardBanner: { marginHorizontal: 16, marginTop: 12, borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "rgba(180,130,0,0.2)" },
+  adRewardGradient: { flexDirection: "row", alignItems: "center", padding: 14, gap: 10 },
+  adRewardIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(146,64,14,0.1)", alignItems: "center", justifyContent: "center" },
+  adRewardTextWrap: { flex: 1 },
+  adRewardTitle: { fontSize: 13, fontWeight: "700", color: "#78350F" },
+  adRewardSub: { fontSize: 11, color: "#92400E", marginTop: 2 },
+  adRewardEarned: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 16, marginTop: 12, backgroundColor: "#F0FDF4", borderRadius: 12, padding: 14, borderWidth: 1, borderColor: "#BBF7D0" },
+  adRewardEarnedText: { flex: 1 },
+  adRewardEarnedTitle: { fontSize: 13, fontWeight: "700", color: "#15803D" },
+  adRewardEarnedCode: { fontSize: 12, color: "#166534", marginTop: 2 },
+  adRewardCode: { fontWeight: "800", letterSpacing: 0.5 },
 });

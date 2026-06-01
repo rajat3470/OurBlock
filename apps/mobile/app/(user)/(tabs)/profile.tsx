@@ -8,6 +8,8 @@ import {
   Alert,
   Image,
   ActivityIndicator,
+  Modal,
+  Switch,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,14 +22,40 @@ import { userAppService } from "../../../src/services/userAppService";
 import { useAppSelector, useAppDispatch } from "../../../src/hooks/useRedux";
 import { useAuth } from "../../../src/hooks/useAuth";
 import { setUser } from "../../../src/store/slices/authSlice";
+import { useFeatureFlags } from "../../../src/hooks/useFeatureFlags";
+import { featureFlagsService } from "../../../src/services/featureFlagsService";
+import {
+  setFeatureFlagsError,
+  setFlags,
+  setLocalOverride,
+  setRefreshing,
+} from "../../../src/store/slices/featureFlagsSlice";
+import type { FeatureFlags } from "../../../src/constants/featureFlags";
 
 export default function UserProfile() {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
   const toast = useToast();
   const { user } = useAppSelector((state) => state.auth);
+  const featureFlags = useFeatureFlags();
   const { logoutUser } = useAuth();
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [devDrawerVisible, setDevDrawerVisible] = useState(false);
+
+  const handleRefreshFeatureFlags = async () => {
+    dispatch(setRefreshing(true));
+    try {
+      const snapshot = await featureFlagsService.refresh();
+      dispatch(setFlags(snapshot));
+      dispatch(setFeatureFlagsError(null));
+      toast.show("Feature flags refreshed from Firebase.", { type: "success" });
+    } catch (error: any) {
+      dispatch(setFeatureFlagsError(error?.message || "Failed to refresh feature flags"));
+      toast.show(error?.message || "Failed to refresh feature flags", { type: "danger" });
+    } finally {
+      dispatch(setRefreshing(false));
+    }
+  };
 
   const handlePickProfilePhoto = async () => {
     if (!user?.id) return;
@@ -138,6 +166,19 @@ export default function UserProfile() {
 
         {/* Sign out */}
         <View style={styles.section}>
+          {__DEV__ ? (
+            <>
+              <TouchableOpacity style={styles.row} onPress={() => setDevDrawerVisible(true)}>
+                <View style={styles.rowIconWrap}>
+                  <Ionicons name="construct-outline" size={20} color="#DC2626" />
+                </View>
+                <Text style={styles.rowLabel}>Developer Feature Flags</Text>
+                <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+              </TouchableOpacity>
+              <View style={styles.divider} />
+            </>
+          ) : null}
+
           <TouchableOpacity style={styles.signOutBtn} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={20} color="#DC2626" />
             <Text style={styles.signOutText}>Sign Out</Text>
@@ -146,6 +187,73 @@ export default function UserProfile() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {__DEV__ ? (
+        <Modal
+          visible={devDrawerVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setDevDrawerVisible(false)}
+        >
+          <View style={styles.devDrawerBackdrop}>
+            <View style={styles.devDrawerCard}>
+              <View style={styles.devDrawerHeader}>
+                <Text style={styles.devDrawerTitle}>Feature Flags (Dev)</Text>
+                <TouchableOpacity onPress={() => setDevDrawerVisible(false)}>
+                  <Ionicons name="close" size={22} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.devDrawerMeta}>
+                Fetch status: {featureFlags.lastFetchStatus}
+              </Text>
+              <Text style={styles.devDrawerMeta}>
+                Last fetch: {featureFlags.lastFetchTime ? new Date(featureFlags.lastFetchTime).toLocaleString() : "never"}
+              </Text>
+              {featureFlags.error ? (
+                <Text style={styles.devDrawerError}>{featureFlags.error}</Text>
+              ) : null}
+
+              {(
+                [
+                  ["ads.enabled", "adsEnabled"],
+                  ["ads.nativeFeed.enabled", "adsNativeFeedEnabled"],
+                  ["ads.nativeListing.enabled", "adsNativeListingEnabled"],
+                  ["ads.rewarded.enabled", "adsRewardedEnabled"],
+                ] as [string, keyof FeatureFlags][]
+              ).map(([label, key]) => (
+                <View style={styles.devFlagRow} key={key}>
+                  <Text style={styles.devFlagLabel}>{label}</Text>
+                  <Switch
+                    value={featureFlags.values[key] as boolean}
+                    onValueChange={(v) => { dispatch(setLocalOverride({ key, value: v })); }}
+                    trackColor={{ false: "#D1D5DB", true: "#DC2626" }}
+                  />
+                </View>
+              ))}
+
+              <Text style={styles.devDrawerMeta}>ads.rewarded.minRs: {featureFlags.values.adsRewardedMinRs}</Text>
+              <Text style={styles.devDrawerMeta}>ads.rewarded.maxRs: {featureFlags.values.adsRewardedMaxRs}</Text>
+              <Text style={styles.devDrawerMeta}>ads.density.everyNthCard: {featureFlags.values.adsDensityEveryNthCard}</Text>
+              <Text style={styles.devDrawerMeta}>
+                ads.rewarded.maxClaimsPerDay: {featureFlags.values.adsRewardedMaxClaimsPerDay}
+              </Text>
+
+              <TouchableOpacity
+                style={[styles.devRefreshBtn, featureFlags.isRefreshing && styles.devRefreshBtnDisabled]}
+                onPress={handleRefreshFeatureFlags}
+                disabled={featureFlags.isRefreshing}
+              >
+                {featureFlags.isRefreshing ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.devRefreshBtnText}>Refresh From Firebase</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
     </View>
   );
 }
@@ -250,4 +358,68 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   signOutText: { fontSize: 15, fontWeight: "700", color: "#DC2626" },
+  devDrawerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(17,24,39,0.55)",
+    justifyContent: "flex-end",
+  },
+  devDrawerCard: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 24,
+    gap: 10,
+  },
+  devDrawerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  devDrawerTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#111827",
+  },
+  devDrawerMeta: {
+    fontSize: 12,
+    color: "#4B5563",
+    fontWeight: "500",
+  },
+  devDrawerError: {
+    fontSize: 12,
+    color: "#B91C1C",
+    fontWeight: "600",
+  },
+  devFlagRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  devFlagLabel: {
+    fontSize: 13,
+    color: "#111827",
+    fontWeight: "600",
+  },
+  devRefreshBtn: {
+    marginTop: 8,
+    backgroundColor: "#DC2626",
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  devRefreshBtnDisabled: {
+    opacity: 0.7,
+  },
+  devRefreshBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
 });

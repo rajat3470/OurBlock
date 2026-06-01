@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { ActivityIndicator, View, StyleSheet, Text, TextInput } from "react-native";
+import { useEffect, useRef } from "react";
+import { ActivityIndicator, View, StyleSheet, Text, TextInput, AppState } from "react-native";
 import { Stack } from "expo-router";
 import { Provider } from "react-redux";
 import { ToastProvider } from "react-native-toast-notifications";
@@ -12,6 +12,9 @@ import { logout, setAuth, setHydrated } from "../src/store/slices/authSlice";
 import { authStateService } from "../src/services/authStateService";
 import { authService } from "../src/services/authService";
 import { apiClient } from "../src/services/apiClient";
+import { featureFlagsService } from "../src/services/featureFlagsService";
+import { setFeatureFlagsError, setFlags, setRefreshing } from "../src/store/slices/featureFlagsSlice";
+import { initializeMobileAds } from "../src/services/adService";
 import { colors } from "../src/constants/theme";
 
 Notifications.setNotificationHandler({
@@ -41,6 +44,49 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
   const dispatch = useAppDispatch();
   const isHydrated = useAppSelector((state) => state.auth.isHydrated);
   const authUser = useAppSelector((state) => state.auth.user);
+  const adsEnabled = useAppSelector((state) => state.featureFlags.values.adsEnabled);
+  const adsSdkInitialized = useRef(false);
+
+  // Initialize the Google Mobile Ads SDK once, only when the master ads flag is on.
+  useEffect(() => {
+    if (!adsEnabled || adsSdkInitialized.current) return;
+    adsSdkInitialized.current = true;
+    initializeMobileAds().catch(() => { /* non-blocking — app works without ads */ });
+  }, [adsEnabled]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const syncFlags = async (refresh = false) => {
+      dispatch(setRefreshing(true));
+      try {
+        const snapshot = refresh
+          ? await featureFlagsService.refresh()
+          : await featureFlagsService.initialize();
+        if (!mounted) return;
+        dispatch(setFlags(snapshot));
+        dispatch(setFeatureFlagsError(null));
+      } catch (error: any) {
+        if (!mounted) return;
+        dispatch(setFeatureFlagsError(error?.message || "Failed to sync feature flags"));
+      } finally {
+        if (mounted) dispatch(setRefreshing(false));
+      }
+    };
+
+    syncFlags(false);
+
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        syncFlags(true);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      sub.remove();
+    };
+  }, [dispatch]);
 
   useEffect(() => {
     const hydrate = async () => {

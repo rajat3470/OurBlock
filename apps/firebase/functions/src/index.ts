@@ -26,6 +26,7 @@ import ownerRoutes from './api/owner';
 import reviewRoutes from './api/reviews';
 import couponRoutes from './api/coupons';
 import refundRoutes from './api/refunds';
+import adsRoutes from './api/ads';
 
 // Use routes
 app.use('/auth', authRoutes);
@@ -39,6 +40,7 @@ app.use('/owner', ownerRoutes);
 app.use('/reviews', reviewRoutes);
 app.use('/coupons', couponRoutes);
 app.use('/refunds', refundRoutes);
+app.use('/ads', adsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

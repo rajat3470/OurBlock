@@ -11,22 +11,28 @@
 import { useEffect } from "react";
 import { Alert, Vibration } from "react-native";
 import { useRouter } from "expo-router";
+import Constants from "expo-constants";
 import { useAppSelector } from "./useRedux";
 
-// Dynamic import guard: @react-native-firebase/messaging may not be available
-// in Expo Go web/managed builds — it is available in bare/standalone builds.
-let messaging: any = null;
-try {
-  const _messaging = require("@react-native-firebase/messaging").default;
-  // Verify the native module is actually installed by calling once.
-  // This throws "firebase.app() not installed" on Android if the native
-  // @react-native-firebase/app module isn't linked (e.g. EAS dev client not rebuilt).
-  _messaging();
-  messaging = _messaging;
-} catch {
-  // Not available in this environment — push notifications gracefully disabled
-  messaging = null;
-}
+// In Expo Go the @react-native-firebase native modules don't exist.
+// Guard at the top level so we never attempt to require them.
+const IS_EXPO_GO = Constants.executionEnvironment === "storeClient";
+
+let _messagingCache: any = undefined;
+
+const getMessaging = (): any => {
+  if (IS_EXPO_GO) return null;
+  if (_messagingCache !== undefined) return _messagingCache;
+  try {
+    const mod = require("@react-native-firebase/messaging").default;
+    // Probe the module — throws if native layer is not linked.
+    mod();
+    _messagingCache = mod;
+  } catch {
+    _messagingCache = null;
+  }
+  return _messagingCache;
+};
 
 const APP_TARGET = process.env.EXPO_PUBLIC_APP_TARGET; // "user" | "businessOwner"
 
@@ -38,18 +44,19 @@ export function useOrderNotifications() {
 
   // ── 1. Register FCM token ─────────────────────────────────────────────────
   useEffect(() => {
-    if (!messaging || !accessToken) return;
+    const m = getMessaging();
+    if (!m || !accessToken) return;
 
     const registerToken = async () => {
       try {
-        const authStatus = await messaging().requestPermission();
+        const authStatus = await m().requestPermission();
         const granted =
-          authStatus === messaging.AuthorizationStatus?.AUTHORIZED ||
-          authStatus === messaging.AuthorizationStatus?.PROVISIONAL;
+          authStatus === m.AuthorizationStatus?.AUTHORIZED ||
+          authStatus === m.AuthorizationStatus?.PROVISIONAL;
 
         if (!granted) return;
 
-        const fcmToken = await messaging().getToken();
+        const fcmToken = await m().getToken();
         if (!fcmToken) return;
 
         // Persist token to backend so server can send targeted pushes
@@ -63,7 +70,7 @@ export function useOrderNotifications() {
     registerToken();
 
     // Refresh token
-    const unsubRefresh = messaging().onTokenRefresh(async (newToken: string) => {
+    const unsubRefresh = m().onTokenRefresh(async (newToken: string) => {
       const { apiClient } = await import("@services/apiClient");
       await apiClient.post("/users/fcm-token", { fcmToken: newToken }).catch(() => null);
     });
@@ -73,9 +80,10 @@ export function useOrderNotifications() {
 
   // ── 2. Foreground notifications ───────────────────────────────────────────
   useEffect(() => {
-    if (!messaging) return;
+    const m = getMessaging();
+    if (!m) return;
 
-    const unsubForeground = messaging().onMessage(async (remoteMessage: any) => {
+    const unsubForeground = m().onMessage(async (remoteMessage: any) => {
       const { notification, data } = remoteMessage;
       if (!notification) return;
 
@@ -115,10 +123,11 @@ export function useOrderNotifications() {
 
   // ── 3. Background / quit tap handler ─────────────────────────────────────
   useEffect(() => {
-    if (!messaging) return;
+    const m = getMessaging();
+    if (!m) return;
 
     // Tapped notification while app was in background
-    messaging().onNotificationOpenedApp((remoteMessage: any) => {
+    m().onNotificationOpenedApp((remoteMessage: any) => {
       if (remoteMessage?.data?.orderId) {
         if (APP_TARGET === "businessOwner") {
           router.push("/(business-owner)/orders");
@@ -129,7 +138,7 @@ export function useOrderNotifications() {
     });
 
     // App opened from a quit state via notification
-    messaging()
+    m()
       .getInitialNotification()
       .then((remoteMessage: any) => {
         if (remoteMessage?.data?.orderId) {

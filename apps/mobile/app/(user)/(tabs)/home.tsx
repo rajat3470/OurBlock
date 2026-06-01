@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   Dimensions,
   View,
@@ -16,6 +16,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useToast } from "react-native-toast-notifications";
 import { useAppDispatch, useAppSelector } from "../../../src/hooks/useRedux";
 import { useUserApp } from "../../../src/hooks/useUserApp";
+import { useFeatureFlags } from "../../../src/hooks/useFeatureFlags";
+import { NativeAdCard } from "../../../src/components/NativeAdCard";
 import { userAppService } from "../../../src/services/userAppService";
 import { addItem, updateQuantity } from "../../../src/store/slices/cartSlice";
 
@@ -132,6 +134,8 @@ export default function UserHome() {
     initializeHome,
     selectSociety,
   } = useUserApp();
+
+  const { isNativeFeedEnabled, values: ffValues } = useFeatureFlags();
 
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -589,21 +593,29 @@ export default function UserHome() {
           </View>
         ) : (
           <View style={styles.productGrid}>
-            {filteredProducts.map((product) => {
+            {filteredProducts.map((product, productIndex) => {
               const store = businessesById.get(product.businessId);
               const discount = Number(product.discount || 0);
               const imageUrl = getFirstImageUrl(product.imageUrls);
               const cartItem = cartItems.find((i) => i.productId === product.id);
               const qty = cartItem?.quantity ?? 0;
 
+              const showAdBefore =
+                isNativeFeedEnabled &&
+                productIndex > 0 &&
+                productIndex % ffValues.adsDensityEveryNthCard === 0;
+
               return (
-                <TouchableOpacity
-                  key={product.id}
-                  style={styles.productCard}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/(user)/product",
-                      params: { id: product.id, businessId: product.businessId },
+                <Fragment key={product.id}>
+                  {showAdBefore ? (
+                    <NativeAdCard style={styles.adRow} />
+                  ) : null}
+                  <TouchableOpacity
+                    style={styles.productCard}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(user)/product",
+                        params: { id: product.id, businessId: product.businessId },
                     })
                   }
                 >
@@ -681,6 +693,7 @@ export default function UserHome() {
                     )}
                   </View>
                 </TouchableOpacity>
+                </Fragment>
               );
             })}
           </View>
@@ -1095,6 +1108,10 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "space-between",
     rowGap: 12,
+  },
+  adRow: {
+    width: "100%",
+    marginBottom: 0,
   },
   productCard: {
     width: "48.5%",
