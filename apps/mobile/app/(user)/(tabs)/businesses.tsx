@@ -38,22 +38,66 @@ function getBusinessStatus(business: Business): "open" | "paused" | "closed" {
 
 export default function UserBusinesses() {
   const insets = useSafeAreaInsets();
-  const { businesses, favoriteBusinessIds, toggleFavorite } = useUserApp();
+  const { businesses, featuredProducts, favoriteBusinessIds, toggleFavorite } = useUserApp();
   const [searchQuery, setSearchQuery] = useState("");
 
+  const productMatchesByBusiness = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const map = new Map<string, string[]>();
+    if (!query) return map;
+
+    featuredProducts.forEach((product) => {
+      const searchable = [
+        product.name,
+        product.category,
+        product.description ?? "",
+        ...(product.tags ?? []),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      if (!searchable.includes(query)) return;
+
+      const existing = map.get(product.businessId) ?? [];
+      if (!existing.includes(product.name)) {
+        existing.push(product.name);
+      }
+      map.set(product.businessId, existing);
+    });
+
+    return map;
+  }, [featuredProducts, searchQuery]);
+
   const filteredBusinesses = useMemo(
-    () =>
-      businesses.filter(
-        (item) =>
-          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.category.toLowerCase().includes(searchQuery.toLowerCase())
-      ),
-    [businesses, searchQuery]
+    () => {
+      const query = searchQuery.trim().toLowerCase();
+      return businesses
+        .filter((item) => {
+          if (!query) return true;
+          const matchesStore =
+            item.name.toLowerCase().includes(query) ||
+            item.category.toLowerCase().includes(query) ||
+            item.address.toLowerCase().includes(query);
+
+          return matchesStore || productMatchesByBusiness.has(item.id);
+        })
+        .sort((a, b) => {
+          if (!query) return Number(b.rating || 0) - Number(a.rating || 0);
+          const aItemHits = productMatchesByBusiness.get(a.id)?.length ?? 0;
+          const bItemHits = productMatchesByBusiness.get(b.id)?.length ?? 0;
+          if (aItemHits !== bItemHits) return bItemHits - aItemHits;
+          return Number(b.rating || 0) - Number(a.rating || 0);
+        });
+    },
+    [businesses, productMatchesByBusiness, searchQuery]
   );
 
   const renderItem = ({ item }: { item: Business }) => {
     const isFavorite = favoriteBusinessIds.includes(item.id);
     const bizStatus = getBusinessStatus(item);
+    const matchedItems = productMatchesByBusiness.get(item.id) ?? [];
+    const matchedPreview = matchedItems.slice(0, 2).join(", ");
+    const extraMatchedCount = Math.max(0, matchedItems.length - 2);
     return (
       <TouchableOpacity
         style={styles.card}
@@ -87,6 +131,11 @@ export default function UserBusinesses() {
               )}
             </View>
             <Text style={styles.address} numberOfLines={1}>{item.address}</Text>
+            {searchQuery.trim().length > 0 && matchedItems.length > 0 ? (
+              <Text style={styles.matchedItemsText} numberOfLines={1}>
+                Items: {matchedPreview}{extraMatchedCount > 0 ? ` +${extraMatchedCount} more` : ""}
+              </Text>
+            ) : null}
           </View>
         </View>
         <TouchableOpacity
@@ -119,7 +168,7 @@ export default function UserBusinesses() {
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search shops..."
+            placeholder="Search stores or items..."
             placeholderTextColor="#9CA3AF"
             style={styles.searchInput}
           />
@@ -276,6 +325,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontSize: 12,
     color: "#6B7280",
+  },
+  matchedItemsText: {
+    marginTop: 4,
+    fontSize: 11,
+    color: "#B91C1C",
+    fontWeight: "600",
   },
   favoriteBtn: {
     width: 36,

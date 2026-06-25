@@ -191,55 +191,68 @@ export default function UserOrders() {
               {STATUS_LABEL[item.status] ?? item.status}
             </Text>
           </View>
-          <View style={styles.rowBottomRight}>
-            <Text style={styles.paymentText}>
-              {item.paymentStatus === "cod"
-                ? "Cash on Delivery"
-                : item.paymentStatus === "completed"
-                ? "Paid"
-                : item.paymentStatus === "failed"
-                ? "Payment Failed"
-                : "Pending"}
-            </Text>
-            {canCancel ? (
-              <TouchableOpacity
-                style={styles.cancelBtn}
-                onPress={() => handleCancel(item.id)}
-              >
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-            ) : null}
-            {(item.status === OrderStatus.DELIVERED ||
-              item.status === OrderStatus.CANCELLED ||
-              (item.status as string) === "rejected") ? (
-              <TouchableOpacity
-                style={styles.reorderBtn}
-                onPress={() => handleReorder(item)}
-              >
-                <Ionicons name="refresh" size={12} color="#DC2626" />
-                <Text style={styles.reorderBtnText}>Reorder</Text>
-              </TouchableOpacity>
-            ) : null}
-            {item.status === OrderStatus.DELIVERED ? (
-              <TouchableOpacity
-                style={styles.rateBtn}
-                onPress={() => setRatingOrder(item)}
-              >
-                <Ionicons name="star-outline" size={12} color="#D97706" />
-                <Text style={styles.rateBtnText}>Rate</Text>
-              </TouchableOpacity>
-            ) : null}
-            {item.status === OrderStatus.DELIVERED && !(item as any).refundRequested ? (
-              <TouchableOpacity
-                style={styles.refundBtn}
-                onPress={() => setRefundOrder(item)}
-              >
-                <Ionicons name="return-up-back-outline" size={12} color="#7C3AED" />
-                <Text style={styles.refundBtnText}>Refund</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
+          <Text style={styles.paymentText}>
+            {item.paymentStatus === "cod"
+              ? "Cash on Delivery"
+              : item.paymentStatus === "completed"
+              ? "Paid"
+              : item.paymentStatus === "failed"
+              ? "Payment Failed"
+              : "Pending"}
+          </Text>
         </View>
+
+        {/* Action buttons */}
+        {(() => {
+          const isClosed =
+            item.status === OrderStatus.DELIVERED ||
+            item.status === OrderStatus.CANCELLED ||
+            (item.status as string) === "rejected";
+          const showReorder = isClosed;
+          const showRate = item.status === OrderStatus.DELIVERED;
+          const showRefund =
+            item.status === OrderStatus.DELIVERED && !(item as any).refundRequested;
+          if (!canCancel && !showReorder && !showRate && !showRefund) return null;
+          return (
+            <View style={styles.actionRow}>
+              {canCancel ? (
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => handleCancel(item.id)}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              ) : null}
+              {showReorder ? (
+                <TouchableOpacity
+                  style={styles.reorderBtn}
+                  onPress={() => handleReorder(item)}
+                >
+                  <Ionicons name="refresh" size={12} color="#DC2626" />
+                  <Text style={styles.reorderBtnText}>Reorder</Text>
+                </TouchableOpacity>
+              ) : null}
+              {showRate ? (
+                <TouchableOpacity
+                  style={styles.rateBtn}
+                  onPress={() => setRatingOrder(item)}
+                >
+                  <Ionicons name="star-outline" size={12} color="#D97706" />
+                  <Text style={styles.rateBtnText}>Rate</Text>
+                </TouchableOpacity>
+              ) : null}
+              {showRefund ? (
+                <TouchableOpacity
+                  style={styles.refundBtn}
+                  onPress={() => setRefundOrder(item)}
+                >
+                  <Ionicons name="return-up-back-outline" size={12} color="#7C3AED" />
+                  <Text style={styles.refundBtnText}>Refund</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          );
+        })()}
         {/* Show rejection reason if order was rejected */}
         {item.status === OrderStatus.REJECTED && (item as any).rejectionReason ? (
           <View style={styles.rejectionBanner}>
@@ -442,8 +455,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 10,
   },
-  rowBottomRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  actionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 10,
+  },
   statusBadge: {
     borderWidth: 1,
     paddingHorizontal: 10,
@@ -517,8 +537,7 @@ const styles = StyleSheet.create({
   },
   browseBtnText: { fontSize: 14, fontWeight: "800", color: "#FFFFFF" },
   rejectionBanner: {
-    marginHorizontal: 12,
-    marginBottom: 10,
+    marginTop: 10,
     backgroundColor: "#FEF2F2",
     borderRadius: 10,
     paddingHorizontal: 12,

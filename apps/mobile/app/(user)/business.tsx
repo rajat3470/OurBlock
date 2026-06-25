@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  SectionList,
+  ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
-  Dimensions,
+  Modal,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -17,14 +18,14 @@ import { useToast } from "react-native-toast-notifications";
 import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
 import { useFeatureFlags } from "../../src/hooks/useFeatureFlags";
 import { NativeAdCard } from "../../src/components/NativeAdCard";
-import { addItem, updateQuantity } from "../../src/store/slices/cartSlice";
+import { MenuSkeleton } from "../../src/components/Skeleton";
+import { PressableScale } from "../../src/components/PressableScale";
+import { addItem, clearCart, updateQuantity } from "../../src/store/slices/cartSlice";
 import { userAppService } from "../../src/services/userAppService";
-import { Business, Product } from "../../src/types";
+import { Business, Product, ProductAttribute } from "../../src/types";
 import { unitStepLabel, displayQuantity, maxCartSteps } from "../../src/utils/helpers";
 import { useUserApp } from "../../src/hooks/useUserApp";
-
-const SCREEN_WIDTH = Dimensions.get("window").width;
-const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
+import { ORDER_FEES } from "../../src/constants";
 
 const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
 
@@ -52,30 +53,123 @@ function getFirstImageUrl(images?: string[]) {
   return images?.find((url) => typeof url === "string" && url.trim().length > 0) ?? null;
 }
 
-type ListRow =
-  | { type: "ad"; id: string }
-  | { type: "row"; id: string; products: Product[] };
+type DietFilter = "all" | "veg" | "nonveg" | "bestseller";
+
+type MenuSection = { title: string; data: Product[] };
+
+const BESTSELLER_RE = /bestseller|recommended|popular/i;
+
+function isBestsellerProduct(product: Product) {
+  return (product.tags ?? []).some((tag) => BESTSELLER_RE.test(tag));
+}
+
+function groupAttributes(attributes?: ProductAttribute[]) {
+  const map = new Map<string, string[]>();
+  (attributes ?? []).forEach((attr) => {
+    const values = map.get(attr.name) ?? [];
+    if (!values.includes(attr.value)) values.push(attr.value);
+    map.set(attr.name, values);
+  });
+  return Array.from(map.entries()).map(([name, values]) => ({ name, values }));
+}
 
 export default function BusinessDetailScreen() {
   const toast = useToast();
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
-  const { id: businessId } = useLocalSearchParams<{ id: string }>();
+  const { id: businessId, highlightProductId } = useLocalSearchParams<{
+    id: string;
+    highlightProductId?: string;
+  }>();
+  const listRef = useRef<SectionList<Product, MenuSection>>(null);
 
   const cartItems = useAppSelector((state) => state.cart.items);
   const cartBusinessId = useAppSelector((state) => state.cart.businessId);
-  const cartCount = useAppSelector((state) => state.cart.items.reduce((acc, i) => acc + i.quantity, 0));
 
   const { businesses } = useUserApp();
-  const { isNativeListingEnabled, values: ffValues } = useFeatureFlags();
+  const { isNativeListingEnabled } = useFeatureFlags();
   const [business, setBusiness] = useState<Business | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dietFilter, setDietFilter] = useState<DietFilter>("all");
+  const [highlightId, setHighlightId] = useState<string | null>(highlightProductId ?? null);
+  const [customizeProduct, setCustomizeProduct] = useState<Product | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [customizeQty, setCustomizeQty] = useState(1);
 
   // Derive orderable status from business state
   const bizOrderStatus = business ? getBusinessOrderStatus(business) : "open";
   const isOrderable = bizOrderStatus === "open";
+
+  const minOrder =
+    business?.minimumOrderAmount && business.minimumOrderAmount > 0
+      ? business.minimumOrderAmount
+      : ORDER_FEES.MINIMUM_ORDER;
+
+  const bizCartItems = useMemo(
+    () => cartItems.filter((i) => i.businessId === businessId),
+    [cartItems, businessId]
+  );
+  const bizCartCount = bizCartItems.reduce((acc, i) => acc + i.quantity, 0);
+  const bizSubtotal = bizCartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
+
+  const hasVeg = useMemo(() => products.some((p) => p.isVeg === true), [products]);
+  const hasNonVeg = useMemo(() => products.some((p) => p.isVeg === false), [products]);
+  const hasBestseller = useMemo(() => products.some(isBestsellerProduct), [products]);
+
+  const filteredProducts = useMemo(() => {
+    if (dietFilter === "veg") return products.filter((p) => p.isVeg === true);
+    if (dietFilter === "nonveg") return products.filter((p) => p.isVeg === false);
+    if (dietFilter === "bestseller") return products.filter(isBestsellerProduct);
+    return products;
+  }, [products, dietFilter]);
+
+  const sections = useMemo<MenuSection[]>(() => {
+    const map = new Map<string, Product[]>();
+    filteredProducts.forEach((p) => {
+      const key =
+        (p.menuSection && p.menuSection.trim()) ||
+        (p.category && p.category.trim()) ||
+        "Menu";
+      const arr = map.get(key) ?? [];
+      arr.push(p);
+      map.set(key, arr);
+    });
+    return Array.from(map.entries()).map(([title, data]) => ({ title, data }));
+  }, [filteredProducts]);
+
+  useEffect(() => {
+    setHighlightId(highlightProductId ?? null);
+  }, [highlightProductId]);
+
+  useEffect(() => {
+    if (!highlightId || sections.length === 0) return;
+    let sectionIndex = -1;
+    let itemIndex = -1;
+    for (let s = 0; s < sections.length; s += 1) {
+      const idx = sections[s].data.findIndex((p) => p.id === highlightId);
+      if (idx >= 0) {
+        sectionIndex = s;
+        itemIndex = idx;
+        break;
+      }
+    }
+    if (sectionIndex < 0) return;
+    const scrollTimer = setTimeout(() => {
+      listRef.current?.scrollToLocation({
+        sectionIndex,
+        itemIndex,
+        viewPosition: 0.35,
+        animated: true,
+      });
+    }, 350);
+    const clearTimer = setTimeout(() => setHighlightId(null), 3200);
+    return () => {
+      clearTimeout(scrollTimer);
+      clearTimeout(clearTimer);
+    };
+  }, [highlightId, sections]);
 
   useEffect(() => {
     if (!businessId) return;
@@ -100,105 +194,236 @@ export default function BusinessDetailScreen() {
       });
   }, [businessId]);
 
-  const renderProduct = (product: Product) => {
+  const openCustomize = (product: Product) => {
+    const groups = groupAttributes(product.attributes);
+    const initial: Record<string, string> = {};
+    groups.forEach((group) => {
+      initial[group.name] = group.values[0];
+    });
+    setSelectedOptions(initial);
+    setCustomizeQty(1);
+    setCustomizeProduct(product);
+  };
+
+  const commitCustomize = () => {
+    const product = customizeProduct;
+    if (!product) return;
+    const imageUrl = getFirstImageUrl(product.imageUrls);
+    const maxSteps = maxCartSteps(product.stock, product.unit, product.unitStep);
+    const selectedAttributes = Object.entries(selectedOptions).map(([name, value]) => ({
+      name,
+      value,
+    }));
+    const run = () => {
+      dispatch(
+        addItem({
+          productId: product.id,
+          productName: product.name,
+          productImage: imageUrl,
+          businessId: product.businessId,
+          businessName: business?.name ?? "Local Store",
+          price: product.price,
+          quantity: customizeQty,
+          maxQuantity: maxSteps,
+          unit: product.unit,
+          unitStep: product.unitStep,
+          selectedAttributes: selectedAttributes.length ? selectedAttributes : undefined,
+        })
+      );
+      toast.show(`${product.name} added`, { type: "success" });
+      setCustomizeProduct(null);
+    };
+    if (cartBusinessId && cartBusinessId !== product.businessId) {
+      Alert.alert(
+        "Replace cart items?",
+        "Your cart has items from another shop. Continue to clear cart and add this item?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Yes, replace",
+            style: "destructive",
+            onPress: () => {
+              dispatch(clearCart());
+              run();
+            },
+          },
+        ]
+      );
+      return;
+    }
+    run();
+  };
+
+  const renderMenuItem = ({ item: product }: { item: Product }) => {
     const imageUrl = getFirstImageUrl(product.imageUrls);
     const qty = cartItems.find((i) => i.productId === product.id)?.quantity ?? 0;
     const discount = Number(product.discount || 0);
     const uLabel = unitStepLabel(product.unit, product.unitStep);
     const maxSteps = maxCartSteps(product.stock, product.unit, product.unitStep);
+    const bestseller = isBestsellerProduct(product);
+    const highlighted = product.id === highlightId;
+
+    function addProductToCart() {
+      dispatch(
+        addItem({
+          productId: product.id,
+          productName: product.name,
+          productImage: imageUrl,
+          businessId: product.businessId,
+          businessName: business?.name ?? "Local Store",
+          price: product.price,
+          quantity: 1,
+          maxQuantity: maxSteps,
+          unit: product.unit,
+          unitStep: product.unitStep,
+        })
+      );
+      toast.show(`${product.name} added`, { type: "success" });
+    }
+
+    function handleAddPress() {
+      if (cartBusinessId && cartBusinessId !== product.businessId) {
+        Alert.alert(
+          "Replace cart items?",
+          "Your cart has items from another shop. Continue to clear cart and add this item?",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Yes, replace",
+              style: "destructive",
+              onPress: () => {
+                dispatch(clearCart());
+                addProductToCart();
+              },
+            },
+          ]
+        );
+        return;
+      }
+      addProductToCart();
+    }
 
     return (
       <TouchableOpacity
-        style={styles.productCard}
+        style={[styles.menuItem, highlighted ? styles.menuItemHighlighted : null]}
+        activeOpacity={0.85}
         onPress={() =>
           router.push({
             pathname: "/(user)/product",
             params: { id: product.id, businessId: product.businessId },
           })
         }
-        activeOpacity={0.85}
       >
-        <View style={styles.productThumb}>
-          {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={styles.productThumbImage} contentFit="cover" />
-          ) : (
-            <View style={styles.productThumbFallback}>
-              <Text style={styles.fallbackEmoji}>🛍️</Text>
-            </View>
-          )}
-          {discount > 0 ? (
-            <View style={styles.discountPill}>
-              <Text style={styles.discountPillText}>{discount}% OFF</Text>
-            </View>
-          ) : null}
-          {product.stock <= 0 ? (
-            <View style={styles.outOfStockOverlay}>
-              <Text style={styles.outOfStockOverlayText}>Out of Stock</Text>
-            </View>
-          ) : null}
-        </View>
+        <View style={styles.menuItemLeft}>
+          <View style={styles.menuItemTagRow}>
+            {product.isVeg !== undefined ? (
+              <View
+                style={[
+                  styles.dietMark,
+                  { borderColor: product.isVeg ? "#16A34A" : "#DC2626" },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.dietDot,
+                    { backgroundColor: product.isVeg ? "#16A34A" : "#DC2626" },
+                  ]}
+                />
+              </View>
+            ) : null}
+            {bestseller ? (
+              <View style={styles.bestsellerPill}>
+                <Text style={styles.bestsellerText}>★ Bestseller</Text>
+              </View>
+            ) : null}
+          </View>
 
-        <View style={styles.productBody}>
-          <Text style={styles.productName} numberOfLines={2}>
+          <Text style={styles.menuItemName} numberOfLines={2}>
             {product.name}
           </Text>
-          <View style={styles.productPriceRow}>
-            <Text style={styles.productPrice}>
+
+          <View style={styles.menuItemPriceRow}>
+            <Text style={styles.menuItemPrice}>
               Rs {product.price}{uLabel ? `/${uLabel}` : ""}
             </Text>
             {product.originalPrice && product.originalPrice > product.price ? (
-              <Text style={styles.productOriginalPrice}>Rs {product.originalPrice}</Text>
+              <Text style={styles.menuItemOriginalPrice}>Rs {product.originalPrice}</Text>
+            ) : null}
+            {discount > 0 ? (
+              <Text style={styles.menuItemDiscount}>{discount}% OFF</Text>
+            ) : null}
+          </View>
+
+          {product.description ? (
+            <Text style={styles.menuItemDesc} numberOfLines={2}>
+              {product.description}
+            </Text>
+          ) : null}
+        </View>
+
+        <View style={styles.menuItemRight}>
+          <View style={styles.menuItemImageWrap}>
+            {imageUrl ? (
+              <Image source={{ uri: imageUrl }} style={styles.menuItemImage} contentFit="cover" />
+            ) : (
+              <View style={styles.menuItemImageFallback}>
+                <Text style={styles.menuItemFallbackEmoji}>🛍️</Text>
+              </View>
+            )}
+            {product.stock <= 0 ? (
+              <View style={styles.menuItemOosOverlay}>
+                <Text style={styles.menuItemOosText}>Out of Stock</Text>
+              </View>
             ) : null}
           </View>
 
           {maxSteps > 0 && isOrderable ? (
             qty === 0 ? (
-              <TouchableOpacity
-                style={styles.addCartBtn}
+              <PressableScale
+                style={styles.menuAddBtn}
+                accessibilityRole="button"
+                accessibilityLabel={`Add ${product.name} to cart`}
                 onPress={(e) => {
                   e.stopPropagation();
-                  if (cartBusinessId && cartBusinessId !== product.businessId) {
-                    toast.show("Adding this will clear your existing cart", { type: "warning" });
+                  if (product.attributes && product.attributes.length > 0) {
+                    openCustomize(product);
+                  } else {
+                    handleAddPress();
                   }
-                  dispatch(
-                    addItem({
-                      productId: product.id,
-                      productName: product.name,
-                      productImage: imageUrl,
-                      businessId: product.businessId,
-                      businessName: business?.name ?? "Local Store",
-                      price: product.price,
-                      quantity: 1,
-                      maxQuantity: maxSteps,
-                      unit: product.unit,
-                      unitStep: product.unitStep,
-                    })
-                  );
-                  toast.show(`${product.name} added`, { type: "success" });
                 }}
               >
-                <Text style={styles.addCartBtnText}>Add</Text>
-              </TouchableOpacity>
+                <Text style={styles.menuAddBtnText}>ADD</Text>
+                <Text style={styles.menuAddPlus}>+</Text>
+              </PressableScale>
             ) : (
-              <View style={styles.miniQtyRow}>
+              <View style={styles.menuQtyRow}>
                 <TouchableOpacity
-                  style={styles.miniQtyBtn}
+                  style={styles.menuQtyBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Decrease quantity of ${product.name}`}
                   onPress={(e) => {
                     e.stopPropagation();
                     dispatch(updateQuantity({ productId: product.id, quantity: qty - 1 }));
                   }}
                 >
-                  <Text style={styles.miniQtyBtnText}>−</Text>
+                  <Text style={styles.menuQtyBtnText}>−</Text>
                 </TouchableOpacity>
-                <Text style={styles.miniQtyCount}>{displayQuantity(qty, product.unit, product.unitStep)}</Text>
+                <Text
+                  style={styles.menuQtyCount}
+                  accessibilityLabel={`Quantity ${displayQuantity(qty, product.unit, product.unitStep)}`}
+                >
+                  {displayQuantity(qty, product.unit, product.unitStep)}
+                </Text>
                 <TouchableOpacity
-                  style={styles.miniQtyBtn}
+                  style={styles.menuQtyBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Increase quantity of ${product.name}`}
                   onPress={(e) => {
                     e.stopPropagation();
                     if (qty >= maxSteps) {
                       toast.show(
                         product.unit && product.unit !== "piece"
-                          ? `Only ${unitStepLabel(product.unit, product.unitStep) ? `${product.stock}${product.unit}` : product.stock} available`
+                          ? `Only ${product.stock}${product.unit} available`
                           : `Only ${product.stock} available`,
                         { type: "warning" }
                       );
@@ -207,41 +432,13 @@ export default function BusinessDetailScreen() {
                     dispatch(updateQuantity({ productId: product.id, quantity: qty + 1 }));
                   }}
                 >
-                  <Text style={styles.miniQtyBtnText}>+</Text>
+                  <Text style={styles.menuQtyBtnText}>+</Text>
                 </TouchableOpacity>
               </View>
             )
           ) : null}
         </View>
       </TouchableOpacity>
-    );
-  };
-
-  const displayRows = useMemo<ListRow[]>(() => {
-    if (products.length === 0) return [];
-    const density = isNativeListingEnabled ? ffValues.adsDensityEveryNthCard : 0;
-    const rows: ListRow[] = [];
-    let count = 0;
-    for (let i = 0; i < products.length; i += 2) {
-      if (density > 0 && count > 0 && count % density === 0) {
-        rows.push({ type: "ad", id: `ad-${i}` });
-      }
-      const pair = products.slice(i, i + 2);
-      rows.push({ type: "row", id: products[i].id, products: pair });
-      count += pair.length;
-    }
-    return rows;
-  }, [products, isNativeListingEnabled, ffValues.adsDensityEveryNthCard]);
-
-  const renderRow = ({ item }: { item: ListRow }) => {
-    if (item.type === "ad") {
-      return <NativeAdCard style={{ marginHorizontal: 16, marginBottom: 12 }} />;
-    }
-    return (
-      <View style={styles.columnWrapper}>
-        {item.products.map((p) => renderProduct(p))}
-        {item.products.length === 1 ? <View style={{ width: CARD_WIDTH }} /> : null}
-      </View>
     );
   };
 
@@ -259,12 +456,12 @@ export default function BusinessDetailScreen() {
           <Text style={styles.headerTitle} numberOfLines={1}>
             {business?.name ?? "Shop"}
           </Text>
-          {cartCount > 0 ? (
+          {bizCartCount > 0 ? (
             <TouchableOpacity
               style={styles.cartBadgeBtn}
               onPress={() => router.push("/(user)/cart")}
             >
-              <Text style={styles.cartBadgeText}>{cartCount}</Text>
+              <Text style={styles.cartBadgeText}>{bizCartCount}</Text>
             </TouchableOpacity>
           ) : (
             <View style={{ width: 64 }} />
@@ -320,12 +517,47 @@ export default function BusinessDetailScreen() {
         </View>
       ) : null}
 
+      {/* Diet / bestseller filter bar */}
+      {!isLoading && !error && products.length > 0 ? (
+        <View style={styles.filterBarWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterBar}
+          >
+            {(
+              [
+                { key: "all", label: "All" },
+                ...(hasVeg ? [{ key: "veg", label: "\ud83d\udfe2 Veg" }] : []),
+                ...(hasNonVeg ? [{ key: "nonveg", label: "\ud83d\udd34 Non-veg" }] : []),
+                ...(hasBestseller ? [{ key: "bestseller", label: "\u2605 Bestseller" }] : []),
+              ] as { key: DietFilter; label: string }[]
+            ).map((chip) => {
+              const active = dietFilter === chip.key;
+              return (
+                <TouchableOpacity
+                  key={chip.key}
+                  style={[styles.filterChip, active ? styles.filterChipActive : null]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={`Filter: ${chip.label}`}
+                  onPress={() => setDietFilter(chip.key)}
+                >
+                  <Text
+                    style={[styles.filterChipText, active ? styles.filterChipTextActive : null]}
+                  >
+                    {chip.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
+
       {/* Products */}
       {isLoading ? (
-        <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color="#DC2626" />
-          <Text style={styles.stateText}>Loading products...</Text>
-        </View>
+        <MenuSkeleton rows={6} />
       ) : error ? (
         <View style={styles.centeredState}>
           <Text style={styles.errorText}>{error}</Text>
@@ -354,37 +586,182 @@ export default function BusinessDetailScreen() {
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={displayRows}
+        <SectionList
+          ref={listRef}
+          sections={sections}
           keyExtractor={(item) => item.id}
-          renderItem={renderRow}
-          contentContainerStyle={[
-            styles.listContent,
-            { paddingBottom: insets.bottom + 16 },
-          ]}
+          renderItem={renderMenuItem}
+          onScrollToIndexFailed={() => {}}
+          renderSectionHeader={({ section }) => (
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionHeaderTitle}>{section.title}</Text>
+              <Text style={styles.sectionHeaderCount}>{section.data.length}</Text>
+            </View>
+          )}
+          ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+          stickySectionHeadersEnabled
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <Text style={styles.productsHeader}>
-              {products.length} item{products.length !== 1 ? "s" : ""}
-            </Text>
+          contentContainerStyle={{
+            paddingBottom: insets.bottom + (bizCartCount > 0 ? 110 : 24),
+          }}
+          ListEmptyComponent={
+            <View style={styles.centeredState}>
+              <Text style={styles.emptyEmoji}>🔍</Text>
+              <Text style={styles.emptyTitle}>No items match</Text>
+              <Text style={styles.emptySubtitle}>Try a different filter.</Text>
+            </View>
+          }
+          ListFooterComponent={
+            isNativeListingEnabled ? (
+              <NativeAdCard style={{ marginHorizontal: 16, marginTop: 12 }} />
+            ) : null
           }
         />
       )}
+
+      {/* Sticky View Cart bar */}
+      {bizCartCount > 0 ? (
+        <View style={[styles.cartBar, { paddingBottom: insets.bottom + 10 }]}>
+          {bizSubtotal < minOrder ? (
+            <View style={styles.cartBarNotice}>
+              <Text style={styles.cartBarNoticeText}>
+                Add Rs {minOrder - bizSubtotal} more to reach the Rs {minOrder} minimum
+              </Text>
+            </View>
+          ) : null}
+          <View style={styles.cartBarRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cartBarCount}>
+                {bizCartCount} item{bizCartCount !== 1 ? "s" : ""} · Rs {bizSubtotal}
+              </Text>
+              <Text style={styles.cartBarSub} numberOfLines={1}>
+                {business?.name ?? "Your store"}
+              </Text>
+            </View>
+            <PressableScale
+              style={styles.cartBarBtn}
+              accessibilityRole="button"
+              accessibilityLabel={`View cart, ${bizCartCount} item${bizCartCount !== 1 ? "s" : ""}, total Rs ${bizSubtotal}`}
+              onPress={() => router.push("/(user)/cart")}
+            >
+              <Text style={styles.cartBarBtnText}>View Cart</Text>
+              <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+            </PressableScale>
+          </View>
+        </View>
+      ) : null}
+
+      <Modal
+        visible={customizeProduct !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCustomizeProduct(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setCustomizeProduct(null)}
+          />
+          <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 16 }]}>
+            {customizeProduct ? (
+              <>
+                <View style={styles.modalHeaderRow}>
+                  <Text style={styles.modalTitle} numberOfLines={1}>
+                    {customizeProduct.name}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setCustomizeProduct(null)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close customization"
+                  >
+                    <Ionicons name="close" size={22} color="#6B7280" />
+                  </TouchableOpacity>
+                </View>
+                {customizeProduct.description ? (
+                  <Text style={styles.modalDesc} numberOfLines={2}>
+                    {customizeProduct.description}
+                  </Text>
+                ) : null}
+                <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+                  {groupAttributes(customizeProduct.attributes).map((group) => (
+                    <View key={group.name} style={styles.optionGroup}>
+                      <Text style={styles.optionGroupTitle}>{group.name}</Text>
+                      <View style={styles.optionChipsRow}>
+                        {group.values.map((value) => {
+                          const active = selectedOptions[group.name] === value;
+                          return (
+                            <TouchableOpacity
+                              key={value}
+                              style={[styles.optionChip, active ? styles.optionChipActive : null]}
+                              accessibilityRole="radio"
+                              accessibilityState={{ selected: active }}
+                              accessibilityLabel={`${group.name}: ${value}`}
+                              onPress={() =>
+                                setSelectedOptions((prev) => ({ ...prev, [group.name]: value }))
+                              }
+                            >
+                              <Text
+                                style={[
+                                  styles.optionChipText,
+                                  active ? styles.optionChipTextActive : null,
+                                ]}
+                              >
+                                {value}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+                <View style={styles.modalFooter}>
+                  <View style={styles.modalQtyRow}>
+                    <TouchableOpacity
+                      style={styles.modalQtyBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel="Decrease quantity"
+                      onPress={() => setCustomizeQty((q) => Math.max(1, q - 1))}
+                    >
+                      <Text style={styles.modalQtyBtnText}>−</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.modalQtyCount} accessibilityLabel={`Quantity ${customizeQty}`}>
+                      {customizeQty}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.modalQtyBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel="Increase quantity"
+                      onPress={() => setCustomizeQty((q) => q + 1)}
+                    >
+                      <Text style={styles.modalQtyBtnText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <PressableScale
+                    style={styles.modalAddBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Add ${customizeProduct.name} to cart, Rs ${customizeProduct.price * customizeQty}`}
+                    onPress={commitCustomize}
+                  >
+                    <Text style={styles.modalAddBtnText}>
+                      Add Item · Rs {customizeProduct.price * customizeQty}
+                    </Text>
+                  </PressableScale>
+                </View>
+              </>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F7F8FA" },
-  header: {
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
+  header: { paddingHorizontal: 16, paddingBottom: 14 },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   backBtn: {
     width: 36,
     height: 36,
@@ -393,12 +770,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  headerTitle: {
-    flex: 1,
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
+  headerTitle: { flex: 1, fontSize: 17, fontWeight: "700", color: "#FFFFFF" },
   cartBadgeBtn: {
     backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 20,
@@ -428,10 +800,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     flexShrink: 1,
   },
-  bannerImage: {
-    width: "100%",
-    height: 160,
-  },
+  bannerImage: { width: "100%", height: 150 },
   orderNoticeBanner: {
     backgroundColor: "#FEF3C7",
     borderLeftWidth: 4,
@@ -439,15 +808,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
   },
-  orderNoticeClosedBanner: {
-    backgroundColor: "#FEE2E2",
-    borderLeftColor: "#DC2626",
-  },
-  orderNoticeText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#92400E",
-  },
+  orderNoticeClosedBanner: { backgroundColor: "#FEE2E2", borderLeftColor: "#DC2626" },
+  orderNoticeText: { fontSize: 13, fontWeight: "600", color: "#92400E" },
   centeredState: {
     flex: 1,
     alignItems: "center",
@@ -468,105 +830,272 @@ const styles = StyleSheet.create({
   emptyEmoji: { fontSize: 48 },
   emptyTitle: { fontSize: 18, fontWeight: "700", color: "#111827" },
   emptySubtitle: { fontSize: 14, color: "#6B7280", textAlign: "center" },
-  productsHeader: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#6B7280",
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 4,
-  },
-  columnWrapper: { flexDirection: "row", gap: 12, marginBottom: 12 },
-  productCard: {
-    width: CARD_WIDTH,
+
+  filterBarWrap: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
   },
-  productThumb: {
-    width: "100%",
-    height: 140,
+  filterBar: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  filterChip: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     backgroundColor: "#F3F4F6",
-    position: "relative",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
-  productThumbImage: { width: "100%", height: "100%" },
-  productThumbFallback: {
-    flex: 1,
+  filterChipActive: { backgroundColor: "#FEF2F2", borderColor: "#DC2626" },
+  filterChipText: { fontSize: 12.5, fontWeight: "700", color: "#374151" },
+  filterChipTextActive: { color: "#DC2626" },
+
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#F7F8FA",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  sectionHeaderTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#111827",
+    letterSpacing: -0.2,
+  },
+  sectionHeaderCount: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#9CA3AF",
+    backgroundColor: "#EEF0F3",
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+  },
+  itemSeparator: { height: 1, backgroundColor: "#F0F1F3", marginHorizontal: 16 },
+
+  menuItem: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  menuItemHighlighted: {
+    backgroundColor: "#FEF2F2",
+    borderLeftWidth: 3,
+    borderLeftColor: "#DC2626",
+  },
+  menuItemLeft: { flex: 1, paddingRight: 4 },
+  menuItemTagRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+    minHeight: 18,
+  },
+  dietMark: {
+    width: 16,
+    height: 16,
+    borderRadius: 3,
+    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
   },
-  fallbackEmoji: { fontSize: 44 },
-  discountPill: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    backgroundColor: "#EF4444",
+  dietDot: { width: 7, height: 7, borderRadius: 3.5 },
+  bestsellerPill: {
+    backgroundColor: "#FEF3C7",
     borderRadius: 6,
-    paddingHorizontal: 6,
+    paddingHorizontal: 7,
     paddingVertical: 2,
   },
-  discountPillText: { fontSize: 11, fontWeight: "800", color: "#FFFFFF" },
-  outOfStockOverlay: {
+  bestsellerText: { fontSize: 10.5, fontWeight: "800", color: "#B45309" },
+  menuItemName: { fontSize: 15.5, fontWeight: "700", color: "#111827", lineHeight: 21 },
+  menuItemPriceRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 5 },
+  menuItemPrice: { fontSize: 14, fontWeight: "800", color: "#111827" },
+  menuItemOriginalPrice: {
+    fontSize: 12.5,
+    color: "#9CA3AF",
+    textDecorationLine: "line-through",
+  },
+  menuItemDiscount: { fontSize: 11.5, fontWeight: "800", color: "#16A34A" },
+  menuItemDesc: { marginTop: 6, fontSize: 12.5, color: "#6B7280", lineHeight: 18 },
+
+  menuItemRight: { width: 116, alignItems: "center" },
+  menuItemImageWrap: {
+    width: 116,
+    height: 116,
+    borderRadius: 14,
+    overflow: "hidden",
+    backgroundColor: "#F3F4F6",
+  },
+  menuItemImage: { width: "100%", height: "100%" },
+  menuItemImageFallback: { flex: 1, alignItems: "center", justifyContent: "center" },
+  menuItemFallbackEmoji: { fontSize: 40 },
+  menuItemOosOverlay: {
     position: "absolute",
     inset: 0,
     backgroundColor: "rgba(0,0,0,0.45)",
     alignItems: "center",
     justifyContent: "center",
   },
-  outOfStockOverlayText: {
-    fontSize: 13,
-    fontWeight: "700",
+  menuItemOosText: {
+    fontSize: 12,
+    fontWeight: "800",
     color: "#FFFFFF",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
-  productBody: { padding: 10 },
-  productName: { fontSize: 13, fontWeight: "600", color: "#111827", marginBottom: 4, lineHeight: 18 },
-  productPriceRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
-  productPrice: { fontSize: 14, fontWeight: "800", color: "#DC2626" },
-  productOriginalPrice: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    textDecorationLine: "line-through",
-  },
-  addCartBtn: {
-    backgroundColor: "#DC2626",
-    borderRadius: 8,
-    paddingVertical: 7,
+  menuAddBtn: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+    marginTop: -18,
+    minWidth: 100,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#DC2626",
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  addCartBtnText: { fontSize: 13, fontWeight: "700", color: "#FFFFFF" },
-  miniQtyRow: {
+  menuAddBtnText: { fontSize: 14, fontWeight: "800", color: "#DC2626", letterSpacing: 0.5 },
+  menuAddPlus: { fontSize: 14, fontWeight: "800", color: "#DC2626" },
+  menuQtyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: -18,
+    minWidth: 100,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#DC2626",
+    borderRadius: 10,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  menuQtyBtn: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#FEF2F2" },
+  menuQtyBtnText: { fontSize: 16, fontWeight: "800", color: "#DC2626" },
+  menuQtyCount: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#111827",
+  },
+
+  cartBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  cartBarNotice: {
+    backgroundColor: "#FEF2F2",
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    marginBottom: 8,
+  },
+  cartBarNoticeText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#991B1B",
+    textAlign: "center",
+  },
+  cartBarRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  cartBarCount: { fontSize: 15, fontWeight: "800", color: "#111827" },
+  cartBarSub: { fontSize: 11.5, color: "#6B7280", marginTop: 1 },
+  cartBarBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#DC2626",
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  cartBarBtnText: { fontSize: 15, fontWeight: "800", color: "#FFFFFF" },
+
+  modalOverlay: { flex: 1, justifyContent: "flex-end" },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
+  modalSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+  },
+  modalHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  modalTitle: { flex: 1, fontSize: 18, fontWeight: "800", color: "#111827" },
+  modalDesc: { marginTop: 6, fontSize: 13, color: "#6B7280", lineHeight: 19 },
+  optionGroup: { marginTop: 16 },
+  optionGroupTitle: { fontSize: 13.5, fontWeight: "800", color: "#111827", marginBottom: 8 },
+  optionChipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  optionChip: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  optionChipActive: { backgroundColor: "#FEF2F2", borderColor: "#DC2626" },
+  optionChipText: { fontSize: 13, fontWeight: "700", color: "#374151" },
+  optionChipTextActive: { color: "#DC2626" },
+  modalFooter: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 18 },
+  modalQtyRow: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
     borderColor: "#DC2626",
-    borderRadius: 8,
+    borderRadius: 12,
     overflow: "hidden",
   },
-  miniQtyBtn: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 6,
-    backgroundColor: "#FEF2F2",
-  },
-  miniQtyBtnText: { fontSize: 16, fontWeight: "700", color: "#DC2626" },
-  miniQtyCount: {
-    flex: 1,
+  modalQtyBtn: { paddingHorizontal: 14, paddingVertical: 11, backgroundColor: "#FEF2F2" },
+  modalQtyBtnText: { fontSize: 17, fontWeight: "800", color: "#DC2626" },
+  modalQtyCount: {
+    minWidth: 36,
     textAlign: "center",
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "800",
     color: "#111827",
   },
+  modalAddBtn: {
+    flex: 1,
+    backgroundColor: "#DC2626",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  modalAddBtnText: { fontSize: 15, fontWeight: "800", color: "#FFFFFF" },
 });

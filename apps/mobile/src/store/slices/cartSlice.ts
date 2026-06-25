@@ -11,6 +11,7 @@ export interface CartItem {
   maxQuantity: number;
   unit?: string;      // "piece" | "g" | "kg" | "ml" | "L" — for display
   unitStep?: number;  // purchasable increment in that unit
+  selectedAttributes?: { name: string; value: string }[]; // chosen customization options
 }
 
 interface CartState {
@@ -29,10 +30,9 @@ const cartSlice = createSlice({
   reducers: {
     addItem(state, action: PayloadAction<CartItem>) {
       const item = action.payload;
-      // If cart belongs to a different business, clear it first
+      // Cart stays locked to one business; UI should confirm before clearing.
       if (state.businessId && state.businessId !== item.businessId) {
-        state.items = [];
-        state.businessId = null;
+        return;
       }
       state.businessId = item.businessId;
 

@@ -32,7 +32,7 @@ export default function CheckoutScreen() {
   const toast = useToast();
   const cartItems = useAppSelector((state) => state.cart.items);
   const cartBusinessId = useAppSelector((state) => state.cart.businessId);
-  const { placeOrder, isLoading } = useUserApp();
+  const { placeOrder, isLoading, businesses } = useUserApp();
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
@@ -109,8 +109,10 @@ export default function CheckoutScreen() {
       toast.show("Cart is empty", { type: "warning" });
       return;
     }
-    if (subTotal < MINIMUM_ORDER) {
-      toast.show(`Minimum order is Rs ${MINIMUM_ORDER}`, { type: "warning" });
+    const storeMin = businesses.find((b) => b.id === cartBusinessId)?.minimumOrderAmount;
+    const minOrder = storeMin && storeMin > 0 ? storeMin : MINIMUM_ORDER;
+    if (subTotal < minOrder) {
+      toast.show(`Minimum order is Rs ${minOrder}`, { type: "warning" });
       return;
     }
 

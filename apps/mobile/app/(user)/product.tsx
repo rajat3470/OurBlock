@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -14,7 +15,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import { useToast } from "react-native-toast-notifications";
 import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
-import { addItem, updateQuantity } from "../../src/store/slices/cartSlice";
+import { addItem, clearCart, updateQuantity } from "../../src/store/slices/cartSlice";
 import { userAppService } from "../../src/services/userAppService";
 import { Product, Business } from "../../src/types";
 import { unitStepLabel, displayQuantity, maxCartSteps, stockBadgeInfo } from "../../src/utils/helpers";
@@ -108,32 +109,47 @@ export default function ProductDetailScreen() {
   const maxSteps = product ? maxCartSteps(product.stock, product.unit, product.unitStep) : 0;
   const uLabel = product ? unitStepLabel(product.unit, product.unitStep) : "";
 
+  function addCurrentProductToCart(targetProduct: Product) {
+    dispatch(
+      addItem({
+        productId: targetProduct.id,
+        productName: targetProduct.name,
+        productImage: getFirstImageUrl(targetProduct.imageUrls),
+        businessId: targetProduct.businessId,
+        businessName: business?.name ?? "Local Store",
+        price: targetProduct.price,
+        quantity: 1,
+        maxQuantity: maxCartSteps(targetProduct.stock, targetProduct.unit, targetProduct.unitStep),
+        unit: targetProduct.unit,
+        unitStep: targetProduct.unitStep,
+      })
+    );
+    toast.show(`${targetProduct.name} added to cart`, { type: "success" });
+  }
+
   function handleAddToCart() {
     if (!product) return;
 
-    // If cart has items from a different business, warn
     if (cartBusinessId && cartBusinessId !== product.businessId) {
-      toast.show(
-        "Your cart has items from another shop. Adding this will clear the cart.",
-        { type: "warning", duration: 3000 }
+      Alert.alert(
+        "Replace cart items?",
+        "Your cart has items from another shop. Continue to clear cart and add this item?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Yes, replace",
+            style: "destructive",
+            onPress: () => {
+              dispatch(clearCart());
+              addCurrentProductToCart(product);
+            },
+          },
+        ]
       );
+      return;
     }
 
-    dispatch(
-      addItem({
-        productId: product.id,
-        productName: product.name,
-        productImage: getFirstImageUrl(product.imageUrls),
-        businessId: product.businessId,
-        businessName: business?.name ?? "Local Store",
-        price: product.price,
-        quantity: 1,
-        maxQuantity: maxSteps,
-        unit: product.unit,
-        unitStep: product.unitStep,
-      })
-    );
-    toast.show(`${product.name} added to cart`, { type: "success" });
+    addCurrentProductToCart(product);
   }
 
   function handleIncrease() {

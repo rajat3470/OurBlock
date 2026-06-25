@@ -18,15 +18,20 @@ const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
 export default function CartScreen() {
   const dispatch = useAppDispatch();
   const cartItems = useAppSelector((state) => state.cart.items);
+  const cartBusinessId = useAppSelector((state) => state.cart.businessId);
+  const businesses = useAppSelector((state) => state.userApp.businesses);
   const insets = useSafeAreaInsets();
 
   const { isRewardedEnabled, values: ffValues } = useFeatureFlags();
   const { adState, showRewardedAd } = useRewardedAd();
   const [adReward, setAdReward] = useState<{ couponCode: string; discountAmount: number } | null>(null);
 
+  const storeMin = businesses.find((b) => b.id === cartBusinessId)?.minimumOrderAmount;
+  const MIN_ORDER = storeMin && storeMin > 0 ? storeMin : MINIMUM_ORDER;
+
   const subTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const finalAmount = subTotal + PLATFORM_FEE;
-  const canCheckout = cartItems.length > 0 && subTotal >= MINIMUM_ORDER;
+  const canCheckout = cartItems.length > 0 && subTotal >= MIN_ORDER;
 
   async function handleWatchAd() {
     const earned = await showRewardedAd();
@@ -111,6 +116,11 @@ export default function CartScreen() {
                 </View>
                 <View style={styles.itemDetails}>
                   <Text style={styles.itemName} numberOfLines={2}>{item.productName}</Text>
+                  {item.selectedAttributes && item.selectedAttributes.length > 0 ? (
+                    <Text style={styles.itemOptions} numberOfLines={1}>
+                      {item.selectedAttributes.map((a) => a.value).join(", ")}
+                    </Text>
+                  ) : null}
                   <Text style={styles.itemPrice}>Rs {item.price} × {displayQuantity(item.quantity, item.unit, item.unitStep)}</Text>
                   <Text style={styles.itemLineTotal}>Rs {item.price * item.quantity}</Text>
                 </View>
@@ -131,10 +141,10 @@ export default function CartScreen() {
               </View>
             ))}
 
-            {subTotal < MINIMUM_ORDER ? (
+            {subTotal < MIN_ORDER ? (
               <View style={styles.minOrderWarn}>
                 <Ionicons name="information-circle-outline" size={14} color="#991B1B" />
-                <Text style={styles.minOrderWarnText}>Add Rs {MINIMUM_ORDER - subTotal} more to reach the Rs {MINIMUM_ORDER} minimum.</Text>
+                <Text style={styles.minOrderWarnText}>Add Rs {MIN_ORDER - subTotal} more to reach the Rs {MIN_ORDER} minimum.</Text>
               </View>
             ) : null}
 
@@ -238,6 +248,7 @@ const styles = StyleSheet.create({
   itemImageFallback: { width: 72, height: 72, alignItems: "center", justifyContent: "center", backgroundColor: "#DC2626", borderRadius: 10 },
   itemDetails: { flex: 1, gap: 4 },
   itemName: { fontSize: 14, fontWeight: "700", color: "#111827" },
+  itemOptions: { fontSize: 11.5, color: "#9CA3AF", marginTop: 1 },
   itemPrice: { fontSize: 12, color: "#6B7280" },
   itemLineTotal: { fontSize: 15, fontWeight: "800", color: "#DC2626" },
   itemActions: { alignItems: "flex-end", gap: 8 },
