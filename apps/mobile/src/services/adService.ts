@@ -1,5 +1,4 @@
 import { Platform } from "react-native";
-import mobileAds, { MaxAdContentRating } from "react-native-google-mobile-ads";
 
 // Replace with your real AdMob ad unit IDs before going to production.
 // These are Google's official test ad unit IDs.
@@ -12,10 +11,21 @@ export function getRewardedAdUnitId(): string {
   return Platform.OS === "ios" ? AD_UNITS.REWARDED_IOS : AD_UNITS.REWARDED_ANDROID;
 }
 
+async function loadAdsModule() {
+  try {
+    return await import("react-native-google-mobile-ads");
+  } catch (error) {
+    return null;
+  }
+}
+
 export async function initializeMobileAds(): Promise<void> {
-  await mobileAds().initialize();
-  await mobileAds().setRequestConfiguration({
-    maxAdContentRating: MaxAdContentRating.PG,
+  const mobileAds = await loadAdsModule();
+  if (!mobileAds) return;
+
+  await mobileAds.default().initialize();
+  await mobileAds.default().setRequestConfiguration({
+    maxAdContentRating: mobileAds.MaxAdContentRating.PG,
     tagForChildDirectedTreatment: false,
     tagForUnderAgeOfConsent: false,
   });

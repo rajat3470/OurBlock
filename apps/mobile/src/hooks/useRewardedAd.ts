@@ -1,13 +1,15 @@
 import { useState, useCallback } from "react";
-import {
-  RewardedAd,
-  RewardedAdEventType,
-  AdEventType,
-  TestIds,
-} from "react-native-google-mobile-ads";
 import { getRewardedAdUnitId } from "../services/adService";
 
-export type RewardedAdState = "idle" | "loading" | "showing" | "error";
+export type RewardedAdState = "idle" | "loading" | "showing" | "error" | "unsupported";
+
+async function loadAdsModule() {
+  try {
+    return await import("react-native-google-mobile-ads");
+  } catch (error) {
+    return null;
+  }
+}
 
 /**
  * Loads and shows a rewarded ad.
@@ -18,9 +20,17 @@ export function useRewardedAd() {
   const [adState, setAdState] = useState<RewardedAdState>("idle");
 
   const showRewardedAd = useCallback((): Promise<boolean> => {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
       setAdState("loading");
 
+      const adsModule = await loadAdsModule();
+      if (!adsModule) {
+        setAdState("unsupported");
+        resolve(false);
+        return;
+      }
+
+      const { RewardedAd, RewardedAdEventType, AdEventType, TestIds } = adsModule;
       const adUnitId = __DEV__ ? TestIds.REWARDED : getRewardedAdUnitId();
       const rewarded = RewardedAd.createForAdRequest(adUnitId, {
         requestNonPersonalizedAdsOnly: false,

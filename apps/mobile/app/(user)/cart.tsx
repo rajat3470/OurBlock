@@ -138,7 +138,7 @@ export default function CartScreen() {
               </View>
             ) : null}
 
-            {isRewardedEnabled && !adReward && (
+            {isRewardedEnabled && !adReward && adState !== "unsupported" && (
               <TouchableOpacity
                 style={styles.adRewardBanner}
                 onPress={handleWatchAd}
