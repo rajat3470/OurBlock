@@ -1,10 +1,14 @@
 
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import RoleLoginForm from "../../src/components/RoleLoginForm";
+import BackButton from "../../src/components/BackButton";
 import { colors } from "../../src/constants/theme";
 
 export default function BusinessOwnerLoginScreen() {
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.wrapper}>
       <RoleLoginForm
@@ -24,6 +28,9 @@ export default function BusinessOwnerLoginScreen() {
           <Text style={styles.registerLink}>Create an account</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Back button rendered last so it captures touches above everything */}
+      <BackButton top={insets.top + 12} />
     </View>
   );
 }

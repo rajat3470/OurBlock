@@ -15,10 +15,12 @@ import {
   FlatList,
 } from "react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../src/hooks/useAuth";
 import { societyService } from "../../src/services/societyService";
 import { Society } from "../../src/types/index";
 import { colors } from "../../src/constants/theme";
+import BackButton from "../../src/components/BackButton";
 
 const BUSINESS_CATEGORIES = [
   { label: "🛒  Grocery", value: "grocery" },
@@ -54,6 +56,7 @@ const EMPTY_FORM: RegisterForm = {
 };
 
 export default function BusinessOwnerRegisterScreen() {
+  const insets = useSafeAreaInsets();
   const { register } = useAuth();
 
   const [form, setForm] = useState<RegisterForm>(EMPTY_FORM);
@@ -554,6 +557,9 @@ export default function BusinessOwnerRegisterScreen() {
           />
         </SafeAreaView>
       </Modal>
+
+      {/* Back button rendered last so it captures touches above everything */}
+      <BackButton top={insets.top + 12} />
     </SafeAreaView>
   );
 }

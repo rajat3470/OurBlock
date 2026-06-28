@@ -11,7 +11,7 @@ export const getHomeRouteByRole = (role?: UserRole) => {
     case "user":
       return "/(user)/home";
     default:
-      return "/(auth)/role-selection";
+      return "/(auth)/user-login";
   }
 };
 
@@ -37,7 +37,7 @@ export const getDefaultRoute = (
   }
 
   if (!isAuthenticated || !role) {
-    return "/(auth)/role-selection";
+    return "/(auth)/user-login";
   }
 
   return getHomeRouteByRole(role);

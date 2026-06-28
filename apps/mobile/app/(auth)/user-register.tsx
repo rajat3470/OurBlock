@@ -16,12 +16,14 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useToast } from "react-native-toast-notifications";
 import { useAuth } from "../../src/hooks/useAuth";
 import { societyService } from "../../src/services/societyService";
 import { userAppService } from "../../src/services/userAppService";
 import { Society } from "../../src/types/index";
 import { colors } from "../../src/constants/theme";
+import BackButton from "../../src/components/BackButton";
 
 interface RegisterForm {
   firstName: string;
@@ -50,6 +52,7 @@ const EMPTY_FORM: RegisterForm = {
 };
 
 export default function UserRegisterScreen() {
+  const insets = useSafeAreaInsets();
   const { register } = useAuth();
   const toast = useToast();
 
@@ -586,6 +589,9 @@ export default function UserRegisterScreen() {
           />
         </SafeAreaView>
       </Modal>
+
+      {/* Back button rendered last so it captures touches above everything */}
+      <BackButton top={insets.top + 12} />
     </SafeAreaView>
   );
 }
