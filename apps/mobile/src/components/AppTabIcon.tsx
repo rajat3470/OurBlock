@@ -23,29 +23,24 @@ export default function AppTabIcon({ iconName, focused, role }: AppTabIconProps)
         colors={[start, end]}
         style={styles.iconWrap}
       >
-        <Ionicons name={iconName} size={20} color="#FFFFFF" />
+        <Ionicons name={iconName} size={19} color="#FFFFFF" />
       </LinearGradient>
     );
   }
 
   return (
-    <View style={[styles.iconWrap, styles.iconWrapUnfocused]}>
-      <Ionicons name={iconName} size={20} color="#9CA3AF" />
+    <View style={styles.iconWrap}>
+      <Ionicons name={iconName} size={19} color="#9CA3AF" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
-  },
-  iconWrapUnfocused: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
   },
 });

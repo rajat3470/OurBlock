@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { Order, OrderStatus } from "../../src/types";
 
@@ -187,7 +188,11 @@ export default function BusinessOwnerOrders() {
     const isAdvancing = advancing === item.id;
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => router.push(`/(business-owner)/order-detail?orderId=${item.id}`)}
+        activeOpacity={0.97}
+      >
         {/* Top row: ID + time + amount */}
         <View style={styles.cardTop}>
           <View>
@@ -332,7 +337,7 @@ export default function BusinessOwnerOrders() {
             ) : null}
           </View>
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 

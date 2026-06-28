@@ -190,12 +190,22 @@ export const useBusinessOwner = () => {
   }, [dispatch]);
 
   const toggleTakingOrders = useCallback(async (taking: boolean) => {
+    // Optimistic update immediately so the UI reflects the new state right away
+    const profile = state.businessProfile;
+    if (profile) {
+      dispatch(setBusinessProfile({ ...profile, isTakingOrders: taking } as Business));
+    }
     try {
-      await businessOwnerService.toggleTakingOrders(taking);
-      // Optimistically update the profile in Redux
-      const profile = state.businessProfile;
-      if (profile) dispatch(setBusinessProfile({ ...profile, isTakingOrders: taking } as Business));
+      const result = await businessOwnerService.toggleTakingOrders(taking);
+      // Confirm with the actual server value
+      if (profile) {
+        dispatch(setBusinessProfile({ ...profile, isTakingOrders: result?.isTakingOrders ?? taking } as Business));
+      }
     } catch (err: unknown) {
+      // Revert on failure
+      if (profile) {
+        dispatch(setBusinessProfile({ ...profile, isTakingOrders: !taking } as Business));
+      }
       const message = extractErrorMessage(err, "Failed to update order availability");
       dispatch(setError(message));
       throw err;

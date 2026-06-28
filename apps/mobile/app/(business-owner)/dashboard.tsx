@@ -8,8 +8,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Switch,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+  Alert,
+} from "react-native";import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useAppSelector } from "../../src/hooks/useRedux";
@@ -80,8 +80,21 @@ export default function BusinessOwnerDashboard() {
   };
 
   async function handleToggleTakingOrders(val: boolean) {
+    if (toggleLoading) return;
     setToggleLoading(true);
-    try { await toggleTakingOrders(val); } catch { /* ignore */ } finally { setToggleLoading(false); }
+    try {
+      await toggleTakingOrders(val);
+    } catch (err: unknown) {
+      const apiMsg =
+        (err as any)?.response?.data?.error ||
+        (err instanceof Error ? err.message : null);
+      const fallback = businessProfile?.isVerified
+        ? "Failed to update order availability. Please try again."
+        : "Your business is pending approval. Order availability can be changed once verified.";
+      Alert.alert("Cannot Update", apiMsg || fallback);
+    } finally {
+      setToggleLoading(false);
+    }
   }
 
   const approvedProducts  = products.filter((p) => (p.approvalStatus ?? "pending") === "approved").length;
@@ -134,7 +147,11 @@ export default function BusinessOwnerDashboard() {
               <View
                 style={[
                   styles.verifiedPill,
-                  businessProfile?.isVerified ? styles.verifiedPillLive : styles.verifiedPillPending,
+                  !businessProfile?.isVerified
+                    ? styles.verifiedPillPending
+                    : isTakingOrders
+                    ? styles.verifiedPillLive
+                    : styles.verifiedPillPaused,
                 ]}
               >
                 <Text
@@ -143,23 +160,25 @@ export default function BusinessOwnerDashboard() {
                     { color: businessProfile?.isVerified ? "#FFFFFF" : "#92400E" },
                   ]}
                 >
-                  {businessProfile?.isVerified ? "✓ Live" : "⏳ Pending"}
+                  {!businessProfile?.isVerified
+                    ? "⏳ Pending"
+                    : isTakingOrders
+                    ? "✓ Live"
+                    : "⏸ Paused"}
                 </Text>
               </View>
               {/* Pause / Resume toggle */}
-              <View style={styles.pauseRow}>
-                <Text style={styles.pauseLabel}>{isTakingOrders ? "Taking Orders" : "Paused"}</Text>
-                {toggleLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" style={{ marginLeft: 8 }} />
-                ) : (
-                  <Switch
-                    value={isTakingOrders}
-                    onValueChange={handleToggleTakingOrders}
-                    trackColor={{ false: "rgba(255,255,255,0.3)", true: "#4ADE80" }}
-                    thumbColor={isTakingOrders ? "#FFFFFF" : "#FECACA"}
-                    ios_backgroundColor="rgba(255,255,255,0.3)"
-                  />
-                )}
+              <View style={[styles.pauseRow, { backgroundColor: isTakingOrders ? "rgba(255,255,255,0.12)" : "rgba(252,165,165,0.15)" }]}>
+                <Text style={[styles.pauseLabel, { color: isTakingOrders ? "#FFFFFF" : "#FCA5A5" }]}>{isTakingOrders ? "Taking Orders" : "Paused"}</Text>
+                <Switch
+                  value={isTakingOrders}
+                  onValueChange={handleToggleTakingOrders}
+                  disabled={toggleLoading}
+                  trackColor={{ false: "rgba(255,255,255,0.3)", true: "#4ADE80" }}
+                  thumbColor={isTakingOrders ? "#FFFFFF" : "#FECACA"}
+                  ios_backgroundColor="rgba(255,255,255,0.3)"
+                  style={{ opacity: toggleLoading ? 0.6 : 1 }}
+                />
               </View>
             </View>
           </View>
@@ -407,6 +426,11 @@ const styles = StyleSheet.create({
   },
   verifiedPillPending: {
     backgroundColor: "#FEF3C7",
+  },
+  verifiedPillPaused: {
+    backgroundColor: "rgba(251,146,60,0.22)",
+    borderWidth: 1,
+    borderColor: "rgba(251,146,60,0.45)",
   },
   verifiedPillText: {
     fontSize: 12,

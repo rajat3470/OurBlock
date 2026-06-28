@@ -145,7 +145,11 @@ export default function UserOrders() {
       item.status === OrderStatus.PENDING || item.status === OrderStatus.CONFIRMED;
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => router.push(`/(user)/order-detail?orderId=${item.id}`)}
+        activeOpacity={0.97}
+      >
         {/* Top row */}
         <View style={styles.rowTop}>
           <View>
@@ -260,7 +264,7 @@ export default function UserOrders() {
             <Text style={styles.rejectionText}>{(item as any).rejectionReason}</Text>
           </View>
         ) : null}
-      </View>
+      </TouchableOpacity>
     );
   };
 

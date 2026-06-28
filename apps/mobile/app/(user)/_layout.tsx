@@ -12,6 +12,7 @@ export default function UserLayout() {
         <Stack.Screen name="product" />
         <Stack.Screen name="cart" />
         <Stack.Screen name="checkout" />
+        <Stack.Screen name="order-detail" />
       </Stack>
     </RoleGate>
   );

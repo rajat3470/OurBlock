@@ -23,9 +23,9 @@ export default function BusinessOwnerLayout() {
           tabBarStyle: {
             backgroundColor: "#FFFFFF",
             borderTopWidth: 0,
-            height: 76,
-            paddingBottom: 14,
-            paddingTop: 8,
+            height: 82,
+            paddingBottom: 10,
+            paddingTop: 10,
             marginHorizontal: 16,
             marginBottom: 28,
             borderRadius: 24,
@@ -87,6 +87,13 @@ export default function BusinessOwnerLayout() {
             tabBarIcon: ({ focused }) => (
               <AppTabIcon iconName="settings-outline" focused={focused} role="businessOwner" />
             ),
+          }}
+        />
+        <Tabs.Screen
+          name="order-detail"
+          options={{
+            href: null,
+            tabBarStyle: { display: "none" },
           }}
         />
       </Tabs>
