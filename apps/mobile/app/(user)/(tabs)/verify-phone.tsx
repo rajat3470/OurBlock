@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -13,12 +13,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { FirebaseRecaptchaVerifierModal } from "expo-firebase-recaptcha";
 import { useToast } from "react-native-toast-notifications";
 import { phoneVerificationService } from "../../../src/services/phoneVerificationService";
+import type { FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { useAppDispatch, useAppSelector } from "../../../src/hooks/useRedux";
 import { colors } from "../../../src/constants/theme";
-import app from "../../../src/services/firebase";
 import { setUser } from "../../../src/store/slices/authSlice";
 import { authStateService } from "../../../src/services/authStateService";
 
@@ -27,10 +26,8 @@ export default function PhoneVerificationScreen() {
   const toast = useToast();
   const params = useLocalSearchParams<{ fromRegistration?: string }>();
   const user = useAppSelector((state) => state.auth.user);
-  const recaptchaVerifier = useRef<any>(null);
-
   const [phoneNumber, setPhoneNumber] = useState(user?.phone || "");
-  const [verificationId, setVerificationId] = useState("");
+  const [confirmation, setConfirmation] = useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
   const [code, setCode] = useState("");
   const [step, setStep] = useState<"phone" | "code">("phone");
   const [loading, setLoading] = useState(false);
@@ -50,11 +47,8 @@ export default function PhoneVerificationScreen() {
     setLoading(true);
     try {
       const formattedPhone = phoneVerificationService.formatPhoneNumber(phoneNumber);
-      const verId = await phoneVerificationService.sendVerificationCode(
-        formattedPhone,
-        recaptchaVerifier.current
-      );
-      setVerificationId(verId);
+      const confirmationResult = await phoneVerificationService.sendVerificationCode(formattedPhone);
+      setConfirmation(confirmationResult);
       setStep("code");
       toast.show("Verification code sent to your phone", { type: "success" });
     } catch (error: any) {
@@ -72,7 +66,7 @@ export default function PhoneVerificationScreen() {
 
     setLoading(true);
     try {
-      await phoneVerificationService.verifyCode(verificationId, code);
+      await phoneVerificationService.verifyCode(confirmation!, code);
       if (user) {
         const updatedUser = { ...user, isPhoneVerified: true, phone: phoneNumber };
         dispatch(setUser(updatedUser));
@@ -89,17 +83,13 @@ export default function PhoneVerificationScreen() {
 
   const handleResendCode = async () => {
     setCode("");
+    setConfirmation(null);
     setStep("phone");
     await handleSendCode();
   };
 
   return (
     <View style={styles.container}>
-      <FirebaseRecaptchaVerifierModal
-        ref={recaptchaVerifier}
-        firebaseConfig={app.options}
-        attemptInvisibleVerification
-      />
       <LinearGradient
         colors={["#DC2626", "#991B1B"]}
         style={[styles.header, { paddingTop: insets.top + 12 }]}

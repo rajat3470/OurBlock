@@ -1,0 +1,83 @@
+diff --git a/node_modules/expo-image/ios/ImageView.swift b/node_modules/expo-image/ios/ImageView.swift
+index 034b662..3a93912 100644
+--- a/node_modules/expo-image/ios/ImageView.swift
++++ b/node_modules/expo-image/ios/ImageView.swift
+@@ -131,7 +131,10 @@ public final class ImageView: ExpoView {
+ 
+   deinit {
+     // Cancel pending requests when the view is deallocated.
+-    cancelPendingOperation()
++    // Wrapped in Task to avoid main actor isolation error
++    Task { @MainActor in
++      cancelPendingOperation()
++    }
+   }
+ 
+   public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+@@ -656,32 +659,35 @@ public final class ImageView: ExpoView {
+       case .none: sdImageView.addSymbolEffect(.breathe, options: options)
+       }
+     default:
+-      if #available(iOS 26.0, tvOS 26.0, *) {
+-        applySymbolEffectiOS26(effect: effect, scope: scope, options: options)
+-      }
+-    }
+-  }
+-
+-  @available(iOS 26.0, tvOS 26.0, *)
+-  private func applySymbolEffectiOS26(effect: SFSymbolEffectType, scope: SFSymbolEffectScope?, options: SymbolEffectOptions) {
+-    switch effect {
+-    case .drawOn:
+-      switch scope {
+-      case .byLayer: sdImageView.addSymbolEffect(.drawOn.byLayer, options: options)
+-      case .wholeSymbol: sdImageView.addSymbolEffect(.drawOn.wholeSymbol, options: options)
+-      case .none: sdImageView.addSymbolEffect(.drawOn, options: options)
+-      }
+-    case .drawOff:
+-      switch scope {
+-      case .byLayer: sdImageView.addSymbolEffect(.drawOff.byLayer, options: options)
+-      case .wholeSymbol: sdImageView.addSymbolEffect(.drawOff.wholeSymbol, options: options)
+-      case .none: sdImageView.addSymbolEffect(.drawOff, options: options)
+-      }
+-    default:
++      // Commented out: .drawOn and .drawOff APIs don't exist yet
++      // if #available(iOS 26.0, tvOS 26.0, *) {
++      //   applySymbolEffectiOS26(effect: effect, scope: scope, options: options)
++      // }
+       break
+     }
+   }
+ 
++  // Commented out: .drawOn and .drawOff APIs don't exist yet
++  // @available(iOS 26.0, tvOS 26.0, *)
++  // private func applySymbolEffectiOS26(effect: SFSymbolEffectType, scope: SFSymbolEffectScope?, options: SymbolEffectOptions) {
++  //   switch effect {
++  //   case .drawOn:
++  //     switch scope {
++  //     case .byLayer: sdImageView.addSymbolEffect(.drawOn.byLayer, options: options)
++  //     case .wholeSymbol: sdImageView.addSymbolEffect(.drawOn.wholeSymbol, options: options)
++  //     case .none: sdImageView.addSymbolEffect(.drawOn, options: options)
++  //     }
++  //   case .drawOff:
++  //     switch scope {
++  //     case .byLayer: sdImageView.addSymbolEffect(.drawOff.byLayer, options: options)
++  //     case .wholeSymbol: sdImageView.addSymbolEffect(.drawOff.wholeSymbol, options: options)
++  //     case .none: sdImageView.addSymbolEffect(.drawOff, options: options)
++  //     }
++  //   default:
++  //     break
++  //   }
++  // }
++
+   func startSymbolAnimation() {
+     if #available(iOS 17.0, tvOS 17.0, *) {
+       applySymbolEffect()
+@@ -812,7 +818,7 @@ public final class ImageView: ExpoView {
+       return
+     }
+ 
+-    Task {
++    Task { @MainActor in
+       guard let imageAnalyzer = Self.imageAnalyzer, let imageAnalysisInteraction = findImageAnalysisInteraction() else {
+         return
+       }

@@ -1,6 +1,5 @@
-import firebase from 'firebase/compat/app';
-import 'firebase/compat/auth';
-import { getCompatAuthInstance } from './firebase';
+import auth from '@react-native-firebase/auth';
+import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
 import { userAppService } from './userAppService';
 
 export interface PhoneVerificationState {
@@ -14,21 +13,13 @@ export const phoneVerificationService = {
   /**
    * Send OTP to phone number
    * @param phoneNumber - Phone number with country code (e.g., +911234567890)
-   * @param recaptchaVerifier - Recaptcha verifier instance
-   * @returns Verification ID
+   * @returns ConfirmationResult
    */
   async sendVerificationCode(
-    phoneNumber: string,
-    recaptchaVerifier: any
-  ): Promise<string> {
+    phoneNumber: string
+  ): Promise<FirebaseAuthTypes.ConfirmationResult> {
     try {
-      const auth = getCompatAuthInstance();
-      const phoneProvider = new firebase.auth.PhoneAuthProvider(auth);
-      const verificationId = await phoneProvider.verifyPhoneNumber(
-        phoneNumber,
-        recaptchaVerifier
-      );
-      return verificationId;
+      return await auth().signInWithPhoneNumber(phoneNumber);
     } catch (error: any) {
       console.error('Error sending verification code:', error);
       throw this.handleFirebaseError(error);
@@ -37,16 +28,14 @@ export const phoneVerificationService = {
 
   /**
    * Verify OTP code
-   * @param verificationId - Verification ID from sendVerificationCode
+   * @param confirmation - ConfirmationResult from sendVerificationCode
    * @param code - 6-digit OTP code
    * @returns Success status
    */
-  async verifyCode(verificationId: string, code: string): Promise<boolean> {
+  async verifyCode(confirmation: FirebaseAuthTypes.ConfirmationResult, code: string): Promise<boolean> {
     try {
-      const auth = getCompatAuthInstance();
-      const credential = firebase.auth.PhoneAuthProvider.credential(verificationId, code);
-      await auth.signInWithCredential(credential);
-      await userAppService.verifyPhone(code, verificationId);
+      await confirmation.confirm(code);
+      await userAppService.verifyPhone(code, confirmation.verificationId);
       return true;
     } catch (error: any) {
       console.error('Error verifying code:', error);
