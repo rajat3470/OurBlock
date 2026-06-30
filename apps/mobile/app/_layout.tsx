@@ -15,6 +15,7 @@ import { apiClient } from "../src/services/apiClient";
 import { featureFlagsService } from "../src/services/featureFlagsService";
 import { setFeatureFlagsError, setFlags, setRefreshing } from "../src/store/slices/featureFlagsSlice";
 import { initializeMobileAds } from "../src/services/adService";
+import { OneSignalService } from "../src/services/oneSignalService";
 import { colors } from "../src/constants/theme";
 
 Notifications.setNotificationHandler({
@@ -144,6 +145,11 @@ export default function RootLayout() {
     Poppins_700Bold,
     Poppins_800ExtraBold,
   });
+
+  // Initialize OneSignal once at the root level, before any content renders.
+  useEffect(() => {
+    OneSignalService.initialize();
+  }, []);
 
   useEffect(() => {
     const appTarget = process.env.EXPO_PUBLIC_APP_TARGET;

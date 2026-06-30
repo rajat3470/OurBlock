@@ -4,6 +4,7 @@ import { setAuth, setError, logout, setLoading } from "@store/slices/authSlice";
 import { clearUserAppState } from "@store/slices/userAppSlice";
 import { apiClient } from "@services/apiClient";
 import { authStateService } from "@services/authStateService";
+import { OneSignalService } from "@services/oneSignalService";
 import { AuthCredentials, AuthResponse } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -113,6 +114,8 @@ export const useAuth = () => {
         await apiClient.saveTokens(mock.tokens);
         await authStateService.saveAuth(mock);
         dispatch(setAuth(mock));
+        OneSignalService.login(mock.user.id);
+        if (mock.user.email) OneSignalService.setEmail(mock.user.email);
         return;
       }
 
@@ -133,14 +136,13 @@ export const useAuth = () => {
         await apiClient.saveTokens(response.tokens);
         await authStateService.saveAuth(response);
         dispatch(setAuth(response));
+        OneSignalService.login(response.user.id);
+        if (response.user.email) OneSignalService.setEmail(response.user.email);
       }
     } catch (error: any) {
-      dispatch(setError(extractAuthError(error, "Login failed. Please try again.")));
-      throw error;
-    } finally {
-      dispatch(setLoading(false));
+      console.log("Login error:", error);
     }
-  };
+  }
 
   const register = async (data: any, role: "superAdmin" | "businessOwner" | "user") => {
     dispatch(setLoading(true));
@@ -162,6 +164,8 @@ export const useAuth = () => {
         await apiClient.saveTokens(response.tokens);
         await authStateService.saveAuth(response);
         dispatch(setAuth(response));
+        OneSignalService.login(response.user.id);
+        if (response.user.email) OneSignalService.setEmail(response.user.email);
       }
     } catch (error: any) {
       dispatch(setError(extractAuthError(error, "Registration failed. Please try again.")));
@@ -174,6 +178,7 @@ export const useAuth = () => {
   const logoutUser = async () => {
     // Clear local state and tokens immediately so the UI reflects logout at once.
     // The API call is best-effort — a network/backend failure should never block logout.
+    OneSignalService.logout();
     dispatch(logout());
     dispatch(clearUserAppState());
     await apiClient.clearTokens();
@@ -224,4 +229,4 @@ export const useAuth = () => {
     resetPassword,
     changePassword,
   };
-};
+}

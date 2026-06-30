@@ -35,6 +35,12 @@
       "expo-router",
       "./plugins/withFirebaseFrameworkModules",
       [
+        "onesignal-expo-plugin",
+        {
+          "mode": "development"
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "ios": {
