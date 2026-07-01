@@ -10,7 +10,6 @@
  * - Email subscription
  * - Push subscription verification dialog (required by integration guide)
  */
-import { Alert } from "react-native";
 import { OneSignal, LogLevel } from "react-native-onesignal";
 
 const APP_ID = process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID ?? "";
@@ -32,20 +31,8 @@ function maybeShowVerificationDialog(subscriptionId: string | null | undefined):
   }
 }
 
-function showVerificationDialog(): void {
-  Alert.alert(
-    "Your OneSignal SDK integration is complete!",
-    "You can now send Push Notifications & In-App Messages through OneSignal. Tap below to enable push notifications.",
-    [
-      {
-        text: "Got it",
-        onPress: () => {
-          OneSignal.Notifications.requestPermission(true);
-        },
-      },
-    ],
-    { cancelable: false }
-  );
+function logOneSignalState(message: string, data?: unknown): void {
+  console.log(`[OneSignal] ${message}`, data ?? "");
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -65,8 +52,18 @@ export const OneSignalService = {
     OneSignal.Debug.setLogLevel(__DEV__ ? LogLevel.Verbose : LogLevel.Warn);
 
     OneSignal.initialize(APP_ID);
-
     this.setupPushSubscriptionVerification();
+    this.setupForegroundDisplay();
+
+    try {
+      OneSignal.Notifications.requestPermission(true).then((granted: boolean) => {
+        logOneSignalState(`permission ${granted ? "granted" : "denied"}`);
+      }).catch((error: unknown) => {
+        console.warn("[OneSignal] permission request failed", error);
+      });
+    } catch (error) {
+      console.warn("[OneSignal] permission request error", error);
+    }
   },
 
   /**
@@ -88,13 +85,46 @@ export const OneSignalService = {
       .catch(() => null);
   },
 
+  setupForegroundDisplay(): void {
+    try {
+      OneSignal.Notifications.addEventListener("foregroundWillDisplay", (event: any) => {
+        event.preventDefault();
+        event.notification.display();
+      });
+    } catch (error) {
+      console.warn("[OneSignal] foreground display setup failed", error);
+    }
+  },
+
   /**
    * Associate the signed-in user with their OneSignal profile.
    * Call after a successful login, once the user ID is known.
    */
-  login(userId: string): void {
+  login(userId: string, metadata?: { role?: string; businessId?: string }): void {
     if (!APP_ID) return;
     OneSignal.login(userId);
+    // Also set the OneSignal external user id when available so server sends
+    // can target `include_external_user_ids` using our app user id.
+    try {
+      const anyOneSignal = OneSignal as any;
+      if (typeof anyOneSignal.setExternalUserId === 'function') {
+        anyOneSignal.setExternalUserId(userId);
+      } else if (typeof anyOneSignal.setExternalId === 'function') {
+        anyOneSignal.setExternalId(userId);
+      }
+
+      if (metadata?.role || metadata?.businessId) {
+        const tags: Record<string, string> = {};
+        if (metadata.role) tags.role = metadata.role;
+        if (metadata.businessId) tags.businessId = metadata.businessId;
+        if (Object.keys(tags).length > 0 && typeof OneSignal.User.addTags === 'function') {
+          OneSignal.User.addTags(tags);
+        }
+      }
+    } catch (err) {
+      // Non-fatal — older SDKs may not support the call
+      console.warn('[OneSignal] setExternalUserId unavailable', err);
+    }
   },
 
   /**
@@ -104,6 +134,17 @@ export const OneSignalService = {
   logout(): void {
     if (!APP_ID) return;
     OneSignal.logout();
+    try {
+      const anyOneSignal = OneSignal as any;
+      if (typeof anyOneSignal.removeExternalUserId === 'function') {
+        anyOneSignal.removeExternalUserId();
+      } else if (typeof anyOneSignal.setExternalUserId === 'function') {
+        // clear external id
+        anyOneSignal.setExternalUserId('');
+      }
+    } catch (err) {
+      console.warn('[OneSignal] removeExternalUserId unavailable', err);
+    }
   },
 
   /**
