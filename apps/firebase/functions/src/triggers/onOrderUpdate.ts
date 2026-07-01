@@ -1,5 +1,6 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import { notifyUsersByExternalIds } from '../utils/oneSignal';
 
 const db = admin.firestore();
 
@@ -39,12 +40,12 @@ export const onOrderUpdate = functions.firestore
       const after = change.after.data();
       const orderId = context.params.orderId;
       const orderRef = orderId.substring(0, 8).toUpperCase();
-      
+
       if (before.status !== after.status) {
         console.log(`Order ${orderId} status changed: ${before.status} -> ${after.status}`);
-        
+
         let message = statusMessages[after.status] || 'Order status updated';
-        
+
         if (after.status === 'rejected' && after.rejectionReason) {
           message = `Your order was rejected: ${after.rejectionReason}`;
         }
@@ -72,7 +73,9 @@ export const onOrderUpdate = functions.firestore
         const pushData: Record<string, string> = { orderId, status: after.status };
         if (after.rejectionReason) pushData.rejectionReason = after.rejectionReason;
         await sendPushNotification(after.userId, title, body, pushData);
-        
+        // OneSignal push to customer (external_user_id)
+        await notifyUsersByExternalIds([after.userId], title, body, pushData);
+
         console.log('Order update notification sent');
       }
     } catch (error) {

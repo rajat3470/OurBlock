@@ -116,6 +116,15 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
   // Register push token once authenticated
   useEffect(() => {
     if (!authUser) return;
+
+    OneSignalService.login(authUser.id, {
+      role: (authUser as any)?.role,
+      businessId: (authUser as any)?.businessId,
+    });
+    if ((authUser as any)?.email) {
+      OneSignalService.setEmail((authUser as any).email);
+    }
+
     registerForPushNotificationsAsync()
       .then((token) => {
         if (token) {
@@ -123,7 +132,7 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
         }
       })
       .catch(() => { /* non-blocking */ });
-  }, [authUser?.id]);
+  }, [authUser?.id, authUser?.role, (authUser as any)?.businessId, (authUser as any)?.email]);
 
 
   if (!isHydrated) {
@@ -149,6 +158,14 @@ export default function RootLayout() {
   // Initialize OneSignal once at the root level, before any content renders.
   useEffect(() => {
     OneSignalService.initialize();
+  }, []);
+
+  useEffect(() => {
+    if (!process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID) return;
+    const timeout = setTimeout(() => {
+      OneSignalService.initialize();
+    }, 500);
+    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {

@@ -1,5 +1,6 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import { notifyUsersByExternalIds } from '../utils/oneSignal';
 
 const db = admin.firestore();
 
@@ -28,9 +29,9 @@ export const onOrderCreate = functions.firestore
       const order = snap.data();
       const orderId = context.params.orderId;
       const orderRef = orderId.substring(0, 8).toUpperCase();
-      
+
       console.log('New order created:', orderId);
-      
+
       const customerTitle = 'Order Placed Successfully';
       const customerBody = `Your order #${orderRef} for Rs ${order.finalAmount} has been placed. Waiting for store confirmation.`;
 
@@ -48,11 +49,13 @@ export const onOrderCreate = functions.firestore
 
       // FCM push to customer
       await sendPushNotification(order.userId, customerTitle, customerBody, { orderId, status: 'pending' });
-      
+      // OneSignal push to customer (if mobile registered external_user_id)
+      await notifyUsersByExternalIds([order.userId], customerTitle, customerBody, { orderId, status: 'pending' });
+
       // Notify business owner
       const business = await db.collection('businesses').doc(order.businessId).get();
       const businessData = business.data();
-      
+
       if (businessData?.ownerId) {
         const ownerTitle = '🔔 New Order!';
         const ownerBody = `Order #${orderRef} from ${order.userName} — Rs ${order.finalAmount} · ${order.items.length} item(s). Tap to accept or reject.`;
@@ -70,8 +73,10 @@ export const onOrderCreate = functions.firestore
 
         // FCM push to business owner — high priority so it wakes the device
         await sendPushNotification(businessData.ownerId, ownerTitle, ownerBody, { orderId, status: 'pending', action: 'review' });
+        // OneSignal push to business owner (external_user_id should be the app user id)
+        await notifyUsersByExternalIds([businessData.ownerId], ownerTitle, ownerBody, { orderId, status: 'pending', action: 'review' });
       }
-      
+
       console.log('Order notifications sent');
     } catch (error) {
       console.error('Error in onOrderCreate trigger:', error);

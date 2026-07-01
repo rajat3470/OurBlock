@@ -55,6 +55,7 @@ export * from './triggers/onUserCreate';
 export * from './triggers/onOrderCreate';
 export * from './triggers/onOrderUpdate';
 export * from './triggers/onSocietyDelete';
+export * from './test/sendTestOneSignal';
 
 // Export scheduled functions
 export const dailyCleanup = functions.pubsub
