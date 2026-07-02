@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { Order, OrderStatus } from "../../src/types";
 
@@ -69,6 +69,7 @@ function timeAgo(date: Date | string): string {
 
 export default function BusinessOwnerOrders() {
   const { orders, isLoading, loadOrders, changeOrderStatus, rejectOrder } = useBusinessOwner();
+  const { rejectOrderId } = useLocalSearchParams<{ rejectOrderId?: string }>();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [advancing, setAdvancing] = useState<string | null>(null);
   const [rejectModal, setRejectModal] = useState<{ orderId: string; orderRef: string } | null>(null);
@@ -158,6 +159,15 @@ export default function BusinessOwnerOrders() {
     setRejectReason("");
     setRejectModal({ orderId: order.id, orderRef: order.id.slice(0, 8).toUpperCase() });
   };
+
+  // Open reject modal when arriving from a notification "Reject" action
+  useEffect(() => {
+    if (!rejectOrderId || typeof rejectOrderId !== "string") return;
+    const order = orders.find((o) => o.id === rejectOrderId);
+    if (!order || order.status !== OrderStatus.PENDING) return;
+    openRejectModal(order);
+    router.setParams({ rejectOrderId: undefined });
+  }, [rejectOrderId, orders]);
 
   const handleReject = async () => {
     if (!rejectModal) return;

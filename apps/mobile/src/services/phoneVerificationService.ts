@@ -35,7 +35,8 @@ export const phoneVerificationService = {
   async verifyCode(confirmation: FirebaseAuthTypes.ConfirmationResult, code: string): Promise<boolean> {
     try {
       await confirmation.confirm(code);
-      await userAppService.verifyPhone(code, confirmation.verificationId);
+      const verificationId = confirmation.verificationId ?? '';
+      await userAppService.verifyPhone(code, verificationId);
       return true;
     } catch (error: any) {
       console.error('Error verifying code:', error);

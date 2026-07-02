@@ -3,6 +3,7 @@ import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { useAppSelector } from "../src/hooks/useRedux";
 import { AppTarget, getDefaultRoute } from "../src/utils/appRouting";
+import { consumePendingOrderNavigation } from "../src/services/orderNotificationService";
 import { colors } from "../src/constants/theme";
 
 export default function IndexScreen() {
@@ -13,6 +14,15 @@ export default function IndexScreen() {
     if (!isHydrated) return;
 
     const timeout = setTimeout(() => {
+      const pending = consumePendingOrderNavigation();
+      if (pending) {
+        router.replace({
+          pathname: pending.pathname as any,
+          params: pending.params,
+        });
+        return;
+      }
+
       router.replace(getDefaultRoute(isAuthenticated, user?.role, appTarget));
     }, 100);
 

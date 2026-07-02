@@ -3,19 +3,22 @@
  *
  * Handles:
  * 1. FCM push token registration + persistence to Firestore via API
- * 2. Foreground message listener → in-app alert toast
+ * 2. Foreground message listener → local notification with custom sound + actions
  * 3. Background/quit tap handler → navigates to the relevant order
  *
- * Usage: Call once inside each role's root layout (_layout.tsx).
+ * OneSignal click handling is registered globally via initOrderNotificationHandlers().
  */
 import { useEffect } from "react";
-import { Alert, Vibration } from "react-native";
-import { useRouter } from "expo-router";
 import Constants from "expo-constants";
+import * as Notifications from "expo-notifications";
 import { useAppSelector } from "./useRedux";
+import {
+  handleNotificationOpen,
+  isOwnerNewOrderNotification,
+  presentOwnerNewOrderNotification,
+  queueOrderNavigation,
+} from "@services/orderNotificationService";
 
-// In Expo Go the @react-native-firebase native modules don't exist.
-// Guard at the top level so we never attempt to require them.
 const IS_EXPO_GO = Constants.executionEnvironment === "storeClient";
 
 let _messagingCache: any = undefined;
@@ -25,7 +28,6 @@ const getMessaging = (): any => {
   if (_messagingCache !== undefined) return _messagingCache;
   try {
     const mod = require("@react-native-firebase/messaging").default;
-    // Probe the module — throws if native layer is not linked.
     mod();
     _messagingCache = mod;
   } catch {
@@ -34,15 +36,12 @@ const getMessaging = (): any => {
   return _messagingCache;
 };
 
-const APP_TARGET = process.env.EXPO_PUBLIC_APP_TARGET; // "user" | "businessOwner"
+const APP_TARGET = process.env.EXPO_PUBLIC_APP_TARGET;
 
 export function useOrderNotifications() {
   const { tokens } = useAppSelector((s) => s.auth);
   const accessToken = tokens?.accessToken;
-  const router = useRouter();
-  // No soundRef needed — using vibration only (works in Expo Go & native builds)
 
-  // ── 1. Register FCM token ─────────────────────────────────────────────────
   useEffect(() => {
     const m = getMessaging();
     if (!m || !accessToken) return;
@@ -59,17 +58,15 @@ export function useOrderNotifications() {
         const fcmToken = await m().getToken();
         if (!fcmToken) return;
 
-        // Persist token to backend so server can send targeted pushes
         const { apiClient } = await import("@services/apiClient");
         await apiClient.post("/users/fcm-token", { fcmToken }).catch(() => null);
       } catch {
-        // Non-fatal — app works without push, uses in-app polling
+        // Non-fatal
       }
     };
 
     registerToken();
 
-    // Refresh token
     const unsubRefresh = m().onTokenRefresh(async (newToken: string) => {
       const { apiClient } = await import("@services/apiClient");
       await apiClient.post("/users/fcm-token", { fcmToken: newToken }).catch(() => null);
@@ -78,7 +75,6 @@ export function useOrderNotifications() {
     return () => unsubRefresh();
   }, [accessToken]);
 
-  // ── 2. Foreground notifications ───────────────────────────────────────────
   useEffect(() => {
     const m = getMessaging();
     if (!m) return;
@@ -87,75 +83,52 @@ export function useOrderNotifications() {
       const { notification, data } = remoteMessage;
       if (!notification) return;
 
-      const isNewOrder =
-        APP_TARGET === "businessOwner" &&
-        data?.status === "pending";
+      const payload = (data ?? {}) as Record<string, unknown>;
 
-      if (isNewOrder) {
-        // Vibrate alert for business owner (works in Expo Go and native builds)
-        playNewOrderAlert();
+      if (APP_TARGET === "businessOwner" && isOwnerNewOrderNotification(payload)) {
+        await presentOwnerNewOrderNotification(
+          notification.title ?? "New Order",
+          notification.body ?? "",
+          payload
+        );
+        return;
       }
 
-      // Show in-app alert (since system notification is suppressed while app is open)
-      Alert.alert(
-        notification.title ?? "mohallaMitr",
-        notification.body ?? "",
-        [
-          { text: "Dismiss", style: "cancel" },
-          data?.orderId
-            ? {
-                text: "View Order",
-                onPress: () => {
-                  if (APP_TARGET === "businessOwner") {
-                    router.push("/(business-owner)/orders");
-                  } else {
-                    router.push("/(user)/orders");
-                  }
-                },
-              }
-            : null,
-        ].filter(Boolean) as any
-      );
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: notification.title ?? "mohallaMitr",
+          body: notification.body ?? "",
+          data: Object.fromEntries(
+            Object.entries(payload).map(([key, value]) => [key, String(value ?? "")])
+          ),
+          sound: "default",
+        },
+        trigger: null,
+      });
     });
 
     return () => unsubForeground();
-  }, [router]);
+  }, []);
 
-  // ── 3. Background / quit tap handler ─────────────────────────────────────
   useEffect(() => {
     const m = getMessaging();
     if (!m) return;
 
-    // Tapped notification while app was in background
-    m().onNotificationOpenedApp((remoteMessage: any) => {
-      if (remoteMessage?.data?.orderId) {
-        if (APP_TARGET === "businessOwner") {
-          router.push("/(business-owner)/orders");
-        } else {
-          router.push("/(user)/orders");
-        }
-      }
-    });
+    const openFromNotification = (remoteMessage: any) => {
+      const data = remoteMessage?.data as Record<string, unknown> | undefined;
+      if (!data?.orderId) return;
+      queueOrderNavigation(undefined, data);
+      void handleNotificationOpen(undefined, data);
+    };
 
-    // App opened from a quit state via notification
+    m().onNotificationOpenedApp(openFromNotification);
+
     m()
       .getInitialNotification()
       .then((remoteMessage: any) => {
         if (remoteMessage?.data?.orderId) {
-          setTimeout(() => {
-            if (APP_TARGET === "businessOwner") {
-              router.push("/(business-owner)/orders");
-            } else {
-              router.push("/(user)/orders");
-            }
-          }, 1000); // Wait for navigation to mount
+          setTimeout(() => openFromNotification(remoteMessage), 1000);
         }
       });
-  }, [router]);
-}
-
-// ── Sound helper ─────────────────────────────────────────────────────────────
-function playNewOrderAlert() {
-  // Zomato-style short-long-short-long vibration pattern
-  Vibration.vibrate([0, 400, 200, 400, 200, 600]);
+  }, []);
 }

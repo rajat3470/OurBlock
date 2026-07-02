@@ -1,22 +1,30 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { notifyUsersByExternalIds } from '../utils/oneSignal';
+import { notifyUsersByExternalIds, sendExpoPushNotification } from '../utils/oneSignal';
 
 const db = admin.firestore();
 
 async function sendPushNotification(userId: string, title: string, body: string, data: Record<string, string>) {
   try {
     const userDoc = await db.collection('users').doc(userId).get();
-    const fcmToken = userDoc.data()?.fcmToken;
-    if (!fcmToken) return;
+    const userData = userDoc.data() ?? {};
+    const fcmToken = userData.fcmToken;
+    const pushToken = userData.pushToken;
+    if (!fcmToken && !pushToken) return;
 
-    await admin.messaging().send({
-      token: fcmToken,
-      notification: { title, body },
-      data,
-      android: { priority: 'high', notification: { channelId: 'orders', sound: 'default' } },
-      apns: { payload: { aps: { sound: 'default', badge: 1 } } },
-    });
+    if (fcmToken) {
+      await admin.messaging().send({
+        token: fcmToken,
+        notification: { title, body },
+        data,
+        android: { priority: 'high', notification: { channelId: 'orders', sound: 'default' } },
+        apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+      });
+    }
+
+    if (!fcmToken && pushToken) {
+      await sendExpoPushNotification(pushToken, title, body, data);
+    }
   } catch (err) {
     console.warn('FCM send failed for user', userId, err);
   }
@@ -74,7 +82,14 @@ export const onOrderUpdate = functions.firestore
         if (after.rejectionReason) pushData.rejectionReason = after.rejectionReason;
         await sendPushNotification(after.userId, title, body, pushData);
         // OneSignal push to customer (external_user_id)
-        await notifyUsersByExternalIds([after.userId], title, body, pushData);
+        const oneSignalResult = await notifyUsersByExternalIds([after.userId], title, body, pushData);
+        if (!oneSignalResult || oneSignalResult.ok === false) {
+          const customerDoc = await db.collection('users').doc(after.userId).get();
+          const customerPushToken = customerDoc.data()?.pushToken;
+          if (customerPushToken) {
+            await sendExpoPushNotification(customerPushToken, title, body, pushData);
+          }
+        }
 
         console.log('Order update notification sent');
       }

@@ -1,24 +1,84 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { notifyUsersByExternalIds } from '../utils/oneSignal';
+import {
+  NEW_ORDER_SOUND_ANDROID,
+  NEW_ORDER_SOUND_IOS,
+  notifyOwnerNewOrder,
+  notifyUsersByExternalIds,
+  sendExpoPushNotification,
+} from '../utils/oneSignal';
 
 const db = admin.firestore();
 
 async function sendPushNotification(userId: string, title: string, body: string, data: Record<string, string>) {
   try {
     const userDoc = await db.collection('users').doc(userId).get();
-    const fcmToken = userDoc.data()?.fcmToken;
-    if (!fcmToken) return;
+    const userData = userDoc.data() ?? {};
+    const fcmToken = userData.fcmToken;
+    const pushToken = userData.pushToken;
+    if (!fcmToken && !pushToken) return;
 
-    await admin.messaging().send({
-      token: fcmToken,
-      notification: { title, body },
-      data,
-      android: { priority: 'high', notification: { channelId: 'orders', sound: 'default' } },
-      apns: { payload: { aps: { sound: 'default', badge: 1 } } },
-    });
+    if (fcmToken) {
+      await admin.messaging().send({
+        token: fcmToken,
+        notification: { title, body },
+        data,
+        android: { priority: 'high', notification: { channelId: 'orders', sound: 'default' } },
+        apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+      });
+    }
+
+    if (!fcmToken && pushToken) {
+      await sendExpoPushNotification(pushToken, title, body, data);
+    }
   } catch (err) {
     console.warn('FCM send failed for user', userId, err);
+  }
+}
+
+async function sendOwnerNewOrderPush(
+  userId: string,
+  title: string,
+  body: string,
+  data: Record<string, string>
+) {
+  try {
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data() ?? {};
+    const fcmToken = userData.fcmToken;
+    const pushToken = userData.pushToken;
+    if (!fcmToken && !pushToken) return;
+
+    if (fcmToken) {
+      await admin.messaging().send({
+        token: fcmToken,
+        notification: { title, body },
+        data,
+        android: {
+          priority: 'high',
+          notification: {
+            channelId: 'orders',
+            sound: NEW_ORDER_SOUND_ANDROID,
+            clickAction: 'OPEN_ORDERS',
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: NEW_ORDER_SOUND_IOS,
+              badge: 1,
+              category: 'ORDER_REVIEW',
+            },
+          },
+        },
+      });
+    }
+
+    if (!fcmToken && pushToken) {
+      await sendExpoPushNotification(pushToken, title, body, data);
+    }
+  } catch (err) {
+    console.warn('Owner FCM send failed for user', userId, err);
   }
 }
 
@@ -50,7 +110,14 @@ export const onOrderCreate = functions.firestore
       // FCM push to customer
       await sendPushNotification(order.userId, customerTitle, customerBody, { orderId, status: 'pending' });
       // OneSignal push to customer (if mobile registered external_user_id)
-      await notifyUsersByExternalIds([order.userId], customerTitle, customerBody, { orderId, status: 'pending' });
+      const customerOneSignalResult = await notifyUsersByExternalIds([order.userId], customerTitle, customerBody, { orderId, status: 'pending' });
+      if (!customerOneSignalResult || customerOneSignalResult.ok === false) {
+        const customerDoc = await db.collection('users').doc(order.userId).get();
+        const customerPushToken = customerDoc.data()?.pushToken;
+        if (customerPushToken) {
+          await sendExpoPushNotification(customerPushToken, customerTitle, customerBody, { orderId, status: 'pending' });
+        }
+      }
 
       // Notify business owner
       const business = await db.collection('businesses').doc(order.businessId).get();
@@ -71,10 +138,23 @@ export const onOrderCreate = functions.firestore
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        // FCM push to business owner — high priority so it wakes the device
-        await sendPushNotification(businessData.ownerId, ownerTitle, ownerBody, { orderId, status: 'pending', action: 'review' });
-        // OneSignal push to business owner (external_user_id should be the app user id)
-        await notifyUsersByExternalIds([businessData.ownerId], ownerTitle, ownerBody, { orderId, status: 'pending', action: 'review' });
+        const ownerData = {
+          orderId: String(orderId),
+          status: 'pending',
+          action: 'review',
+        };
+
+        // FCM push to business owner — custom sound + iOS action category
+        await sendOwnerNewOrderPush(businessData.ownerId, ownerTitle, ownerBody, ownerData);
+        // OneSignal push to business owner — custom sound + accept/reject buttons
+        const ownerOneSignalResult = await notifyOwnerNewOrder([businessData.ownerId], ownerTitle, ownerBody, ownerData);
+        if (!ownerOneSignalResult || ownerOneSignalResult.ok === false) {
+          const ownerDoc = await db.collection('users').doc(businessData.ownerId).get();
+          const ownerPushToken = ownerDoc.data()?.pushToken;
+          if (ownerPushToken) {
+            await sendExpoPushNotification(ownerPushToken, ownerTitle, ownerBody, { orderId, status: 'pending', action: 'review' });
+          }
+        }
       }
 
       console.log('Order notifications sent');

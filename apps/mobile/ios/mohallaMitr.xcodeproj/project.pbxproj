@@ -14,6 +14,7 @@
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		CDB118F2D8A343EA9454AE6C /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A425CA6DA40A43ED8F3748D8 /* GoogleService-Info.plist */; };
 		DAA30143ED70734F5234D1D7 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D96F25AA8EF455EDEDDD4D4 /* ExpoModulesProvider.swift */; };
+		E1A2B3C42D0307B40044C1D9 /* new_order_alert.wav in Resources */ = {isa = PBXBuildFile; fileRef = E1A2B3C32D0307B40044C1D9 /* new_order_alert.wav */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
@@ -29,6 +30,7 @@
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = mohallaMitr/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		DA3FE90E57030E30A5A76A47 /* Pods-mohallaMitr.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-mohallaMitr.debug.xcconfig"; path = "Target Support Files/Pods-mohallaMitr/Pods-mohallaMitr.debug.xcconfig"; sourceTree = "<group>"; };
+		E1A2B3C32D0307B40044C1D9 /* new_order_alert.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = new_order_alert.wav; path = mohallaMitr/new_order_alert.wav; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = mohallaMitr/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* mohallaMitr-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "mohallaMitr-Bridging-Header.h"; path = "mohallaMitr/mohallaMitr-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -57,6 +59,7 @@
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
 				A425CA6DA40A43ED8F3748D8 /* GoogleService-Info.plist */,
 				382FBCB5BFAC53F7FCD2F1A9 /* PrivacyInfo.xcprivacy */,
+				E1A2B3C32D0307B40044C1D9 /* new_order_alert.wav */,
 			);
 			name = mohallaMitr;
 			sourceTree = "<group>";
@@ -204,6 +207,7 @@
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
 				CDB118F2D8A343EA9454AE6C /* GoogleService-Info.plist in Resources */,
 				4EEB55FAB755975E1A44CEDE /* PrivacyInfo.xcprivacy in Resources */,
+				E1A2B3C42D0307B40044C1D9 /* new_order_alert.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

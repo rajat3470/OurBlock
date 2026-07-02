@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ActivityIndicator, View, StyleSheet, Text, TextInput, AppState } from "react-native";
+import { ActivityIndicator, View, StyleSheet, Text, TextInput, AppState, Platform } from "react-native";
 import { Stack } from "expo-router";
 import { Provider } from "react-redux";
 import { ToastProvider } from "react-native-toast-notifications";
@@ -16,6 +16,14 @@ import { featureFlagsService } from "../src/services/featureFlagsService";
 import { setFeatureFlagsError, setFlags, setRefreshing } from "../src/store/slices/featureFlagsSlice";
 import { initializeMobileAds } from "../src/services/adService";
 import { OneSignalService } from "../src/services/oneSignalService";
+import {
+  ACTION_ACCEPT,
+  ACTION_REJECT,
+  ANDROID_ORDERS_CHANNEL_ID,
+  initOrderNotificationHandlers,
+  NEW_ORDER_SOUND_ANDROID,
+  ORDER_REVIEW_CATEGORY,
+} from "../src/services/orderNotificationService";
 import { colors } from "../src/constants/theme";
 
 Notifications.setNotificationHandler({
@@ -27,6 +35,38 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
+
+async function setupOrderNotificationChannels(): Promise<void> {
+  await Notifications.setNotificationCategoryAsync(ORDER_REVIEW_CATEGORY, [
+    {
+      identifier: ACTION_ACCEPT,
+      buttonTitle: "Accept",
+      options: { opensAppToForeground: true },
+    },
+    {
+      identifier: ACTION_REJECT,
+      buttonTitle: "Reject",
+      options: { opensAppToForeground: true },
+    },
+  ]);
+
+  if (Platform.OS === "android") {
+    // Delete stale channel so sound updates apply after rebuilds.
+    await Notifications.deleteNotificationChannelAsync(ANDROID_ORDERS_CHANNEL_ID).catch(() => null);
+    await Notifications.setNotificationChannelAsync(ANDROID_ORDERS_CHANNEL_ID, {
+      name: "Orders",
+      importance: Notifications.AndroidImportance.MAX,
+      sound: NEW_ORDER_SOUND_ANDROID,
+      vibrationPattern: [0, 400, 200, 400, 200, 600],
+      enableVibrate: true,
+      bypassDnd: true,
+      audioAttributes: {
+        usage: Notifications.AndroidAudioUsage.NOTIFICATION,
+        contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+      },
+    });
+  }
+}
 
 async function registerForPushNotificationsAsync(): Promise<string | null> {
   if (!Device.isDevice) return null; // simulator — skip
@@ -47,6 +87,13 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
   const authUser = useAppSelector((state) => state.auth.user);
   const adsEnabled = useAppSelector((state) => state.featureFlags.values.adsEnabled);
   const adsSdkInitialized = useRef(false);
+  const notificationHandlersReady = useRef(false);
+
+  useEffect(() => {
+    if (!isHydrated || notificationHandlersReady.current) return;
+    notificationHandlersReady.current = true;
+    initOrderNotificationHandlers();
+  }, [isHydrated]);
 
   // Initialize the Google Mobile Ads SDK once, only when the master ads flag is on.
   useEffect(() => {
@@ -158,14 +205,7 @@ export default function RootLayout() {
   // Initialize OneSignal once at the root level, before any content renders.
   useEffect(() => {
     OneSignalService.initialize();
-  }, []);
-
-  useEffect(() => {
-    if (!process.env.EXPO_PUBLIC_ONESIGNAL_APP_ID) return;
-    const timeout = setTimeout(() => {
-      OneSignalService.initialize();
-    }, 500);
-    return () => clearTimeout(timeout);
+    setupOrderNotificationChannels().catch(() => null);
   }, []);
 
   useEffect(() => {
