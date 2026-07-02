@@ -51,6 +51,7 @@ const authSlice = createSlice({
       state.user = null;
       state.tokens = null;
       state.isAuthenticated = false;
+      state.isLoading = false;
       state.error = null;
     },
     clearError(state) {

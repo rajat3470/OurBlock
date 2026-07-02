@@ -496,7 +496,13 @@ export default function UserRegisterScreen() {
           {/* Back to login */}
           <TouchableOpacity
             style={styles.loginLink}
-            onPress={() => router.back()}
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/(auth)/user-login");
+              }
+            }}
           >
             <Text style={styles.loginLinkText}>
               Already have an account?{" "}

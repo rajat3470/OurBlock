@@ -83,12 +83,12 @@ export default function CreateSocietyScreen() {
       if (isEditing && id) {
         await updateSociety(id, form);
         Alert.alert("Success", "Society updated successfully!", [
-          { text: "OK", onPress: () => router.back() },
+          { text: "OK", onPress: () => router.canGoBack() ? router.back() : router.replace("/(super-admin)/societies") },
         ]);
       } else {
         await createSociety(form);
         Alert.alert("Success", "Society created successfully!", [
-          { text: "OK", onPress: () => router.back() },
+          { text: "OK", onPress: () => router.canGoBack() ? router.back() : router.replace("/(super-admin)/societies") },
         ]);
       }
     } catch {
@@ -140,7 +140,13 @@ export default function CreateSocietyScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/(super-admin)/societies");
+            }
+          }}>
             <Text style={styles.backBtnText}>←</Text>
           </TouchableOpacity>
           <Text style={styles.title}>

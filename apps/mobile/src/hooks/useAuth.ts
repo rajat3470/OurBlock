@@ -140,7 +140,11 @@ export const useAuth = () => {
         if (response.user.email) OneSignalService.setEmail(response.user.email);
       }
     } catch (error: any) {
-      console.log("Login error:", error);
+      const message = extractAuthError(error, "Please check your credentials");
+      dispatch(setError(message));
+      throw new Error(message);
+    } finally {
+      dispatch(setLoading(false));
     }
   }
 

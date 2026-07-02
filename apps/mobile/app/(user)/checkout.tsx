@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -42,6 +42,9 @@ export default function CheckoutScreen() {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const insets = useSafeAreaInsets();
+  // Tracks when an order has just been placed so the empty-cart
+  // useEffect does not race against the explicit router.replace call.
+  const orderPlacedRef = useRef(false);
 
   const subTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const discountAmount = appliedCoupon?.discountAmount ?? 0;
@@ -65,9 +68,9 @@ export default function CheckoutScreen() {
     loadAddresses();
   }, [loadAddresses]);
 
-  // Redirect back if cart is empty
+  // Redirect back if cart is empty (but not right after placing an order)
   useEffect(() => {
-    if (cartItems.length === 0) {
+    if (cartItems.length === 0 && !orderPlacedRef.current) {
       router.replace("/(user)/home");
     }
   }, [cartItems]);
@@ -153,6 +156,10 @@ export default function CheckoutScreen() {
                 couponCode: appliedCoupon?.code,
               };
 
+              // Set flag BEFORE placeOrder so the empty-cart useEffect
+              // does not fire router.replace("/(user)/home") while we
+              // are already navigating to orders — double navigation crashes iOS.
+              orderPlacedRef.current = true;
               await placeOrder(payload);
               toast.show("🎉 Order placed successfully!", { type: "success", duration: 3000 });
               router.replace("/(user)/orders");
@@ -175,7 +182,16 @@ export default function CheckoutScreen() {
         colors={["#DC2626", "#991B1B"]}
         style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/(user)/cart");
+            }
+          }}
+          style={styles.backBtn}
+        >
           <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Checkout</Text>

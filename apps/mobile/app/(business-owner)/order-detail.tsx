@@ -143,7 +143,7 @@ export default function BusinessOwnerOrderDetail() {
     return (
       <View style={[styles.fullCenter, { backgroundColor: "#F8FAFC" }]}>
         <Text style={styles.notFoundText}>Order not found.</Text>
-        <TouchableOpacity style={styles.goBackBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.goBackBtn} onPress={() => router.canGoBack() ? router.back() : router.replace("/(business-owner)/orders")}>
           <Text style={styles.goBackText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -164,7 +164,17 @@ export default function BusinessOwnerOrderDetail() {
         style={[styles.header, { paddingTop: insets.top + 12 }]}
       >
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.8}>
+          <TouchableOpacity
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/(business-owner)/orders");
+              }
+            }}
+            style={styles.backBtn}
+            activeOpacity={0.8}
+          >
             <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>

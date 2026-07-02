@@ -174,11 +174,20 @@ export default function ProductDetailScreen() {
           colors={["#DC2626", "#991B1B"]}
           style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
         >
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          <View style={{ flex: 1 }} />
-          <View style={styles.headerRight} />
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/(user)/(tabs)/home");
+            }
+          }}
+          style={styles.backBtn}
+        >
+          <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }} />
+        <View style={styles.headerRight} />
         </LinearGradient>
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color="#DC2626" />
@@ -194,7 +203,16 @@ export default function ProductDetailScreen() {
           colors={["#DC2626", "#991B1B"]}
           style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
         >
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/(user)/(tabs)/home");
+              }
+            }}
+            style={styles.backBtn}
+          >
             <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
@@ -218,7 +236,16 @@ export default function ProductDetailScreen() {
         colors={["#DC2626", "#991B1B"]}
         style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/(user)/(tabs)/home");
+            }
+          }}
+          style={styles.backBtn}
+        >
           <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>

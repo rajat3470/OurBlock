@@ -83,7 +83,11 @@ export default function AddEditAddressScreen() {
       }
     } catch {
       Alert.alert("Error", "Failed to load address");
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/(user)/addresses");
+      }
     } finally {
       setLoading(false);
     }
@@ -125,7 +129,7 @@ export default function AddEditAddressScreen() {
         await userAppService.addAddress(form);
         Alert.alert("Success", "Address added successfully");
       }
-      router.back();
+      router.canGoBack() ? router.back() : router.replace("/(user)/addresses");
     } catch (error: any) {
       Alert.alert("Error", error?.message || "Failed to save address");
     } finally {
@@ -147,7 +151,13 @@ export default function AddEditAddressScreen() {
         colors={["#DC2626", "#991B1B"]}
         style={[styles.header, { paddingTop: insets.top + 12 }]}
       >
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace("/(user)/(tabs)/addresses");
+          }
+        }}>
           <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>

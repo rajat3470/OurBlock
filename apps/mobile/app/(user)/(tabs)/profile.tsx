@@ -98,9 +98,12 @@ export default function UserProfile() {
       {
         text: "Sign Out",
         style: "destructive",
-        onPress: async () => {
-          await logoutUser();
+        onPress: () => {
+          // Navigate first, then clean up — prevents double-navigation race
+          // that crashes on iOS when RoleGate's <Redirect> and router.replace
+          // both fire simultaneously after logout() is dispatched.
           router.replace("/(auth)/user-login");
+          logoutUser();
         },
       },
     ]);

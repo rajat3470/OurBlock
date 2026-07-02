@@ -419,7 +419,13 @@ export default function BusinessOwnerRegisterScreen() {
           {/* Back to login */}
           <TouchableOpacity
             style={styles.loginLink}
-            onPress={() => router.back()}
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/(auth)/business-owner-login");
+              }
+            }}
           >
             <Text style={styles.loginLinkText}>
               Already have an account?{" "}

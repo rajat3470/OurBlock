@@ -124,7 +124,11 @@ export default function CreateBusinessOwnerScreen() {
   };
 
   const handleDone = () => {
-    router.back();
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(super-admin)/businesses");
+    }
   };
 
   // ─── Credentials display ────────────────────────────────────────────────────
@@ -242,7 +246,13 @@ export default function CreateBusinessOwnerScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backBtn}
-            onPress={() => router.back()}
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/(super-admin)/businesses");
+              }
+            }}
           >
             <Text style={styles.backBtnText}>←</Text>
           </TouchableOpacity>
