@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as admin from 'firebase-admin';
+import { docToJson, docsToJson } from '../utils/routeHelpers';
 
 const router = Router();
 const db = admin.firestore();
@@ -22,8 +23,7 @@ router.get('/', async (req, res) => {
     }
     
     const snapshot = await query.get();
-    const products = snapshot.docs
-      .map(doc => ({ id: doc.id, ...doc.data() }))
+    const products = docsToJson(snapshot)
       .filter((product: any) => product.isVerified === true || product.approvalStatus === 'approved');
     
     res.json({ success: true, data: products });
@@ -38,7 +38,7 @@ router.get('/:id', async (req, res) => {
     if (!doc.exists) {
       return res.status(404).json({ success: false, error: 'Product not found' });
     }
-    return res.json({ success: true, data: { id: doc.id, ...doc.data() } });
+    return res.json({ success: true, data: docToJson(doc) });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
@@ -55,7 +55,7 @@ router.post('/', async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     const newDoc = await docRef.get();
-    res.status(201).json({ success: true, data: { id: newDoc.id, ...newDoc.data() } });
+    res.status(201).json({ success: true, data: docToJson(newDoc) });
   } catch (error: any) {
     res.status(400).json({ success: false, error: error.message });
   }
@@ -68,7 +68,7 @@ router.put('/:id', async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     const updatedDoc = await db.collection('products').doc(req.params.id).get();
-    res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
+    res.json({ success: true, data: docToJson(updatedDoc) });
   } catch (error: any) {
     res.status(400).json({ success: false, error: error.message });
   }

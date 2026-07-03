@@ -1,16 +1,12 @@
 import { Router } from 'express';
 import * as admin from 'firebase-admin';
 import { validationSchemas } from '../shared/validation';
+import { getAuthenticatedUid } from '../middleware/requireAuth';
+import { docToJson, docsToJson, normalizeRole, handleFirebaseAuthError } from '../utils/routeHelpers';
 
 const router = Router();
 const auth = admin.auth();
 const db = admin.firestore();
-
-const MOCK_TOKEN_UIDS: Record<string, string> = {
-  'mock-access-token-superadmin': 'mock-super-admin-1',
-  'mock-access-token-businessowner': 'mock-business-owner-1',
-  'mock-access-token-user': 'mock-user-1',
-};
 
 // Firebase Web API key (public — used only for client-facing REST auth endpoints)
 const FIREBASE_API_KEY = 'AIzaSyAcL3sv1VuMTq1gNrTVuIH_Si7_J1hNXAE';
@@ -22,11 +18,6 @@ interface FirebaseSignInResult {
   localId: string;
 }
 
-/**
- * Sign in via the Firebase Auth REST API and return the ID + refresh tokens.
- * The Admin SDK cannot verify email/password directly, so we delegate to the
- * public Identity Toolkit endpoint (this is the standard Firebase pattern).
- */
 async function firebaseSignIn(email: string, password: string): Promise<FirebaseSignInResult> {
   const response = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
@@ -40,7 +31,6 @@ async function firebaseSignIn(email: string, password: string): Promise<Firebase
   const data = await response.json() as any;
 
   if (!response.ok) {
-    // Map Firebase error codes to user-friendly messages
     const code: string = data?.error?.message ?? 'UNKNOWN';
     if (code.includes('EMAIL_NOT_FOUND') || code.includes('INVALID_PASSWORD') || code.includes('INVALID_LOGIN_CREDENTIALS')) {
       throw Object.assign(new Error('Invalid email or password'), { statusCode: 401 });
@@ -52,21 +42,6 @@ async function firebaseSignIn(email: string, password: string): Promise<Firebase
   }
 
   return data as FirebaseSignInResult;
-}
-
-async function getAuthenticatedUid(req: any): Promise<string> {
-  const token = req.headers.authorization?.split('Bearer ')[1];
-
-  if (!token) {
-    throw Object.assign(new Error('No token provided'), { statusCode: 401 });
-  }
-
-  if (token in MOCK_TOKEN_UIDS) {
-    return MOCK_TOKEN_UIDS[token];
-  }
-
-  const decodedToken = await auth.verifyIdToken(token);
-  return decodedToken.uid;
 }
 
 const HOME_BUSINESS_SEEDS = [
@@ -248,7 +223,7 @@ async function getSocietyProducts(businessIds: string[]) {
   );
 
   return snapshots
-    .flatMap((snapshot) => snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })))
+    .flatMap((snapshot) => docsToJson(snapshot))
     .filter((product: any) => (product.isVerified === true || product.approvalStatus === 'approved') && product.status === 'active');
 }
 
@@ -407,12 +382,7 @@ router.post('/businessowner/register', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Business owner registration error:', error);
-    if (error.code === 'auth/email-already-exists') {
-      return res.status(409).json({ success: false, error: 'An account with this email already exists' });
-    }
-    if (error.code === 'auth/phone-number-already-exists') {
-      return res.status(409).json({ success: false, error: 'This phone number is already registered' });
-    }
+    if (handleFirebaseAuthError(res, error)) return;
     return res.status(400).json({ success: false, error: error.message || 'Registration failed' });
   }
 });
@@ -491,12 +461,7 @@ router.post('/user/register', async (req, res) => {
     });
   } catch (error: any) {
     console.error('User registration error:', error);
-    if (error.code === 'auth/email-already-exists') {
-      return res.status(409).json({ success: false, error: 'An account with this email already exists' });
-    }
-    if (error.code === 'auth/phone-number-already-exists') {
-      return res.status(409).json({ success: false, error: 'This phone number is already registered' });
-    }
+    if (handleFirebaseAuthError(res, error)) return;
     return res.status(400).json({ success: false, error: error.message || 'Registration failed' });
   }
 });
@@ -606,7 +571,7 @@ router.get('/profile/me', async (req, res) => {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    return res.json({ id: userDoc.id, ...userDoc.data() });
+    return res.json(docToJson(userDoc));
   } catch (error: any) {
     return res.status(error.statusCode || 401).json({ success: false, error: error.message || 'Unauthorized' });
   }
@@ -623,7 +588,7 @@ router.put('/profile/me', async (req, res) => {
     });
 
     const updatedDoc = await db.collection('users').doc(uid).get();
-    return res.json({ id: updatedDoc.id, ...updatedDoc.data() });
+    return res.json(docToJson(updatedDoc));
   } catch (error: any) {
     return res.status(error.statusCode || 400).json({ success: false, error: error.message });
   }
@@ -634,7 +599,7 @@ router.get('/addresses/me', async (req, res) => {
     const uid = await getAuthenticatedUid(req);
     const snapshot = await db.collection('users').doc(uid).collection('addresses').get();
 
-    const addresses = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
+    const addresses = docsToJson(snapshot) as any[];
     const getTime = (v: any) => {
       if (!v) return 0;
       if (typeof v.toMillis === 'function') return v.toMillis();
@@ -728,7 +693,7 @@ router.put('/addresses/:addressId', async (req, res) => {
     });
 
     const updatedDoc = await addressRef.get();
-    return res.json({ id: updatedDoc.id, ...updatedDoc.data() });
+    return res.json(docToJson(updatedDoc));
   } catch (error: any) {
     return res.status(error.statusCode || 400).json({ success: false, error: error.message });
   }
@@ -771,7 +736,7 @@ router.put('/addresses/:addressId/set-default', async (req, res) => {
     await batch.commit();
 
     const updatedDoc = await addressRef.get();
-    return res.json({ id: updatedDoc.id, ...updatedDoc.data() });
+    return res.json(docToJson(updatedDoc));
   } catch (error: any) {
     return res.status(error.statusCode || 400).json({ success: false, error: error.message });
   }
@@ -822,7 +787,7 @@ router.get('/home-feed', async (req, res) => {
       .where('status', '==', 'active')
       .get();
 
-    const businesses = businessesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
+    const businesses = docsToJson(businessesSnapshot) as any[];
     const businessIds = businesses.map((business) => business.id);
     const products = await getSocietyProducts(businessIds);
 
@@ -834,7 +799,7 @@ router.get('/home-feed', async (req, res) => {
       .limit(100)
       .get();
 
-    const orders = ordersSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
+    const orders = docsToJson(ordersSnapshot) as any[];
     const activeOrders = orders.filter((order) => activeOrderStatuses.has(order.status)).length;
 
     const categoryMap = new Map<string, number>();
@@ -877,7 +842,7 @@ router.get('/home-feed', async (req, res) => {
       .get();
 
     const banners = bannersSnapshot.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() } as any))
+      .map((doc) => docToJson(doc) as any)
       .filter((banner) => {
         const targetSociety = String(banner.societyId || 'global');
         if (targetSociety !== 'global' && targetSociety !== societyId) return false;
@@ -942,15 +907,6 @@ async function loginWithRole(
   }
 
   const userData = userDoc.data() as any;
-
-  const normalizeRole = (role: unknown): 'superAdmin' | 'businessOwner' | 'user' | null => {
-    if (typeof role !== 'string') return null;
-    const compact = role.replace(/[-_\s]/g, '').toLowerCase();
-    if (compact === 'superadmin') return 'superAdmin';
-    if (compact === 'businessowner' || compact === 'owner' || compact === 'merchant') return 'businessOwner';
-    if (compact === 'user' || compact === 'resident' || compact === 'customer') return 'user';
-    return null;
-  };
 
   let normalizedRole = normalizeRole(userData.role);
 

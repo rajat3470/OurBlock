@@ -1,45 +1,10 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import * as admin from 'firebase-admin';
+import { requireAuth } from '../middleware/requireAuth';
+import { docToJson, docsToJson, parsePagination } from '../utils/routeHelpers';
 
 const router = Router();
 const db = admin.firestore();
-const auth = admin.auth();
-
-// ---------------------------------------------------------------------------
-// Mock token lookup — mirrors the mock users in the mobile app's useAuth.ts.
-// Allows the dev mock login to work with these owner API routes without a
-// real Firebase ID token. Remove this map once the real auth flow is active.
-// ---------------------------------------------------------------------------
-const MOCK_TOKEN_UIDS: Record<string, string> = {
-  'mock-access-token-superadmin': 'mock-super-admin-1',
-  'mock-access-token-businessowner': 'mock-business-owner-1',
-  'mock-access-token-user': 'mock-user-1',
-};
-
-// ---------------------------------------------------------------------------
-// Auth middleware
-// ---------------------------------------------------------------------------
-const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split('Bearer ')[1];
-
-  if (!token) {
-    return res.status(401).json({ success: false, error: 'No token provided' });
-  }
-
-  // Dev mock-token bypass
-  if (token in MOCK_TOKEN_UIDS) {
-    (req as any).uid = MOCK_TOKEN_UIDS[token];
-    return next();
-  }
-
-  try {
-    const decoded = await auth.verifyIdToken(token);
-    (req as any).uid = decoded.uid;
-    return next();
-  } catch {
-    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
-  }
-};
 
 // ---------------------------------------------------------------------------
 // Helper — find the business owned by the authenticated user
@@ -52,8 +17,7 @@ const getOwnerBusiness = async (uid: string) => {
     .get();
 
   if (snapshot.empty) return null;
-  const doc = snapshot.docs[0];
-  return { id: doc.id, ...doc.data() };
+  return docToJson(snapshot.docs[0]);
 };
 
 // ---------------------------------------------------------------------------
@@ -76,8 +40,7 @@ router.get('/business', requireAuth, async (req, res) => {
 router.get('/products', requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const { page, limit } = parsePagination(req.query, { limit: 50 });
 
     const business = await getOwnerBusiness(uid);
 
@@ -97,7 +60,7 @@ router.get('/products', requireAuth, async (req, res) => {
       .offset((page - 1) * limit)
       .get();
 
-    const products = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const products = docsToJson(snapshot);
 
     return res.json({
       success: true,
@@ -151,7 +114,7 @@ router.post('/products', requireAuth, async (req, res) => {
     });
 
     const newDoc = await docRef.get();
-    return res.status(201).json({ success: true, data: { id: newDoc.id, ...newDoc.data() } });
+    return res.status(201).json({ success: true, data: docToJson(newDoc) });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
   }
@@ -186,7 +149,7 @@ router.put('/products/:id', requireAuth, async (req, res) => {
     });
 
     const updatedDoc = await db.collection('products').doc(req.params.id).get();
-    return res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
+    return res.json({ success: true, data: docToJson(updatedDoc) });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
   }
@@ -226,8 +189,7 @@ router.delete('/products/:id', requireAuth, async (req, res) => {
 router.get('/orders', requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const { page, limit } = parsePagination(req.query, { limit: 50 });
 
     const business = await getOwnerBusiness(uid);
 
@@ -247,7 +209,7 @@ router.get('/orders', requireAuth, async (req, res) => {
       .offset((page - 1) * limit)
       .get();
 
-    const orders = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const orders = docsToJson(snapshot);
 
     return res.json({
       success: true,
@@ -299,7 +261,7 @@ router.patch('/orders/:orderId/status', requireAuth, async (req, res) => {
     });
 
     const updatedDoc = await db.collection('orders').doc(req.params.orderId).get();
-    return res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
+    return res.json({ success: true, data: docToJson(updatedDoc) });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
   }
@@ -357,7 +319,7 @@ router.post('/orders/:orderId/reject', requireAuth, async (req, res) => {
     });
 
     const updatedDoc = await db.collection('orders').doc(req.params.orderId).get();
-    return res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
+    return res.json({ success: true, data: docToJson(updatedDoc) });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
   }
@@ -405,7 +367,7 @@ router.patch('/business/settings', requireAuth, async (req, res) => {
 
     await db.collection('businesses').doc((business as any).id).update(updates);
     const updated = await db.collection('businesses').doc((business as any).id).get();
-    return res.json({ success: true, data: { id: updated.id, ...updated.data() } });
+    return res.json({ success: true, data: docToJson(updated) });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
@@ -515,7 +477,7 @@ router.post('/coupons', requireAuth, async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     const newDoc = await docRef.get();
-    return res.status(201).json({ success: true, data: { id: newDoc.id, ...newDoc.data() } });
+    return res.status(201).json({ success: true, data: docToJson(newDoc) });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
   }
@@ -536,7 +498,7 @@ router.get('/coupons', requireAuth, async (req, res) => {
       .orderBy('createdAt', 'desc')
       .get();
 
-    const coupons = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const coupons = docsToJson(snap);
     return res.json({ success: true, data: coupons });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });

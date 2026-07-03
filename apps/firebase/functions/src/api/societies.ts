@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as admin from 'firebase-admin';
 import { validationSchemas } from '../shared/validation';
+import { docToJson, parsePagination, buildBusinessCountMap } from '../utils/routeHelpers';
 
 const router = Router();
 const db = admin.firestore();
@@ -8,28 +9,20 @@ const db = admin.firestore();
 // Get all societies
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
-    const offset = (Number(page) - 1) * Number(limit);
+    const { page, limit } = parsePagination(req.query, { limit: 20 });
     
-    const [snapshot, businessSnap] = await Promise.all([
+    const [snapshot, businessCountMap] = await Promise.all([
       db
         .collection('societies')
         .orderBy('createdAt', 'desc')
-        .limit(Number(limit))
-        .offset(offset)
+        .limit(limit)
+        .offset((page - 1) * limit)
         .get(),
-      db.collection('businesses').get(),
+      buildBusinessCountMap(db),
     ]);
 
-    const businessCountMap: Record<string, number> = {};
-    businessSnap.docs.forEach((doc) => {
-      const sid = doc.data().societyId as string | undefined;
-      if (sid) businessCountMap[sid] = (businessCountMap[sid] ?? 0) + 1;
-    });
-    
     const societies = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
+      ...docToJson(doc),
       totalBusinesses: businessCountMap[doc.id] ?? 0,
     }));
     
@@ -37,8 +30,8 @@ router.get('/', async (req, res) => {
       success: true,
       data: societies,
       pagination: {
-        page: Number(page),
-        limit: Number(limit),
+        page,
+        limit,
         total: societies.length,
       },
     });
@@ -59,7 +52,7 @@ router.get('/:id', async (req, res) => {
     
     return res.json({
       success: true,
-      data: { id: doc.id, ...doc.data() },
+      data: docToJson(doc),
     });
   } catch (error: any) {
     console.error('Get society error:', error);
@@ -85,7 +78,7 @@ router.post('/', async (req, res) => {
     
     res.status(201).json({
       success: true,
-      data: { id: newDoc.id, ...newDoc.data() },
+      data: docToJson(newDoc),
     });
   } catch (error: any) {
     console.error('Create society error:', error);
@@ -107,7 +100,7 @@ router.put('/:id', async (req, res) => {
     
     res.json({
       success: true,
-      data: { id: updatedDoc.id, ...updatedDoc.data() },
+      data: docToJson(updatedDoc),
     });
   } catch (error: any) {
     console.error('Update society error:', error);

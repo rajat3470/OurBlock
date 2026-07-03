@@ -1,38 +1,10 @@
 import { Router } from 'express';
 import * as admin from 'firebase-admin';
+import { requireAuth } from '../middleware/requireAuth';
+import { docToJson, docsToJson } from '../utils/routeHelpers';
 
 const router = Router();
 const db = admin.firestore();
-const auth = admin.auth();
-
-const MOCK_TOKEN_UIDS: Record<string, string> = {
-  'mock-access-token-superadmin': 'mock-super-admin-1',
-  'mock-access-token-businessowner': 'mock-business-owner-1',
-  'mock-access-token-user': 'mock-user-1',
-};
-
-const requireAuth = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split('Bearer ')[1];
-
-  if (!token) {
-    return res.status(401).json({ success: false, error: 'No token provided' });
-  }
-
-  if (token in MOCK_TOKEN_UIDS) {
-    req.uid = MOCK_TOKEN_UIDS[token];
-    req.user = { uid: req.uid };
-    return next();
-  }
-
-  try {
-    const decoded = await auth.verifyIdToken(token);
-    req.uid = decoded.uid;
-    req.user = { uid: decoded.uid };
-    return next();
-  } catch {
-    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
-  }
-};
 
 // Get all users
 router.get('/', async (req, res) => {
@@ -50,7 +22,7 @@ router.get('/', async (req, res) => {
     }
     
     const snapshot = await query.get();
-    const users = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    const users = docsToJson(snapshot);
     
     res.json({ success: true, data: users });
   } catch (error: any) {
@@ -64,7 +36,7 @@ router.get('/:id', async (req, res) => {
     if (!doc.exists) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
-    return res.json({ success: true, data: { id: doc.id, ...doc.data() } });
+    return res.json({ success: true, data: docToJson(doc) });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
@@ -77,7 +49,7 @@ router.put('/:id', async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     const updatedDoc = await db.collection('users').doc(req.params.id).get();
-    res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
+    res.json({ success: true, data: docToJson(updatedDoc) });
   } catch (error: any) {
     res.status(400).json({ success: false, error: error.message });
   }
@@ -100,8 +72,7 @@ router.use('/verify-phone', requireAuth);
 // Current user profile endpoints
 router.get('/profile/me', async (req, res) => {
   try {
-    // @ts-ignore - user is attached by auth middleware
-    const userId = req.user?.uid;
+    const userId = (req as any).uid;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
@@ -111,7 +82,7 @@ router.get('/profile/me', async (req, res) => {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    return res.json({ id: doc.id, ...doc.data() });
+    return res.json(docToJson(doc));
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
@@ -119,8 +90,7 @@ router.get('/profile/me', async (req, res) => {
 
 router.put('/profile/me', async (req, res) => {
   try {
-    // @ts-ignore
-    const userId = req.user?.uid;
+    const userId = (req as any).uid;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
@@ -133,7 +103,7 @@ router.put('/profile/me', async (req, res) => {
     });
 
     const updatedDoc = await db.collection('users').doc(userId).get();
-    return res.json({ id: updatedDoc.id, ...updatedDoc.data() });
+    return res.json(docToJson(updatedDoc));
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
   }
@@ -142,15 +112,14 @@ router.put('/profile/me', async (req, res) => {
 // Address Management
 router.get('/addresses/me', async (req, res) => {
   try {
-    // @ts-ignore
-    const userId = req.user?.uid;
+    const userId = (req as any).uid;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
 
     const snapshot = await db.collection('users').doc(userId).collection('addresses').get();
 
-    const addresses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+    const addresses = docsToJson(snapshot) as any[];
     const getTime = (v: any) => {
       if (!v) return 0;
       if (typeof v.toMillis === 'function') return v.toMillis();
@@ -174,8 +143,7 @@ router.get('/addresses/me', async (req, res) => {
 
 router.post('/addresses/me', async (req, res) => {
   try {
-    // @ts-ignore
-    const userId = req.user?.uid;
+    const userId = (req as any).uid;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
@@ -222,8 +190,7 @@ router.post('/addresses/me', async (req, res) => {
 
 router.put('/addresses/:addressId', async (req, res) => {
   try {
-    // @ts-ignore
-    const userId = req.user?.uid;
+    const userId = (req as any).uid;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
@@ -256,7 +223,7 @@ router.put('/addresses/:addressId', async (req, res) => {
     });
 
     const updatedDoc = await addressRef.get();
-    return res.json({ id: updatedDoc.id, ...updatedDoc.data() });
+    return res.json(docToJson(updatedDoc));
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
   }
@@ -264,8 +231,7 @@ router.put('/addresses/:addressId', async (req, res) => {
 
 router.delete('/addresses/:addressId', async (req, res) => {
   try {
-    // @ts-ignore
-    const userId = req.user?.uid;
+    const userId = (req as any).uid;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
@@ -287,8 +253,7 @@ router.delete('/addresses/:addressId', async (req, res) => {
 
 router.put('/addresses/:addressId/set-default', async (req, res) => {
   try {
-    // @ts-ignore
-    const userId = req.user?.uid;
+    const userId = (req as any).uid;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
@@ -310,7 +275,7 @@ router.put('/addresses/:addressId/set-default', async (req, res) => {
     await batch.commit();
 
     const updatedDoc = await addressRef.get();
-    return res.json({ id: updatedDoc.id, ...updatedDoc.data() });
+    return res.json(docToJson(updatedDoc));
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
   }
@@ -319,8 +284,7 @@ router.put('/addresses/:addressId/set-default', async (req, res) => {
 // Phone Verification
 router.post('/verify-phone/me', async (req, res) => {
   try {
-    // @ts-ignore
-    const userId = req.user?.uid;
+    const userId = (req as any).uid;
     if (!userId) {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
@@ -349,7 +313,7 @@ router.post('/verify-phone/me', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/fcm-token', requireAuth, async (req: any, res: any) => {
   try {
-    const uid = req.uid;
+    const uid = (req as any).uid;
     const { fcmToken } = req.body;
 
     if (!fcmToken || typeof fcmToken !== 'string') {

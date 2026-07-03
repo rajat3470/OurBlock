@@ -1,31 +1,10 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import * as admin from 'firebase-admin';
+import { requireAuth } from '../middleware/requireAuth';
+import { docsToJson } from '../utils/routeHelpers';
 
 const router = Router();
 const db = admin.firestore();
-const auth = admin.auth();
-
-const MOCK_TOKEN_UIDS: Record<string, string> = {
-  'mock-access-token-superadmin': 'mock-super-admin-1',
-  'mock-access-token-businessowner': 'mock-business-owner-1',
-  'mock-access-token-user': 'mock-user-1',
-};
-
-const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split('Bearer ')[1];
-  if (!token) return res.status(401).json({ success: false, error: 'No token provided' });
-  if (token in MOCK_TOKEN_UIDS) {
-    (req as any).uid = MOCK_TOKEN_UIDS[token];
-    return next();
-  }
-  try {
-    const decoded = await auth.verifyIdToken(token);
-    (req as any).uid = decoded.uid;
-    return next();
-  } catch {
-    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
-  }
-};
 
 // Refund window: 48 hours after order was last updated to delivered
 const REFUND_WINDOW_HOURS = 48;
@@ -43,7 +22,7 @@ router.get('/my', requireAuth, async (req, res) => {
       .limit(30)
       .get();
 
-    const refunds = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const refunds = docsToJson(snap);
     return res.json({ success: true, data: refunds });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });

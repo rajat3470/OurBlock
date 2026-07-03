@@ -1,12 +1,13 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import * as admin from 'firebase-admin';
 import * as https from 'https';
 import { computeCouponDiscount } from './coupons';
 import { ORDER_FEES } from '../shared/constants';
+import { requireAuth } from '../middleware/requireAuth';
+import { docToJson, docsToJson, parsePagination } from '../utils/routeHelpers';
 
 const router = Router();
 const db = admin.firestore();
-const auth = admin.auth();
 
 // ---------------------------------------------------------------------------
 // Push notification helper (Expo Push API)
@@ -67,41 +68,12 @@ async function notifyOrderStatusChange(
 const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
 
 // ---------------------------------------------------------------------------
-// Mock token lookup (matches owner.ts dev pattern)
-// ---------------------------------------------------------------------------
-const MOCK_TOKEN_UIDS: Record<string, string> = {
-  'mock-access-token-superadmin': 'mock-super-admin-1',
-  'mock-access-token-businessowner': 'mock-business-owner-1',
-  'mock-access-token-user': 'mock-user-1',
-};
-
-// ---------------------------------------------------------------------------
-// Auth middleware
-// ---------------------------------------------------------------------------
-const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split('Bearer ')[1];
-  if (!token) return res.status(401).json({ success: false, error: 'No token provided' });
-  if (token in MOCK_TOKEN_UIDS) {
-    (req as any).uid = MOCK_TOKEN_UIDS[token];
-    return next();
-  }
-  try {
-    const decoded = await auth.verifyIdToken(token);
-    (req as any).uid = decoded.uid;
-    return next();
-  } catch {
-    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
-  }
-};
-
-// ---------------------------------------------------------------------------
 // GET /orders/my — authenticated user's own orders
 // ---------------------------------------------------------------------------
 router.get('/my', requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+    const { page, limit } = parsePagination(req.query, { limit: 20, maxLimit: 50 });
 
     const snapshot = await db
       .collection('orders')
@@ -110,7 +82,7 @@ router.get('/my', requireAuth, async (req, res) => {
       .limit(limit * page)
       .get();
 
-    const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const all = docsToJson(snapshot);
     const paginated = all.slice((page - 1) * limit, page * limit);
 
     return res.json({ success: true, data: paginated, total: snapshot.size, page, limit });
@@ -130,8 +102,7 @@ router.get('/business', requireAuth, async (req, res) => {
 
     const businessId = bizSnap.docs[0].id;
     const statusFilter = req.query.status as string | undefined;
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+    const { page, limit } = parsePagination(req.query, { limit: 20, maxLimit: 50 });
 
     let query: any = db.collection('orders').where('businessId', '==', businessId).orderBy('createdAt', 'desc');
     if (statusFilter) {
@@ -142,7 +113,7 @@ router.get('/business', requireAuth, async (req, res) => {
     }
 
     const snapshot = await query.limit(limit * page).get();
-    const all = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    const all = docsToJson(snapshot);
     const paginated = all.slice((page - 1) * limit, page * limit);
 
     return res.json({ success: true, data: paginated, total: snapshot.size, page, limit });
@@ -157,10 +128,10 @@ router.get('/business', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const doc = await db.collection('orders').doc(req.params.id).get();
-    if (!doc.exists) return res.status(404).json({ success: false, error: 'Order not found' });
+    const orderDoc = await db.collection('orders').doc(req.params.id).get();
+    if (!orderDoc.exists) return res.status(404).json({ success: false, error: 'Order not found' });
 
-    const data = doc.data()!;
+    const data = orderDoc.data()!;
     let allowed = data.userId === uid;
     if (!allowed) {
       const bizSnap = await db.collection('businesses').where('ownerId', '==', uid).limit(1).get();
@@ -168,7 +139,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     }
     if (!allowed) return res.status(403).json({ success: false, error: 'Access denied' });
 
-    return res.json({ success: true, data: { id: doc.id, ...data } });
+    return res.json({ success: true, data: docToJson(orderDoc) });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
@@ -297,7 +268,7 @@ router.post('/', requireAuth, async (req, res) => {
     const docRef = await db.collection('orders').add(orderData);
     const newDoc = await docRef.get();
 
-    return res.status(201).json({ success: true, data: { id: newDoc.id, ...newDoc.data() } });
+    return res.status(201).json({ success: true, data: docToJson(newDoc) });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
@@ -340,7 +311,7 @@ router.put('/:id/status', requireAuth, async (req, res) => {
     // Fire-and-forget push notification to the customer
     notifyOrderStatusChange(orderData.userId, status, orderData.businessName ?? undefined);
 
-    return res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
+    return res.json({ success: true, data: docToJson(updatedDoc) });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
   }
@@ -352,8 +323,7 @@ router.put('/:id/status', requireAuth, async (req, res) => {
 router.get('/', requireAuth, async (req, res) => {
   try {
     const { businessId, status, userId } = req.query;
-    const page = Math.max(1, Number(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 30));
+    const { page, limit } = parsePagination(req.query, { limit: 30 });
 
     let query: any = db.collection('orders').orderBy('createdAt', 'desc');
     if (businessId) query = db.collection('orders').where('businessId', '==', businessId).orderBy('createdAt', 'desc');
@@ -361,7 +331,7 @@ router.get('/', requireAuth, async (req, res) => {
     else if (status) query = db.collection('orders').where('status', '==', status).orderBy('createdAt', 'desc');
 
     const snapshot = await query.limit(limit * page).get();
-    const all = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    const all = docsToJson(snapshot);
     const paginated = all.slice((page - 1) * limit, page * limit);
 
     return res.json({ success: true, data: paginated, total: snapshot.size, page, limit });
