@@ -1,41 +1,12 @@
 import { Router } from 'express';
 import * as admin from 'firebase-admin';
+import { requireAuth, requireSuperAdmin } from '../shared/authMiddleware';
 
 const router = Router();
 const db = admin.firestore();
-const auth = admin.auth();
 
-const MOCK_TOKEN_UIDS: Record<string, string> = {
-  'mock-access-token-superadmin': 'mock-super-admin-1',
-  'mock-access-token-businessowner': 'mock-business-owner-1',
-  'mock-access-token-user': 'mock-user-1',
-};
-
-const requireAuth = async (req: any, res: any, next: any) => {
-  const token = req.headers.authorization?.split('Bearer ')[1];
-
-  if (!token) {
-    return res.status(401).json({ success: false, error: 'No token provided' });
-  }
-
-  if (token in MOCK_TOKEN_UIDS) {
-    req.uid = MOCK_TOKEN_UIDS[token];
-    req.user = { uid: req.uid };
-    return next();
-  }
-
-  try {
-    const decoded = await auth.verifyIdToken(token);
-    req.uid = decoded.uid;
-    req.user = { uid: decoded.uid };
-    return next();
-  } catch {
-    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
-  }
-};
-
-// Get all users
-router.get('/', async (req, res) => {
+// Get all users (admin only)
+router.get('/', requireSuperAdmin, async (req, res) => {
   try {
     const { role, societyId, status = 'active' } = req.query;
     
@@ -58,7 +29,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireSuperAdmin, async (req, res) => {
   try {
     const doc = await db.collection('users').doc(req.params.id).get();
     if (!doc.exists) {
@@ -70,7 +41,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireSuperAdmin, async (req, res) => {
   try {
     await db.collection('users').doc(req.params.id).update({
       ...req.body,
@@ -83,7 +54,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireSuperAdmin, async (req, res) => {
   try {
     await admin.auth().deleteUser(req.params.id);
     await db.collection('users').doc(req.params.id).delete();
@@ -93,9 +64,9 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-router.use('/profile', requireAuth);
-router.use('/addresses', requireAuth);
-router.use('/verify-phone', requireAuth);
+router.use('/profile', requireAuth as any);
+router.use('/addresses', requireAuth as any);
+router.use('/verify-phone', requireAuth as any);
 
 // Current user profile endpoints
 router.get('/profile/me', async (req, res) => {
@@ -125,7 +96,7 @@ router.put('/profile/me', async (req, res) => {
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
 
-    const { email, password, role, createdAt, id, ...updateData } = req.body;
+    const { email, password, role, createdAt, id, status, isEmailVerified, isPhoneVerified, ...updateData } = req.body;
 
     await db.collection('users').doc(userId).update({
       ...updateData,

@@ -1,19 +1,22 @@
 import { Router } from 'express';
 import * as admin from 'firebase-admin';
 import { validationSchemas } from '../shared/validation';
+import { getAuthenticatedUid, normalizeRole } from '../shared/authMiddleware';
 
 const router = Router();
 const auth = admin.auth();
 const db = admin.firestore();
 
-const MOCK_TOKEN_UIDS: Record<string, string> = {
-  'mock-access-token-superadmin': 'mock-super-admin-1',
-  'mock-access-token-businessowner': 'mock-business-owner-1',
-  'mock-access-token-user': 'mock-user-1',
-};
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || (() => {
+  try {
+    const functions = require('firebase-functions');
+    return functions.config()?.app?.api_key;
+  } catch { return undefined; }
+})();
 
-// Firebase Web API key (public — used only for client-facing REST auth endpoints)
-const FIREBASE_API_KEY = 'AIzaSyAcL3sv1VuMTq1gNrTVuIH_Si7_J1hNXAE';
+if (!FIREBASE_API_KEY) {
+  console.warn('[auth] FIREBASE_API_KEY not set — sign-in and token refresh will fail');
+}
 
 interface FirebaseSignInResult {
   idToken: string;
@@ -54,20 +57,7 @@ async function firebaseSignIn(email: string, password: string): Promise<Firebase
   return data as FirebaseSignInResult;
 }
 
-async function getAuthenticatedUid(req: any): Promise<string> {
-  const token = req.headers.authorization?.split('Bearer ')[1];
-
-  if (!token) {
-    throw Object.assign(new Error('No token provided'), { statusCode: 401 });
-  }
-
-  if (token in MOCK_TOKEN_UIDS) {
-    return MOCK_TOKEN_UIDS[token];
-  }
-
-  const decodedToken = await auth.verifyIdToken(token);
-  return decodedToken.uid;
-}
+// getAuthenticatedUid imported from shared/authMiddleware
 
 const HOME_BUSINESS_SEEDS = [
   {
@@ -255,7 +245,8 @@ async function getSocietyProducts(businessIds: string[]) {
 // Register user
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, phone, role = 'user' } = req.body;
+    const { email, password, firstName, lastName, phone } = req.body;
+    const role = 'user';
     
     // Validate input
     const validatedData = validationSchemas.register.parse({
@@ -501,33 +492,35 @@ router.post('/user/register', async (req, res) => {
   }
 });
 
-// Login (client-side handles Firebase Auth, this is for custom claims)
+// Login — syncs custom claims from Firestore (requires valid auth token)
 router.post('/login', async (req, res) => {
   try {
-    const { uid } = req.body;
-    
-    if (!uid) {
-      return res.status(400).json({ success: false, error: 'UID required' });
+    const token = req.headers.authorization?.split('Bearer ')[1];
+    if (!token) {
+      return res.status(401).json({ success: false, error: 'Authorization token required' });
     }
-    
+
+    const decodedToken = await auth.verifyIdToken(token);
+    const uid = decodedToken.uid;
+
     const userDoc = await db.collection('users').doc(uid).get();
-    
+
     if (!userDoc.exists) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
-    
+
     const userData = userDoc.data();
-    
+
     // Set custom claims for role-based access
     await auth.setCustomUserClaims(uid, { role: userData?.role });
-    
+
     return res.json({
       success: true,
       data: userData,
     });
   } catch (error: any) {
     console.error('Login error:', error);
-    return res.status(500).json({
+    return res.status(401).json({
       success: false,
       error: error.message || 'Login failed',
     });
@@ -615,7 +608,7 @@ router.get('/profile/me', async (req, res) => {
 router.put('/profile/me', async (req, res) => {
   try {
     const uid = await getAuthenticatedUid(req);
-    const { email, password, role, createdAt, id, ...updateData } = req.body;
+    const { email, password, role, createdAt, id, status, isEmailVerified, isPhoneVerified, ...updateData } = req.body;
 
     await db.collection('users').doc(uid).update({
       ...updateData,
@@ -786,6 +779,8 @@ router.post('/verify-phone', async (req, res) => {
       return res.status(400).json({ success: false, error: 'Code and verificationId are required' });
     }
 
+    // TODO: Implement server-side OTP verification via Firebase Phone Auth or a third-party provider.
+    // Currently client-side verification is trusted; this should be hardened before launch.
     await db.collection('users').doc(uid).update({
       isPhoneVerified: true,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -943,15 +938,6 @@ async function loginWithRole(
 
   const userData = userDoc.data() as any;
 
-  const normalizeRole = (role: unknown): 'superAdmin' | 'businessOwner' | 'user' | null => {
-    if (typeof role !== 'string') return null;
-    const compact = role.replace(/[-_\s]/g, '').toLowerCase();
-    if (compact === 'superadmin') return 'superAdmin';
-    if (compact === 'businessowner' || compact === 'owner' || compact === 'merchant') return 'businessOwner';
-    if (compact === 'user' || compact === 'resident' || compact === 'customer') return 'user';
-    return null;
-  };
-
   let normalizedRole = normalizeRole(userData.role);
 
   // Repair legacy business-owner accounts that were authenticated successfully
@@ -1045,8 +1031,8 @@ router.post('/refresh-token', async (req, res) => {
 
 // PUT /auth/push-token — store Expo push token for the authenticated user
 router.put('/push-token', async (req, res) => {
-  const uid = (req as any).user?.uid;
-  if (!uid) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  let uid: string;
+  try { uid = await getAuthenticatedUid(req); } catch { return res.status(401).json({ success: false, error: 'Unauthorized' }); }
   const { pushToken } = req.body;
   if (!pushToken || typeof pushToken !== 'string') {
     return res.status(400).json({ success: false, error: 'pushToken is required' });

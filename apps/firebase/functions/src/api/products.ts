@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as admin from 'firebase-admin';
+import { requireSuperAdmin } from '../shared/authMiddleware';
 
 const router = Router();
 const db = admin.firestore();
@@ -44,10 +45,11 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireSuperAdmin as any, async (req, res) => {
   try {
+    const { status: _s, rating: _r, totalReviews: _t, ...safeBody } = req.body;
     const docRef = await db.collection('products').add({
-      ...req.body,
+      ...safeBody,
       status: 'active',
       rating: 0,
       totalReviews: 0,
@@ -61,10 +63,11 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireSuperAdmin as any, async (req, res) => {
   try {
+    const { id: _id, createdAt: _c, ...safeBody } = req.body;
     await db.collection('products').doc(req.params.id).update({
-      ...req.body,
+      ...safeBody,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     const updatedDoc = await db.collection('products').doc(req.params.id).get();
@@ -74,7 +77,7 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireSuperAdmin as any, async (req, res) => {
   try {
     await db.collection('products').doc(req.params.id).delete();
     res.json({ success: true, message: 'Product deleted successfully' });

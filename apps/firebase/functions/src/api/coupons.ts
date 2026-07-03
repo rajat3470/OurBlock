@@ -1,37 +1,9 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import * as admin from 'firebase-admin';
+import { requireAuth } from '../shared/authMiddleware';
 
 const router = Router();
 const db = admin.firestore();
-const auth = admin.auth();
-
-// ---------------------------------------------------------------------------
-// Mock tokens
-// ---------------------------------------------------------------------------
-const MOCK_TOKEN_UIDS: Record<string, string> = {
-  'mock-access-token-superadmin': 'mock-super-admin-1',
-  'mock-access-token-businessowner': 'mock-business-owner-1',
-  'mock-access-token-user': 'mock-user-1',
-};
-
-// ---------------------------------------------------------------------------
-// Auth middleware
-// ---------------------------------------------------------------------------
-const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split('Bearer ')[1];
-  if (!token) return res.status(401).json({ success: false, error: 'No token provided' });
-  if (token in MOCK_TOKEN_UIDS) {
-    (req as any).uid = MOCK_TOKEN_UIDS[token];
-    return next();
-  }
-  try {
-    const decoded = await auth.verifyIdToken(token);
-    (req as any).uid = decoded.uid;
-    return next();
-  } catch {
-    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
-  }
-};
 
 // ---------------------------------------------------------------------------
 // Helper: calculate discount for a coupon against a cart

@@ -1,23 +1,23 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router } from 'express';
 import * as admin from 'firebase-admin';
 import * as https from 'https';
 import { computeCouponDiscount } from './coupons';
 import { ORDER_FEES } from '../shared/constants';
+import { requireAuth } from '../shared/authMiddleware';
 
 const router = Router();
 const db = admin.firestore();
-const auth = admin.auth();
 
 // ---------------------------------------------------------------------------
 // Push notification helper (Expo Push API)
 // ---------------------------------------------------------------------------
 const STATUS_MESSAGES: Record<string, { title: string; body: (name?: string) => string }> = {
-  confirmed:  { title: '✅ Order Confirmed', body: (n) => `${n || 'Your order'} has been confirmed and is being prepared.` },
-  preparing:  { title: '👨‍🍳 Being Prepared', body: (n) => `${n || 'Your order'} is now being prepared.` },
-  ready:      { title: '🎉 Ready for Pickup', body: (n) => `${n || 'Your order'} is ready! Delivery is on the way.` },
-  out_for_delivery: { title: '🚚 Out for Delivery', body: (n) => `${n || 'Your order'} is on its way to you!` },
-  delivered:  { title: '✅ Order Delivered', body: (n) => `${n || 'Your order'} has been delivered. Enjoy your order!` },
-  cancelled:  { title: '❌ Order Cancelled', body: (n) => `${n || 'Your order'} has been cancelled.` },
+  confirmed:  { title: 'Order Confirmed', body: (n) => `${n || 'Your order'} has been confirmed and is being prepared.` },
+  preparing:  { title: 'Being Prepared', body: (n) => `${n || 'Your order'} is now being prepared.` },
+  ready:      { title: 'Ready for Pickup', body: (n) => `${n || 'Your order'} is ready! Delivery is on the way.` },
+  out_for_delivery: { title: 'Out for Delivery', body: (n) => `${n || 'Your order'} is on its way to you!` },
+  delivered:  { title: 'Order Delivered', body: (n) => `${n || 'Your order'} has been delivered. Enjoy your order!` },
+  cancelled:  { title: 'Order Cancelled', body: (n) => `${n || 'Your order'} has been cancelled.` },
 };
 
 async function sendPushNotification(pushToken: string, title: string, body: string): Promise<void> {
@@ -40,7 +40,7 @@ async function sendPushNotification(pushToken: string, title: string, body: stri
       },
     };
     const req = https.request(options, () => resolve());
-    req.on('error', () => resolve()); // non-blocking; ignore errors
+    req.on('error', () => resolve());
     req.write(payload);
     req.end();
   });
@@ -65,34 +65,6 @@ async function notifyOrderStatusChange(
 // Constants
 // ---------------------------------------------------------------------------
 const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
-
-// ---------------------------------------------------------------------------
-// Mock token lookup (matches owner.ts dev pattern)
-// ---------------------------------------------------------------------------
-const MOCK_TOKEN_UIDS: Record<string, string> = {
-  'mock-access-token-superadmin': 'mock-super-admin-1',
-  'mock-access-token-businessowner': 'mock-business-owner-1',
-  'mock-access-token-user': 'mock-user-1',
-};
-
-// ---------------------------------------------------------------------------
-// Auth middleware
-// ---------------------------------------------------------------------------
-const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split('Bearer ')[1];
-  if (!token) return res.status(401).json({ success: false, error: 'No token provided' });
-  if (token in MOCK_TOKEN_UIDS) {
-    (req as any).uid = MOCK_TOKEN_UIDS[token];
-    return next();
-  }
-  try {
-    const decoded = await auth.verifyIdToken(token);
-    (req as any).uid = decoded.uid;
-    return next();
-  } catch {
-    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
-  }
-};
 
 // ---------------------------------------------------------------------------
 // GET /orders/my — authenticated user's own orders

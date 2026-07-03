@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as admin from 'firebase-admin';
+import { requireSuperAdmin } from '../shared/authMiddleware';
 
 const router = Router();
 const db = admin.firestore();
@@ -43,11 +44,12 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create business
-router.post('/', async (req, res) => {
+// Create business (Super Admin only)
+router.post('/', requireSuperAdmin as any, async (req, res) => {
   try {
+    const { id: _id, createdAt: _c, rating: _r, totalReviews: _t, ...safeBody } = req.body;
     const docRef = await db.collection('businesses').add({
-      ...req.body,
+      ...safeBody,
       status: 'active',
       isVerified: false,
       rating: 0,
@@ -63,11 +65,12 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update business
-router.put('/:id', async (req, res) => {
+// Update business (Super Admin only)
+router.put('/:id', requireSuperAdmin as any, async (req, res) => {
   try {
+    const { id: _id, createdAt: _c, ownerId: _o, ...safeBody } = req.body;
     await db.collection('businesses').doc(req.params.id).update({
-      ...req.body,
+      ...safeBody,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     
@@ -78,8 +81,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Delete business
-router.delete('/:id', async (req, res) => {
+// Delete business (Super Admin only)
+router.delete('/:id', requireSuperAdmin as any, async (req, res) => {
   try {
     await db.collection('businesses').doc(req.params.id).delete();
     res.json({ success: true, message: 'Business deleted successfully' });

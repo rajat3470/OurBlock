@@ -11,7 +11,23 @@ admin.initializeApp();
 const app = express();
 
 // Middleware
-app.use(cors({ origin: true }));
+const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
+  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+  : undefined;
+
+app.use(
+  cors({
+    origin: allowedOrigins ?? [
+      /\.our-block-app\.web\.app$/,
+      /\.our-block-app\.firebaseapp\.com$/,
+      /localhost:\d+$/,
+      /127\.0\.0\.1:\d+$/,
+    ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400,
+  })
+);
 app.use(express.json({ limit: '10mb' }));
 
 // Import API routes
@@ -55,7 +71,11 @@ export * from './triggers/onUserCreate';
 export * from './triggers/onOrderCreate';
 export * from './triggers/onOrderUpdate';
 export * from './triggers/onSocietyDelete';
-export * from './test/sendTestOneSignal';
+
+// Only export the test notification endpoint in emulator mode
+if (process.env.FUNCTIONS_EMULATOR === 'true') {
+  exports.sendTestOneSignal = require('./test/sendTestOneSignal').sendTestOneSignal;
+}
 
 // Export scheduled functions
 export const dailyCleanup = functions.pubsub

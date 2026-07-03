@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as admin from 'firebase-admin';
 import { validationSchemas } from '../shared/validation';
+import { requireSuperAdmin } from '../shared/authMiddleware';
 
 const router = Router();
 const db = admin.firestore();
@@ -68,7 +69,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create society (Super Admin only)
-router.post('/', async (req, res) => {
+router.post('/', requireSuperAdmin as any, async (req, res) => {
   try {
     const validatedData = validationSchemas.society.parse(req.body);
     
@@ -93,8 +94,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update society
-router.put('/:id', async (req, res) => {
+// Update society (Super Admin only)
+router.put('/:id', requireSuperAdmin as any, async (req, res) => {
   try {
     const validatedData = validationSchemas.society.partial().parse(req.body);
     
@@ -115,8 +116,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Delete society — cascades to businesses, products, orders, and business-owner accounts
-router.delete('/:id', async (req, res) => {
+// Delete society (Super Admin only) — cascades to businesses, products, orders, and business-owner accounts
+router.delete('/:id', requireSuperAdmin as any, async (req, res) => {
   const societyId = req.params.id;
   try {
     // 1. Confirm the society exists first
