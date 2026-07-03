@@ -7,7 +7,8 @@ const workspaceRoot = path.resolve(projectRoot, "../..");
 const config = getDefaultConfig(projectRoot);
 
 // Watch all files in the monorepo so Metro can resolve shared packages
-config.watchFolders = [workspaceRoot];
+// Merge with Expo's defaults instead of replacing them entirely
+config.watchFolders = [...(config.watchFolders ?? []), workspaceRoot];
 
 // Tell Metro to resolve packages from both the app's own node_modules
 // and the hoisted root node_modules (Yarn workspaces hoisting)

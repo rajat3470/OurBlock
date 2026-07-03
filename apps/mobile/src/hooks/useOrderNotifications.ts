@@ -21,15 +21,43 @@ import {
 
 const IS_EXPO_GO = Constants.executionEnvironment === "storeClient";
 
-let _messagingCache: any = undefined;
+type MessagingApi = {
+  AuthorizationStatus?: {
+    AUTHORIZED?: number;
+    PROVISIONAL?: number;
+  };
+  requestPermission: () => Promise<number>;
+  getToken: () => Promise<string>;
+  onTokenRefresh: (listener: (token: string) => void) => () => void;
+  onMessage: (listener: (message: any) => void) => () => void;
+  onNotificationOpenedApp: (listener: (message: any) => void) => () => void;
+  getInitialNotification: () => Promise<any>;
+};
 
-const getMessaging = (): any => {
+let _messagingCache: MessagingApi | null | undefined = undefined;
+
+const getMessaging = (): MessagingApi | null => {
   if (IS_EXPO_GO) return null;
   if (_messagingCache !== undefined) return _messagingCache;
   try {
-    const mod = require("@react-native-firebase/messaging").default;
-    mod();
-    _messagingCache = mod;
+    const appMod = require("@react-native-firebase/app");
+    const messagingMod = require("@react-native-firebase/messaging");
+
+    const app = appMod.getApp();
+    const messaging = messagingMod.getMessaging(app);
+
+    _messagingCache = {
+      AuthorizationStatus: messagingMod.AuthorizationStatus,
+      requestPermission: () => messagingMod.requestPermission(messaging),
+      getToken: () => messagingMod.getToken(messaging),
+      onTokenRefresh: (listener: (token: string) => void) =>
+        messagingMod.onTokenRefresh(messaging, listener),
+      onMessage: (listener: (message: any) => void) =>
+        messagingMod.onMessage(messaging, listener),
+      onNotificationOpenedApp: (listener: (message: any) => void) =>
+        messagingMod.onNotificationOpenedApp(messaging, listener),
+      getInitialNotification: () => messagingMod.getInitialNotification(messaging),
+    };
   } catch {
     _messagingCache = null;
   }
@@ -48,14 +76,14 @@ export function useOrderNotifications() {
 
     const registerToken = async () => {
       try {
-        const authStatus = await m().requestPermission();
+        const authStatus = await m.requestPermission();
         const granted =
           authStatus === m.AuthorizationStatus?.AUTHORIZED ||
           authStatus === m.AuthorizationStatus?.PROVISIONAL;
 
         if (!granted) return;
 
-        const fcmToken = await m().getToken();
+        const fcmToken = await m.getToken();
         if (!fcmToken) return;
 
         const { apiClient } = await import("@services/apiClient");
@@ -67,7 +95,7 @@ export function useOrderNotifications() {
 
     registerToken();
 
-    const unsubRefresh = m().onTokenRefresh(async (newToken: string) => {
+    const unsubRefresh = m.onTokenRefresh(async (newToken: string) => {
       const { apiClient } = await import("@services/apiClient");
       await apiClient.post("/users/fcm-token", { fcmToken: newToken }).catch(() => null);
     });
@@ -79,7 +107,7 @@ export function useOrderNotifications() {
     const m = getMessaging();
     if (!m) return;
 
-    const unsubForeground = m().onMessage(async (remoteMessage: any) => {
+    const unsubForeground = m.onMessage(async (remoteMessage: any) => {
       const { notification, data } = remoteMessage;
       if (!notification) return;
 
@@ -121,9 +149,9 @@ export function useOrderNotifications() {
       void handleNotificationOpen(undefined, data);
     };
 
-    m().onNotificationOpenedApp(openFromNotification);
+    m.onNotificationOpenedApp(openFromNotification);
 
-    m()
+    m
       .getInitialNotification()
       .then((remoteMessage: any) => {
         if (remoteMessage?.data?.orderId) {

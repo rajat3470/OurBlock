@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,13 +8,16 @@ import {
   ActivityIndicator,
   Share,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useUserApp } from "../../src/hooks/useUserApp";
 import { userAppService } from "../../src/services/userAppService";
 import { Order, OrderStatus } from "../../src/types";
+import { useSocketEvent } from "../../src/hooks/useSocket";
+import { socketService } from "../../src/services/socketService";
+import SafeAreaScreen from "../../src/components/SafeAreaScreen";
+import SafeAreaHeader from "../../src/components/SafeAreaHeader";
 
 const STATUS_LABEL: Record<string, string> = {
   pending:        "Waiting for Acceptance",
@@ -38,6 +41,15 @@ const STATUS_COLOR: Record<string, { bg: string; border: string; text: string; e
   rejected:        { bg: "#FEF2F2", border: "#FECACA", text: "#991B1B",  emoji: "🚫" },
 };
 
+function normalizeOrderPayload(payload: any): Order | null {
+  const raw = payload?.order ?? payload?.data ?? payload;
+  if (!raw || typeof raw !== "object") return null;
+  if (!raw.id && raw._id) {
+    return { ...raw, id: raw._id } as Order;
+  }
+  return raw as Order;
+}
+
 function formatDateTime(date: Date | string): string {
   const d = new Date(date);
   return (
@@ -53,8 +65,8 @@ function buildInvoiceText(order: Order): string {
     day: "numeric", month: "short", year: "numeric",
   });
   const bizName = (order as any).businessName ?? "Shop";
-  const itemLines = (order.items as any[])
-    .map((i) => `  • ${i.quantity}x ${i.productName ?? "Item"} — Rs ${i.lineTotal ?? i.price * i.quantity}`)
+  const itemLines = (Array.isArray((order as any).items) ? (order as any).items : [])
+    .map((i: any) => `  • ${i.quantity}x ${i.productName ?? "Item"} — Rs ${i.lineTotal ?? i.price * i.quantity}`)
     .join("\n");
   const addr = order.deliveryAddress as any;
   const addrParts = [addr?.street, addr?.landmark, addr?.city, addr?.state, addr?.pinCode].filter(Boolean);
@@ -113,6 +125,44 @@ export default function UserOrderDetail() {
     }
   }, [orderId]);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!orderId) return;
+
+      const syncOrder = () => {
+        if (socketService.isConnected()) return;
+        userAppService
+          .getOrder(orderId)
+          .then(setOrder)
+          .catch(() => null);
+      };
+
+      syncOrder();
+      const timer = setInterval(syncOrder, 3000);
+      return () => clearInterval(timer);
+    }, [orderId])
+  );
+
+  // Keep local state aligned when Redux orders are refreshed by another flow
+  // (e.g. pull-to-refresh, app resume, or background sync).
+  useEffect(() => {
+    if (!orderId) return;
+    const latest = orders.find((o) => o.id === orderId);
+    if (latest) {
+      setOrder(latest);
+    }
+  }, [orders, orderId]);
+
+  // Real-time: update this specific order instantly when the business owner
+  // changes its status. Filtered by ID so other orders don't cause re-renders.
+  useSocketEvent<any>("order:updated", (payload) => {
+    const updatedOrder = normalizeOrderPayload(payload);
+    if (!updatedOrder?.id) return;
+    if (updatedOrder.id === orderId) {
+      setOrder(updatedOrder);
+    }
+  });
+
   const handleShare = async () => {
     if (!order) return;
     setSharing(true);
@@ -130,56 +180,49 @@ export default function UserOrderDetail() {
 
   if (fetching) {
     return (
-      <LinearGradient colors={["#DC2626", "#991B1B"]} style={[styles.fullCenter, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
-      </LinearGradient>
+      <SafeAreaScreen backgroundColor="#DC2626">
+        <View style={styles.fullCenter}>
+          <ActivityIndicator size="large" color="#FFFFFF" />
+        </View>
+      </SafeAreaScreen>
     );
   }
 
   if (!order) {
     return (
-      <View style={[styles.fullCenter, { backgroundColor: "#F8FAFC" }]}>
-        <Text style={styles.notFoundText}>Order not found.</Text>
-        <TouchableOpacity style={styles.goBackBtn} onPress={() => router.canGoBack() ? router.back() : router.replace("/(user)/(tabs)/orders")}>
-          <Text style={styles.goBackText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaScreen backgroundColor="#F8FAFC">
+        <View style={styles.fullCenter}>
+          <Text style={styles.notFoundText}>Order not found.</Text>
+          <TouchableOpacity style={styles.goBackBtn} onPress={() => router.canGoBack() ? router.back() : router.replace("/(user)/(tabs)/orders")}>
+            <Text style={styles.goBackText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaScreen>
     );
   }
 
   const statusMeta = STATUS_COLOR[order.status] ?? STATUS_COLOR.pending;
+  const orderItems = Array.isArray((order as any).items) ? (order as any).items : [];
+  const paymentMethod = order.paymentMethod ?? "cash";
   const addr = order.deliveryAddress as any;
   const addressLine = [addr?.street, addr?.landmark].filter(Boolean).join(", ");
   const addressCity = [addr?.city, addr?.state, addr?.pinCode].filter(Boolean).join(", ");
 
   return (
-    <View style={styles.container}>
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <LinearGradient
-        colors={["#DC2626", "#991B1B"]}
-        style={[styles.header, { paddingTop: insets.top + 12 }]}
-      >
-        <View style={styles.headerRow}>
-          <TouchableOpacity
-            onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace("/(user)/(tabs)/orders");
-              }
-            }}
-            style={styles.backBtn}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Order #{order.id.slice(0, 8).toUpperCase()}</Text>
-            <Text style={styles.headerSub}>{formatDateTime(order.createdAt)}</Text>
-          </View>
-          <View style={styles.headerRight} />
-        </View>
-      </LinearGradient>
+    <SafeAreaScreen backgroundColor="#F8FAFC">
+      <SafeAreaHeader
+        title={`Order #${order.id.slice(0, 8).toUpperCase()}`}
+        subtitle={formatDateTime(order.createdAt)}
+        colors={["#DC2626", "#991B1B"] as const}
+        showBackButton
+        onBackPress={() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace("/(user)/(tabs)/orders");
+          }
+        }}
+      />
 
       <ScrollView
         style={styles.body}
@@ -194,7 +237,7 @@ export default function UserOrderDetail() {
               {STATUS_LABEL[order.status] ?? order.status}
             </Text>
             <Text style={[styles.statusPayment, { color: statusMeta.text }]}>
-              {order.paymentMethod.toUpperCase()} ·{" "}
+              {paymentMethod.toUpperCase()} ·{" "}
               {order.paymentStatus === "cod"
                 ? "Cash on Delivery"
                 : order.paymentStatus === "completed"
@@ -214,8 +257,8 @@ export default function UserOrderDetail() {
 
         {/* ── Items ───────────────────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Items ({order.items.length})</Text>
-          {(order.items as any[]).map((item, idx) => (
+          <Text style={styles.sectionTitle}>Items ({orderItems.length})</Text>
+          {orderItems.map((item: any, idx: number) => (
             <View key={idx} style={styles.itemRow}>
               <View style={styles.qtyBadge}>
                 <Text style={styles.qtyText}>{item.quantity}×</Text>
@@ -334,12 +377,12 @@ export default function UserOrderDetail() {
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1 },
   fullCenter: { flex: 1, justifyContent: "center", alignItems: "center" },
   notFoundText: { fontSize: 15, color: "#64748B", marginBottom: 12 },
   goBackBtn: {
@@ -347,19 +390,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#DC2626", borderRadius: 999,
   },
   goBackText: { color: "#FFFFFF", fontWeight: "700" },
-
-  // Header
-  header: { paddingHorizontal: 16, paddingBottom: 20 },
-  headerRow: { flexDirection: "row", alignItems: "center" },
-  backBtn: {
-    width: 38, height: 38, borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    justifyContent: "center", alignItems: "center",
-  },
-  headerCenter: { flex: 1, alignItems: "center" },
-  headerTitle: { fontSize: 16, fontWeight: "800", color: "#FFFFFF" },
-  headerSub: { fontSize: 11, color: "rgba(255,255,255,0.75)", marginTop: 2 },
-  headerRight: { width: 38 },
 
   body: { flex: 1 },
 

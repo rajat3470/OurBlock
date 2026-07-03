@@ -21,10 +21,12 @@ import { NativeAdCard } from "../../src/components/NativeAdCard";
 import { MenuSkeleton } from "../../src/components/Skeleton";
 import { PressableScale } from "../../src/components/PressableScale";
 import { addItem, clearCart, updateQuantity } from "../../src/store/slices/cartSlice";
+import { patchBusiness } from "../../src/store/slices/userAppSlice";
 import { userAppService } from "../../src/services/userAppService";
 import { Business, Product, ProductAttribute } from "../../src/types";
 import { unitStepLabel, displayQuantity, maxCartSteps } from "../../src/utils/helpers";
 import { useUserApp } from "../../src/hooks/useUserApp";
+import { useSocketEvent } from "../../src/hooks/useSocket";
 import { ORDER_FEES } from "../../src/constants";
 
 const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
@@ -101,6 +103,18 @@ export default function BusinessDetailScreen() {
   // Derive orderable status from business state
   const bizOrderStatus = business ? getBusinessOrderStatus(business) : "open";
   const isOrderable = bizOrderStatus === "open";
+
+  // Real-time: reflect business pause/resume instantly while the resident
+  // is browsing this shop. Filtered by businessId so events from other
+  // businesses are ignored without any Redux overhead.
+  useSocketEvent<{ businessId: string; isTakingOrders?: boolean; status?: string }>(
+    "business:status",
+    (data) => {
+      if (data.businessId !== businessId) return;
+      dispatch(patchBusiness({ id: data.businessId, ...data }));
+      setBusiness((prev) => (prev ? { ...prev, ...data } : prev));
+    }
+  );
 
   const minOrder =
     business?.minimumOrderAmount && business.minimumOrderAmount > 0

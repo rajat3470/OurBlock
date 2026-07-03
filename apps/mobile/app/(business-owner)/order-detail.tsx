@@ -9,12 +9,13 @@ import {
   Alert,
   Share,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { Order, OrderStatus } from "../../src/types";
+import SafeAreaScreen from "../../src/components/SafeAreaScreen";
+import SafeAreaHeader from "../../src/components/SafeAreaHeader";
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; border: string; emoji: string }> = {
   [OrderStatus.PENDING]:          { label: "New Order",        color: "#D97706", bg: "#FFFBEB", border: "#FDE68A", emoji: "🔔" },
@@ -157,33 +158,20 @@ export default function BusinessOwnerOrderDetail() {
   const canAdvance = !!NEXT_STATUS[order.status];
 
   return (
-    <View style={styles.container}>
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <LinearGradient
-        colors={["#16A34A", "#15803D"]}
-        style={[styles.header, { paddingTop: insets.top + 12 }]}
-      >
-        <View style={styles.headerRow}>
-          <TouchableOpacity
-            onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace("/(business-owner)/orders");
-              }
-            }}
-            style={styles.backBtn}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Order #{order.id.slice(0, 8).toUpperCase()}</Text>
-            <Text style={styles.headerSub}>{formatDateTime(order.createdAt)}</Text>
-          </View>
-          <View style={styles.headerRight} />
-        </View>
-      </LinearGradient>
+    <SafeAreaScreen backgroundColor="#F8FAFC">
+      <SafeAreaHeader
+        title={`Order #${order.id.slice(0, 8).toUpperCase()}`}
+        subtitle={formatDateTime(order.createdAt)}
+        colors={["#16A34A", "#15803D"] as const}
+        showBackButton
+        onBackPress={() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace("/(business-owner)/orders");
+          }
+        }}
+      />
 
       <ScrollView
         style={styles.body}
@@ -363,12 +351,12 @@ export default function BusinessOwnerOrderDetail() {
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1 },
   fullCenter: { flex: 1, justifyContent: "center", alignItems: "center" },
   notFoundText: { fontSize: 15, color: "#64748B", marginBottom: 12 },
   goBackBtn: {
@@ -376,19 +364,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#16A34A", borderRadius: 999,
   },
   goBackText: { color: "#FFFFFF", fontWeight: "700" },
-
-  // Header
-  header: { paddingHorizontal: 16, paddingBottom: 20 },
-  headerRow: { flexDirection: "row", alignItems: "center" },
-  backBtn: {
-    width: 38, height: 38, borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    justifyContent: "center", alignItems: "center",
-  },
-  headerCenter: { flex: 1, alignItems: "center" },
-  headerTitle: { fontSize: 16, fontWeight: "800", color: "#FFFFFF" },
-  headerSub: { fontSize: 11, color: "rgba(255,255,255,0.75)", marginTop: 2 },
-  headerRight: { width: 38 },
 
   body: { flex: 1 },
 

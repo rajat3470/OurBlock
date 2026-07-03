@@ -25,6 +25,7 @@ import {
   ORDER_REVIEW_CATEGORY,
 } from "../src/services/orderNotificationService";
 import { colors } from "../src/constants/theme";
+import { socketService } from "../src/services/socketService";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -180,6 +181,32 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
       })
       .catch(() => { /* non-blocking */ });
   }, [authUser?.id, authUser?.role, (authUser as any)?.businessId, (authUser as any)?.email]);
+
+  // ── Socket lifecycle ──────────────────────────────────────────────────────
+  // Connect when the user logs in; disconnect on logout.
+  // isHydrated guard ensures we don't try to connect before token is loaded.
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (authUser) {
+      socketService.connect();
+    } else {
+      socketService.disconnect();
+    }
+  }, [isHydrated, authUser?.id]);
+
+  // Reconnect when the app returns to foreground.
+  // Mobile OS kills WebSocket connections in the background; this fills the gap.
+  // A one-time fetch is not needed here — each screen that cares about freshness
+  // already re-fetches on mount; the reconnect just restores the push channel.
+  useEffect(() => {
+    if (!authUser) return;
+    const sub = AppState.addEventListener("change", (appState) => {
+      if (appState === "active") {
+        socketService.reconnect();
+      }
+    });
+    return () => sub.remove();
+  }, [authUser?.id]);
 
 
   if (!isHydrated) {

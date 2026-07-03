@@ -6,13 +6,12 @@
   "expo": {
     "name": "mohallaMitr",
     "slug": "mohallamitr",
-    "scheme": "mohallamitr", 
+    "scheme": "mohallamitr",
     "version": "1.0.0",
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTabletMode": true,
       "bundleIdentifier": "com.ourblock.app",
       "googleServicesFile": "./GoogleService-Info.plist"
     },
@@ -49,6 +48,30 @@
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "OneSignalNotificationServiceExtension",
+                  "bundleIdentifier": "com.ourblock.app.OneSignalNotificationServiceExtension",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.ourblock.app.onesignal"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "projectId": "3425f538-ae33-467e-893d-0c6abdf371c2"
+      }
+    },
+    "owner": "mohallamitr"
   }
 }

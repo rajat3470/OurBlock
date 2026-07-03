@@ -244,7 +244,7 @@ export async function handleOrderNotificationAction(
     if (APP_TARGET === "businessOwner") {
       router.replace("/(business-owner)/orders");
     } else {
-      router.replace("/(user)/orders");
+      router.replace("/(user)/(tabs)/orders");
     }
   }
 }

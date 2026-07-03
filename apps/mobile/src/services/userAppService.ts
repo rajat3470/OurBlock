@@ -23,17 +23,28 @@ export const userAppService = {
     page = 1,
     limit = 50
   ): Promise<PaginatedResponse<Society>> {
-    return apiClient.get<PaginatedResponse<Society>>(
-      `/societies?page=${page}&limit=${limit}`
-    );
+    const res = await apiClient.get<any>(`/societies?page=${page}&limit=${limit}`);
+    const data = Array.isArray(res?.data) ? res.data : [];
+    const total = Number(res?.pagination?.total ?? data.length);
+    return {
+      data,
+      pagination: {
+        page: Number(res?.pagination?.page ?? page),
+        limit: Number(res?.pagination?.limit ?? limit),
+        total,
+        totalPages: Math.max(1, Math.ceil(total / Math.max(1, limit))),
+      },
+    };
   },
 
   async getBusinessesBySociety(societyId: string): Promise<Business[]> {
-    return apiClient.get<Business[]>(`/businesses?societyId=${societyId}`);
+    const res = await apiClient.get<any>(`/businesses?societyId=${societyId}`);
+    return Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
   },
 
   async getFeaturedProducts(societyId: string): Promise<Product[]> {
-    return apiClient.get<Product[]>(`/products/featured?societyId=${societyId}`);
+    const res = await apiClient.get<any>(`/products/featured?societyId=${societyId}`);
+    return Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
   },
 
   async getProductsByBusiness(businessId: string): Promise<Product[]> {
@@ -70,7 +81,19 @@ export const userAppService = {
   },
 
   async getHomeFeed(societyId: string): Promise<HomeFeedResponse> {
-    return apiClient.get<HomeFeedResponse>(`/auth/home-feed?societyId=${societyId}`);
+    const res = await apiClient.get<any>(`/auth/home-feed?societyId=${societyId}`);
+    const payload = (res?.data && typeof res.data === "object") ? res.data : res;
+
+    return {
+      societyId: String(payload?.societyId ?? societyId),
+      stats: payload?.stats ?? { totalBusinesses: 0, activeOrders: 0, favoriteCount: 0 },
+      categories: Array.isArray(payload?.categories) ? payload.categories : [],
+      businesses: Array.isArray(payload?.businesses) ? payload.businesses : [],
+      featuredProducts: Array.isArray(payload?.featuredProducts) ? payload.featuredProducts : [],
+      topRatedBusinesses: Array.isArray(payload?.topRatedBusinesses) ? payload.topRatedBusinesses : [],
+      offerProducts: Array.isArray(payload?.offerProducts) ? payload.offerProducts : [],
+      banners: Array.isArray(payload?.banners) ? payload.banners : [],
+    };
   },
 
   // Profile Management

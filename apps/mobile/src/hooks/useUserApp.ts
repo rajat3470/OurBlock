@@ -48,9 +48,26 @@ export const useUserApp = () => {
       try {
         const feed = await userAppService.getHomeFeed(societyId);
 
-        dispatch(setBusinesses(feed.businesses));
-        dispatch(setBanners(feed.banners ?? []));
-        dispatch(setFeaturedProducts(feed.featuredProducts));
+        let businesses = Array.isArray(feed.businesses) ? feed.businesses : [];
+        let featuredProducts = Array.isArray(feed.featuredProducts)
+          ? feed.featuredProducts
+          : [];
+
+        // Backward-compatible fallback for older backend response shapes.
+        if (businesses.length === 0) {
+          const [bizFallback, featuredFallback] = await Promise.all([
+            userAppService.getBusinessesBySociety(societyId).catch(() => []),
+            userAppService.getFeaturedProducts(societyId).catch(() => []),
+          ]);
+          businesses = Array.isArray(bizFallback) ? bizFallback : [];
+          if (featuredProducts.length === 0) {
+            featuredProducts = Array.isArray(featuredFallback) ? featuredFallback : [];
+          }
+        }
+
+        dispatch(setBusinesses(businesses));
+        dispatch(setBanners(Array.isArray(feed.banners) ? feed.banners : []));
+        dispatch(setFeaturedProducts(featuredProducts));
         dispatch(setStats(feed.stats));
       } catch (err: unknown) {
         const message =
@@ -64,18 +81,24 @@ export const useUserApp = () => {
     [dispatch]
   );
 
-  const loadMyOrders = useCallback(async () => {
-    dispatch(setLoading(true));
+  const loadMyOrders = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (!silent) {
+      dispatch(setLoading(true));
+    }
     try {
       const response = await userAppService.getMyOrders();
-      dispatch(setOrders(response.data));
-      return response.data;
+      const orders = Array.isArray(response.data) ? response.data : [];
+      dispatch(setOrders(orders));
+      return orders;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to load orders";
       dispatch(setError(message));
       throw err;
     } finally {
-      dispatch(setLoading(false));
+      if (!silent) {
+        dispatch(setLoading(false));
+      }
     }
   }, [dispatch]);
 
@@ -108,7 +131,7 @@ export const useUserApp = () => {
         dispatch(clearCart());
         // Refresh orders list
         const response = await userAppService.getMyOrders();
-        dispatch(setOrders(response.data));
+        dispatch(setOrders(Array.isArray(response.data) ? response.data : []));
         return order;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Failed to place order";
@@ -126,7 +149,7 @@ export const useUserApp = () => {
       try {
         const order = await userAppService.cancelOrder(orderId);
         const response = await userAppService.getMyOrders();
-        dispatch(setOrders(response.data));
+        dispatch(setOrders(Array.isArray(response.data) ? response.data : []));
         return order;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Failed to cancel order";

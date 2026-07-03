@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,18 +7,22 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  AppState,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUserApp } from "../../../src/hooks/useUserApp";
 import { useAppDispatch, useAppSelector } from "../../../src/hooks/useRedux";
 import { addItem, clearCart } from "../../../src/store/slices/cartSlice";
+import { updateOrderInStore } from "../../../src/store/slices/userAppSlice";
 import { Order, OrderStatus } from "../../../src/types";
 import { useToast } from "react-native-toast-notifications";
 import RatingModal from "../../../src/components/RatingModal";
 import RefundModal from "../../../src/components/RefundModal";
+import { useSocketEvent } from "../../../src/hooks/useSocket";
+import { socketService } from "../../../src/services/socketService";
+import { LinearGradient } from "expo-linear-gradient";
 
 type FilterKey = "all" | "active" | "completed";
 
@@ -62,8 +66,16 @@ function getStatusStyle(status: string) {
   return STATUS_COLOR[status] ?? STATUS_COLOR.pending;
 }
 
+function normalizeOrderPayload(payload: any): Order | null {
+  const raw = payload?.order ?? payload?.data ?? payload;
+  if (!raw || typeof raw !== "object") return null;
+  if (!raw.id && raw._id) {
+    return { ...raw, id: raw._id } as Order;
+  }
+  return raw as Order;
+}
+
 export default function UserOrders() {
-  const insets = useSafeAreaInsets();
   const { orders, isLoading, loadMyOrders, cancelOrder } = useUserApp();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const dispatch = useAppDispatch();
@@ -71,6 +83,43 @@ export default function UserOrders() {
   const toast = useToast();
   const [ratingOrder, setRatingOrder] = useState<Order | null>(null);
   const [refundOrder, setRefundOrder] = useState<Order | null>(null);
+  const insets = useSafeAreaInsets();
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActivityAtRef = useRef<number>(Date.now());
+
+  const getFallbackDelayMs = useCallback(() => {
+    const elapsed = Date.now() - lastActivityAtRef.current;
+    if (elapsed < 30_000) return 3_000;
+    if (elapsed < 180_000) return 10_000;
+    return 30_000;
+  }, []);
+
+  const refreshFallbackNow = useCallback(() => {
+    lastActivityAtRef.current = Date.now();
+    if (!socketService.isConnected()) {
+      loadMyOrders({ silent: true }).catch(() => null);
+    }
+  }, [loadMyOrders]);
+
+  const stopFallbackLoop = useCallback(() => {
+    if (fallbackTimerRef.current) {
+      clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
+  }, []);
+
+  const startFallbackLoop = useCallback(() => {
+    stopFallbackLoop();
+
+    const tick = () => {
+      if (!socketService.isConnected()) {
+        loadMyOrders({ silent: true }).catch(() => null);
+      }
+      fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
+    };
+
+    fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
+  }, [getFallbackDelayMs, loadMyOrders, stopFallbackLoop]);
 
   function handleReorder(order: Order) {
     const bizId = order.businessId;
@@ -113,6 +162,36 @@ export default function UserOrders() {
     loadMyOrders().catch(() => null);
   }, [loadMyOrders]);
 
+  // Fallback path while backend socket events are unavailable: sync only when
+  // this screen is focused and socket is disconnected.
+  useFocusEffect(
+    useCallback(() => {
+      // Immediate refresh on focus (covers notification tap navigation too).
+      refreshFallbackNow();
+      startFallbackLoop();
+
+      const sub = AppState.addEventListener("change", (state) => {
+        if (state === "active") {
+          // Meaningful event: app foreground resume.
+          refreshFallbackNow();
+        }
+      });
+
+      return () => {
+        sub.remove();
+        stopFallbackLoop();
+      };
+    }, [refreshFallbackNow, startFallbackLoop, stopFallbackLoop])
+  );
+
+  // Real-time: update a single order in Redux when the business owner
+  // changes its status. No full-list re-fetch needed.
+  useSocketEvent<any>("order:updated", (payload) => {
+    const updatedOrder = normalizeOrderPayload(payload);
+    if (!updatedOrder?.id) return;
+    dispatch(updateOrderInStore(updatedOrder));
+  });
+
   const filteredOrders = useMemo(() => {
     if (activeFilter === "active") {
       return orders.filter((item) => ACTIVE_STATUSES.includes(item.status));
@@ -134,13 +213,18 @@ export default function UserOrders() {
       {
         text: "Yes, Cancel",
         style: "destructive",
-        onPress: () => cancelOrder(orderId).catch(() => null),
+        onPress: () => {
+          cancelOrder(orderId)
+            .then(() => refreshFallbackNow())
+            .catch(() => null);
+        },
       },
     ]);
   }
 
   const renderItem = ({ item }: { item: Order }) => {
     const statusStyle = getStatusStyle(item.status);
+    const orderItems = Array.isArray((item as any).items) ? (item as any).items : [];
     const canCancel =
       item.status === OrderStatus.PENDING || item.status === OrderStatus.CONFIRMED;
 
@@ -158,12 +242,12 @@ export default function UserOrders() {
           </View>
           <View style={styles.rightCol}>
             <Text style={styles.amount}>Rs {item.finalAmount}</Text>
-            <Text style={styles.orderMeta}>{item.items.length} item{item.items.length !== 1 ? "s" : ""}</Text>
+            <Text style={styles.orderMeta}>{orderItems.length} item{orderItems.length !== 1 ? "s" : ""}</Text>
           </View>
         </View>
 
         {/* Items list */}
-        {item.items.slice(0, 3).map((orderItem: any, idx: number) => (
+        {orderItems.slice(0, 3).map((orderItem: any, idx: number) => (
           <View key={idx} style={styles.itemRow}>
             <Text style={styles.itemQty}>{orderItem.quantity}×</Text>
             <Text style={styles.itemName} numberOfLines={1}>
@@ -172,8 +256,8 @@ export default function UserOrders() {
             <Text style={styles.itemPrice}>Rs {orderItem.lineTotal ?? orderItem.price * orderItem.quantity}</Text>
           </View>
         ))}
-        {item.items.length > 3 ? (
-          <Text style={styles.moreItems}>+{item.items.length - 3} more items</Text>
+        {orderItems.length > 3 ? (
+          <Text style={styles.moreItems}>+{orderItems.length - 3} more items</Text>
         ) : null}
 
         {/* Price breakdown */}
@@ -270,7 +354,10 @@ export default function UserOrders() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#DC2626", "#991B1B"]} style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <LinearGradient
+        colors={["#DC2626", "#991B1B"]}
+        style={[styles.header, { paddingTop: insets.top + 16 }]}
+      >
         <Text style={styles.headerTitle}>My Orders</Text>
         <Text style={styles.headerSub}>Track your purchases</Text>
       </LinearGradient>
@@ -353,7 +440,7 @@ export default function UserOrders() {
           onSubmitted={() => {
             setRefundOrder(null);
             toast.show("Refund request submitted! We'll get back to you soon.", { type: "success", duration: 4000 });
-            loadMyOrders().catch(() => null);
+            refreshFallbackNow();
           }}
         />
       ) : null}
@@ -362,22 +449,27 @@ export default function UserOrders() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7F8FA" },
+  container: {
+    flex: 1,
+    backgroundColor: "#F7F8FA",
+  },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: "hidden",
   },
   headerTitle: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: "800",
     color: "#FFFFFF",
     letterSpacing: -0.5,
   },
   headerSub: {
     marginTop: 4,
-    fontSize: 14,
-    color: "rgba(255,255,255,0.82)",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.75)",
     fontWeight: "500",
   },
   filterRow: {

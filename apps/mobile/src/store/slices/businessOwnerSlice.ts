@@ -32,6 +32,8 @@ interface BusinessOwnerState {
   businessProfile: Business | null;
   products: Product[];
   orders: Order[];
+  // Order index for O(1) lookups
+  ordersMap: Record<string, Order>;
   stats: BusinessOwnerStats | null;
   analytics: BusinessAnalytics | null;
   selectedOrderId: string | null;
@@ -44,6 +46,7 @@ const initialState: BusinessOwnerState = {
   businessProfile: null,
   products: [],
   orders: [],
+  ordersMap: {},
   stats: null,
   analytics: null,
   selectedOrderId: null,
@@ -81,12 +84,30 @@ const businessOwnerSlice = createSlice({
     },
     setOrders(state, action: PayloadAction<Order[]>) {
       state.orders = action.payload;
+      // Rebuild index
+      state.ordersMap = action.payload.reduce((acc, order) => {
+        acc[order.id] = order;
+        return acc;
+      }, {} as Record<string, Order>);
       state.error = null;
     },
-    updateOrder(state, action: PayloadAction<Order>) {
-      const index = state.orders.findIndex((o) => o.id === action.payload.id);
-      if (index !== -1) {
-        state.orders[index] = action.payload;
+    /** Prepend a new incoming order from a socket `order:new` event. */
+    prependOrder(state, action: PayloadAction<Order>) {
+      // Guard against duplicates if the FCM path already added this order.
+      if (!state.ordersMap[action.payload.id]) {
+        state.orders.unshift(action.payload);
+        state.ordersMap[action.payload.id] = action.payload;
+      }
+    },
+    updateOrder(state, action: PayloadAction<Partial<Order> & { id: string }>) {
+      const existingOrder = state.ordersMap[action.payload.id];
+      if (existingOrder) {
+        const updatedOrder = { ...existingOrder, ...action.payload };
+        state.ordersMap[action.payload.id] = updatedOrder;
+        const index = state.orders.findIndex((o) => o.id === action.payload.id);
+        if (index !== -1) {
+          state.orders[index] = updatedOrder;
+        }
       }
     },
     setStats(state, action: PayloadAction<BusinessOwnerStats>) {
@@ -111,7 +132,7 @@ const businessOwnerSlice = createSlice({
       state.error = null;
     },
     clearBusinessOwnerState() {
-      return initialState;
+      return { ...initialState, ordersMap: {} };
     },
   },
 });
@@ -124,6 +145,7 @@ export const {
   updateProduct,
   removeProduct,
   setOrders,
+  prependOrder,
   updateOrder,
   setStats,
   setAnalytics,

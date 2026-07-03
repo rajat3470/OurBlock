@@ -4,7 +4,7 @@
 node_modules/
 *.pem
 package-lock.json
-yarn.lock
+# yarn.lock is intentionally tracked for reproducible EAS cloud builds
 .pnp
 .pnp.js
 

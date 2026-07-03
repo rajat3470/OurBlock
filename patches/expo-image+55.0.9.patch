@@ -2,13 +2,16 @@ diff --git a/node_modules/expo-image/ios/ImageView.swift b/node_modules/expo-ima
 index 034b662..3a93912 100644
 --- a/node_modules/expo-image/ios/ImageView.swift
 +++ b/node_modules/expo-image/ios/ImageView.swift
-@@ -131,7 +131,10 @@ public final class ImageView: ExpoView {
+@@ -131,7 +131,13 @@ public final class ImageView: ExpoView {
  
    deinit {
      // Cancel pending requests when the view is deallocated.
 -    cancelPendingOperation()
-+    // Wrapped in Task to avoid main actor isolation error
-+    Task { @MainActor in
++    // UIView deinit is ALWAYS called on the main thread (UIKit guarantee),
++    // so assumeIsolated is safe here. Using Task { @MainActor in } instead
++    // causes a use-after-free: the Task captures `self` strongly, but by the
++    // time it runs the ObjC layer has already freed self → EXC_BAD_ACCESS.
++    MainActor.assumeIsolated {
 +      cancelPendingOperation()
 +    }
    }

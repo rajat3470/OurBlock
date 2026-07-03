@@ -5,6 +5,7 @@ import { clearUserAppState } from "@store/slices/userAppSlice";
 import { apiClient } from "@services/apiClient";
 import { authStateService } from "@services/authStateService";
 import { OneSignalService } from "@services/oneSignalService";
+import { socketService } from "@services/socketService";
 import { AuthCredentials, AuthResponse } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -182,6 +183,7 @@ export const useAuth = () => {
   const logoutUser = async () => {
     // Clear local state and tokens immediately so the UI reflects logout at once.
     // The API call is best-effort — a network/backend failure should never block logout.
+    socketService.disconnect();
     OneSignalService.logout();
     dispatch(logout());
     dispatch(clearUserAppState());

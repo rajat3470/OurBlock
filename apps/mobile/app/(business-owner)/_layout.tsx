@@ -1,20 +1,26 @@
-import { Tabs } from "expo-router";
+import { Tabs, useSegments } from "expo-router";
 import RoleGate from "../../src/components/RoleGate";
 import AppTabIcon from "../../src/components/AppTabIcon";
+import PendingOrderBanner from "../../src/components/PendingOrderBanner";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { OrderStatus } from "../../src/types";
 import { useOrderNotifications } from "../../src/hooks/useOrderNotifications";
 
 export default function BusinessOwnerLayout() {
+  const segments = useSegments();
   const orders = useAppSelector((state) => state.businessOwner.orders);
   const activeOrderCount = orders.filter(
     (o) => o.status !== OrderStatus.DELIVERED && o.status !== OrderStatus.CANCELLED
   ).length;
 
+  // Hide banner on orders screen
+  const isOrdersScreen = segments.includes("orders");
+
   useOrderNotifications();
 
   return (
     <RoleGate allowedRole="businessOwner">
+      {!isOrdersScreen && <PendingOrderBanner />}
       <Tabs
         screenOptions={{
           headerShown: false,

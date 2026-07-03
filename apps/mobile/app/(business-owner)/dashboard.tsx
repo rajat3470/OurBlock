@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -9,13 +9,16 @@ import {
   TouchableOpacity,
   Switch,
   Alert,
-} from "react-native";import { LinearGradient } from "expo-linear-gradient";
+  AppState,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { OrderStatus } from "../../src/types";
 import { gradients } from "../../src/constants/theme";
+import { socketService } from "../../src/services/socketService";
 
 const ORDER_STATUS_META: Record<string, { label: string; color: string; bg: string; emoji: string }> = {
   [OrderStatus.PENDING]:          { label: "Pending",          color: "#D97706", bg: "#FFFBEB", emoji: "⏳" },
@@ -57,6 +60,42 @@ export default function BusinessOwnerDashboard() {
   } = useBusinessOwner();
   const [refreshing, setRefreshing] = useState(false);
   const [toggleLoading, setToggleLoading] = useState(false);
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActivityAtRef = useRef<number>(Date.now());
+
+  const getFallbackDelayMs = useCallback(() => {
+    const elapsed = Date.now() - lastActivityAtRef.current;
+    if (elapsed < 30_000) return 5_000;
+    if (elapsed < 180_000) return 20_000;
+    return 60_000;
+  }, []);
+
+  const refreshOrdersNow = useCallback(() => {
+    lastActivityAtRef.current = Date.now();
+    if (!socketService.isConnected()) {
+      loadOrders({ silent: true }).catch(() => null);
+    }
+  }, [loadOrders]);
+
+  const stopFallbackLoop = useCallback(() => {
+    if (fallbackTimerRef.current) {
+      clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
+  }, []);
+
+  const startFallbackLoop = useCallback(() => {
+    stopFallbackLoop();
+
+    const tick = () => {
+      if (!socketService.isConnected()) {
+        loadOrders({ silent: true }).catch(() => null);
+      }
+      fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
+    };
+
+    fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
+  }, [getFallbackDelayMs, loadOrders, stopFallbackLoop]);
 
   const isTakingOrders = businessProfile?.isTakingOrders !== false;
 
@@ -73,6 +112,25 @@ export default function BusinessOwnerDashboard() {
   }, [loadBusinessProfile, loadStats, loadOrders, loadProducts, loadAnalytics]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  // Keep dashboard order counts/recent list fresh while focused.
+  useFocusEffect(
+    useCallback(() => {
+      refreshOrdersNow();
+      startFallbackLoop();
+
+      const sub = AppState.addEventListener("change", (state) => {
+        if (state === "active") {
+          refreshOrdersNow();
+        }
+      });
+
+      return () => {
+        sub.remove();
+        stopFallbackLoop();
+      };
+    }, [refreshOrdersNow, startFallbackLoop, stopFallbackLoop])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -104,7 +162,7 @@ export default function BusinessOwnerDashboard() {
 
   const activeOrders    = orders.filter((o) => o.status !== OrderStatus.DELIVERED && o.status !== OrderStatus.CANCELLED).length;
   const deliveredOrders = orders.filter((o) => o.status === OrderStatus.DELIVERED).length;
-  const totalOrders     = stats?.totalOrders ?? orders.length;
+  const totalOrders     = orders.length;
 
   // Revenue chart helpers
   const maxRevenue = analytics?.daily?.reduce((m, d) => Math.max(m, d.revenue), 0) ?? 1;

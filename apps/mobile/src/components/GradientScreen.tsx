@@ -1,6 +1,7 @@
 import { PropsWithChildren } from "react";
-import { SafeAreaView, StyleSheet, View, type ViewStyle } from "react-native";
+import { StyleSheet, View, type ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { getRoleGradient, gradients, type AppRoleTheme } from "../constants/theme";
 
 interface GradientScreenProps extends PropsWithChildren {
@@ -10,12 +11,13 @@ interface GradientScreenProps extends PropsWithChildren {
 
 export default function GradientScreen({ role, style, children }: GradientScreenProps) {
   const colors = role ? getRoleGradient(role) : gradients.appBackground;
+  const insets = useSafeAreaInsets();
 
   return (
     <LinearGradient colors={colors} style={styles.gradient}>
-      <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right }]}>
         <View style={[styles.content, style]}>{children}</View>
-      </SafeAreaView>
+      </View>
     </LinearGradient>
   );
 }

@@ -75,6 +75,14 @@ export default function UserHome() {
     loadMyOrders,
   } = useUserApp();
 
+  const safeSocieties = Array.isArray(societies) ? societies : [];
+  const safeBusinesses = Array.isArray(businesses) ? businesses : [];
+  const safeFeaturedProducts = Array.isArray(featuredProducts) ? featuredProducts : [];
+  const safeOrders = Array.isArray(orders) ? orders : [];
+  const safeFavoriteBusinessIds = Array.isArray(favoriteBusinessIds)
+    ? favoriteBusinessIds
+    : [];
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const entrance = useState(new Animated.Value(0))[0];
@@ -113,19 +121,19 @@ export default function UserHome() {
   }, [initializeHome, loadMyOrders, entrance]);
 
   const selectedSocietyName =
-    societies.find((society) => society.id === selectedSocietyId)?.name ?? "Your Society";
+    safeSocieties.find((society) => society.id === selectedSocietyId)?.name ?? "Your Society";
 
   const categories = useMemo(() => {
-    const unique = Array.from(new Set(businesses.map((item) => item.category)));
+    const unique = Array.from(new Set(safeBusinesses.map((item) => item.category)));
     return ["all", ...unique];
-  }, [businesses]);
+  }, [safeBusinesses]);
 
   const productMatchesByBusiness = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     const map = new Map<string, string[]>();
     if (!query) return map;
 
-    featuredProducts.forEach((product) => {
+    safeFeaturedProducts.forEach((product) => {
       const searchable = [
         product.name,
         product.category,
@@ -145,11 +153,11 @@ export default function UserHome() {
     });
 
     return map;
-  }, [featuredProducts, searchQuery]);
+  }, [safeFeaturedProducts, searchQuery]);
 
   const filteredBusinesses = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    return businesses
+    return safeBusinesses
       .filter((business) => {
         if (selectedCategory !== "all" && business.category !== selectedCategory) {
           return false;
@@ -169,18 +177,18 @@ export default function UserHome() {
         if (aItemHits !== bItemHits) return bItemHits - aItemHits;
         return Number(b.rating || 0) - Number(a.rating || 0);
       });
-  }, [businesses, productMatchesByBusiness, searchQuery, selectedCategory]);
+  }, [safeBusinesses, productMatchesByBusiness, searchQuery, selectedCategory]);
 
   const businessNameById = useMemo(() => {
     const map = new Map<string, string>();
-    businesses.forEach((business) => map.set(business.id, business.name));
+    safeBusinesses.forEach((business) => map.set(business.id, business.name));
     return map;
-  }, [businesses]);
+  }, [safeBusinesses]);
 
   const matchedDishes = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return [] as Product[];
-    return featuredProducts
+    return safeFeaturedProducts
       .filter((product) => {
         const searchable = [
           product.name,
@@ -194,43 +202,43 @@ export default function UserHome() {
       })
       .filter((product) => {
         if (selectedCategory === "all") return true;
-        const biz = businesses.find((b) => b.id === product.businessId);
+          const biz = safeBusinesses.find((b) => b.id === product.businessId);
         return biz?.category === selectedCategory;
       })
       .slice(0, 15);
-  }, [featuredProducts, searchQuery, selectedCategory, businesses]);
+        }, [safeFeaturedProducts, searchQuery, selectedCategory, safeBusinesses]);
 
   const orderAgainStores = useMemo(() => {
     const seen = new Set<string>();
     const result: Business[] = [];
-    const sorted = [...orders].sort(
+    const sorted = [...safeOrders].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
     for (const order of sorted) {
       if (seen.has(order.businessId)) continue;
       seen.add(order.businessId);
-      const biz = businesses.find((b) => b.id === order.businessId);
+      const biz = safeBusinesses.find((b) => b.id === order.businessId);
       if (biz) result.push(biz);
       if (result.length >= 8) break;
     }
     return result;
-  }, [orders, businesses]);
+  }, [safeOrders, safeBusinesses]);
 
   const favoriteStores = useMemo(
-    () => businesses.filter((b) => favoriteBusinessIds.includes(b.id)),
-    [businesses, favoriteBusinessIds]
+    () => safeBusinesses.filter((b) => safeFavoriteBusinessIds.includes(b.id)),
+    [safeBusinesses, safeFavoriteBusinessIds]
   );
 
   const offers = useMemo(
     () =>
-      featuredProducts
+      safeFeaturedProducts
         .filter(
           (p) =>
             Number(p.discount || 0) > 0 ||
             (p.originalPrice !== undefined && p.originalPrice > p.price)
         )
         .slice(0, 10),
-    [featuredProducts]
+      [safeFeaturedProducts]
   );
 
   const renderStoreRow = (title: string, list: Business[]) => (
@@ -339,7 +347,7 @@ export default function UserHome() {
           <View style={styles.heroInfoRow}>
             <View style={styles.heroInfoPill}>
               <Ionicons name="storefront-outline" size={14} color="#FFFFFF" />
-              <Text style={styles.heroInfoText}>{businesses.length} stores</Text>
+              <Text style={styles.heroInfoText}>{safeBusinesses.length} stores</Text>
             </View>
             <View style={styles.heroInfoPill}>
               <Ionicons name="shield-checkmark-outline" size={14} color="#FFFFFF" />
@@ -519,7 +527,7 @@ export default function UserHome() {
           ) : null}
         </View>
 
-        {isLoading && businesses.length === 0 ? (
+        {isLoading && safeBusinesses.length === 0 ? (
           <StoreListSkeleton rows={4} />
         ) : filteredBusinesses.length === 0 ? (
           <View style={styles.stateWrap}>

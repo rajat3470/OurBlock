@@ -13,6 +13,7 @@ const BASE_URL = "https://us-central1-our-block-app.cloudfunctions.net/api";
 class ApiClient {
   private axiosInstance: AxiosInstance;
   private baseURL: string = BASE_URL;
+  private refreshPromise: Promise<string | null> | null = null;
 
   constructor() {
     this.axiosInstance = axios.create({
@@ -39,34 +40,59 @@ class ApiClient {
     this.axiosInstance.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          try {
-            const refreshToken = await AsyncStorage.getItem("refreshToken");
-            // Skip refresh for mock tokens — they never expire
-            if (refreshToken && !refreshToken.startsWith("mock-")) {
-              const response = await axios.post(
-                `${this.baseURL}/auth/refresh-token`,
-                { refreshToken }
-              );
-              const { accessToken, refreshToken: newRefreshToken } =
-                response.data;
-              await AsyncStorage.setItem("accessToken", accessToken);
-              await AsyncStorage.setItem("refreshToken", newRefreshToken);
+        if (error.response?.status === 401 && error.config) {
+          const originalConfig = error.config as AxiosRequestConfig & {
+            _retry?: boolean;
+            headers?: Record<string, string>;
+            url?: string;
+          };
 
-              // Retry original request
-              if (error.config) {
-                error.config.headers.Authorization = `Bearer ${accessToken}`;
-                return this.axiosInstance(error.config);
-              }
+          const isRefreshEndpoint = originalConfig.url?.includes("/auth/refresh-token");
+          if (!originalConfig._retry && !isRefreshEndpoint) {
+            originalConfig._retry = true;
+            const accessToken = await this.refreshAccessToken();
+            if (accessToken) {
+              originalConfig.headers = {
+                ...(originalConfig.headers ?? {}),
+                Authorization: `Bearer ${accessToken}`,
+              };
+              return this.axiosInstance(originalConfig);
             }
-          } catch (err) {
-            // Refresh failed — clear tokens so user is prompted to log in again
-            await AsyncStorage.multiRemove(["accessToken", "refreshToken"]);
           }
         }
         return Promise.reject(error);
       }
     );
+  }
+
+  private async refreshAccessToken(): Promise<string | null> {
+    if (!this.refreshPromise) {
+      this.refreshPromise = (async () => {
+        try {
+          const refreshToken = await AsyncStorage.getItem("refreshToken");
+          // Skip refresh for mock tokens — they never expire
+          if (!refreshToken || refreshToken.startsWith("mock-")) {
+            return null;
+          }
+
+          const response = await axios.post(`${this.baseURL}/auth/refresh-token`, {
+            refreshToken,
+          });
+          const { accessToken, refreshToken: newRefreshToken } = response.data;
+          await AsyncStorage.setItem("accessToken", accessToken);
+          await AsyncStorage.setItem("refreshToken", newRefreshToken);
+          return accessToken;
+        } catch {
+          // Refresh failed — clear tokens so user is prompted to log in again
+          await AsyncStorage.multiRemove(["accessToken", "refreshToken"]);
+          return null;
+        } finally {
+          this.refreshPromise = null;
+        }
+      })();
+    }
+
+    return this.refreshPromise;
   }
 
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {

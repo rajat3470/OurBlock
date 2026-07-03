@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -12,12 +12,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   Vibration,
+  AppState,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { Order, OrderStatus } from "../../src/types";
+import { useAppDispatch } from "../../src/hooks/useRedux";
+import { prependOrder } from "../../src/store/slices/businessOwnerSlice";
+import { useSocketEvent } from "../../src/hooks/useSocket";
+import { socketService } from "../../src/services/socketService";
+import { LinearGradient } from "expo-linear-gradient";
 
 type FilterKey = "all" | "pending" | "active" | "done";
 
@@ -56,6 +61,15 @@ const NEXT_STATUS_LABEL: Partial<Record<OrderStatus, string>> = {
   [OrderStatus.OUT_FOR_DELIVERY]: "✅ Mark Completed",
 };
 
+function normalizeOrderPayload(payload: any): Order | null {
+  const raw = payload?.order ?? payload?.data ?? payload;
+  if (!raw || typeof raw !== "object") return null;
+  if (!raw.id && raw._id) {
+    return { ...raw, id: raw._id } as Order;
+  }
+  return raw as Order;
+}
+
 function timeAgo(date: Date | string): string {
   const d = new Date(date);
   const diffMs = Date.now() - d.getTime();
@@ -70,12 +84,49 @@ function timeAgo(date: Date | string): string {
 export default function BusinessOwnerOrders() {
   const { orders, isLoading, loadOrders, changeOrderStatus, rejectOrder } = useBusinessOwner();
   const { rejectOrderId } = useLocalSearchParams<{ rejectOrderId?: string }>();
+  const dispatch = useAppDispatch();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [advancing, setAdvancing] = useState<string | null>(null);
   const [rejectModal, setRejectModal] = useState<{ orderId: string; orderRef: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejecting, setRejecting] = useState(false);
   const insets = useSafeAreaInsets();
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastActivityAtRef = useRef<number>(Date.now());
+
+  const getFallbackDelayMs = useCallback(() => {
+    const elapsed = Date.now() - lastActivityAtRef.current;
+    if (elapsed < 30_000) return 3_000;
+    if (elapsed < 180_000) return 10_000;
+    return 30_000;
+  }, []);
+
+  const refreshFallbackNow = useCallback(() => {
+    lastActivityAtRef.current = Date.now();
+    if (!socketService.isConnected()) {
+      loadOrders({ silent: true }).catch(() => null);
+    }
+  }, [loadOrders]);
+
+  const stopFallbackLoop = useCallback(() => {
+    if (fallbackTimerRef.current) {
+      clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
+  }, []);
+
+  const startFallbackLoop = useCallback(() => {
+    stopFallbackLoop();
+
+    const tick = () => {
+      if (!socketService.isConnected()) {
+        loadOrders({ silent: true }).catch(() => null);
+      }
+      fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
+    };
+
+    fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
+  }, [getFallbackDelayMs, loadOrders, stopFallbackLoop]);
 
   // Track previous pending count to detect new orders
   const prevPendingCount = useRef<number>(0);
@@ -83,6 +134,38 @@ export default function BusinessOwnerOrders() {
   useEffect(() => {
     loadOrders().catch(() => null);
   }, [loadOrders]);
+
+  // Fallback path while backend socket events are unavailable: sync only when
+  // this screen is focused and socket is disconnected.
+  useFocusEffect(
+    useCallback(() => {
+      // Immediate refresh on focus (covers notification tap navigation too).
+      refreshFallbackNow();
+      startFallbackLoop();
+
+      const sub = AppState.addEventListener("change", (state) => {
+        if (state === "active") {
+          // Meaningful event: app foreground resume.
+          refreshFallbackNow();
+        }
+      });
+
+      return () => {
+        sub.remove();
+        stopFallbackLoop();
+      };
+    }, [refreshFallbackNow, startFallbackLoop, stopFallbackLoop])
+  );
+
+  // Real-time: a new order has arrived via socket.
+  // prependOrder guards against duplicates if FCM also triggers a refresh.
+  // The existing useEffect watching `orders` will detect the new pending order
+  // and fire playNewOrderAlert() automatically.
+  useSocketEvent<any>("order:new", (payload) => {
+    const order = normalizeOrderPayload(payload);
+    if (!order?.id) return;
+    dispatch(prependOrder(order));
+  });
 
   // Ring/buzz when a new pending order arrives
   useEffect(() => {
@@ -137,6 +220,7 @@ export default function BusinessOwnerOrders() {
     setAdvancing(order.id);
     try {
       await changeOrderStatus(order.id, next);
+      refreshFallbackNow();
     } catch {
       Alert.alert("Error", "Failed to update order status. Please try again.");
     } finally {
@@ -148,6 +232,7 @@ export default function BusinessOwnerOrders() {
     setAdvancing(order.id);
     try {
       await changeOrderStatus(order.id, OrderStatus.CONFIRMED);
+      refreshFallbackNow();
     } catch {
       Alert.alert("Error", "Failed to accept order. Please try again.");
     } finally {
@@ -175,11 +260,13 @@ export default function BusinessOwnerOrders() {
       Alert.alert("Reason Required", "Please provide a reason for rejecting this order.");
       return;
     }
+
     setRejecting(true);
     try {
       await rejectOrder(rejectModal.orderId, rejectReason.trim());
       setRejectModal(null);
       setRejectReason("");
+      refreshFallbackNow();
     } catch {
       Alert.alert("Error", "Failed to reject order. Please try again.");
     } finally {
@@ -196,12 +283,13 @@ export default function BusinessOwnerOrders() {
       ? [addr.street, addr.landmark].filter(Boolean).join(", ")
       : null;
     const isAdvancing = advancing === item.id;
+    const orderItems = Array.isArray((item as any).items) ? (item as any).items : [];
+    const paymentMethod = item.paymentMethod ?? "cash";
 
     return (
       <TouchableOpacity
         style={styles.card}
         onPress={() => router.push(`/(business-owner)/order-detail?orderId=${item.id}`)}
-        activeOpacity={0.97}
       >
         {/* Top row: ID + time + amount */}
         <View style={styles.cardTop}>
@@ -240,7 +328,7 @@ export default function BusinessOwnerOrders() {
                 },
               ]}
             >
-              {item.paymentMethod.toUpperCase()} ·{" "}
+              {paymentMethod.toUpperCase()} ·{" "}
               {item.paymentStatus === "completed"
                 ? "Paid"
                 : item.paymentStatus === "cod"
@@ -255,11 +343,11 @@ export default function BusinessOwnerOrders() {
           <View style={styles.infoRow}>
             <Text style={styles.infoIcon}>🛍</Text>
             <Text style={styles.infoText}>
-              {item.items.length} item{item.items.length !== 1 ? "s" : ""}
+              {orderItems.length} item{orderItems.length !== 1 ? "s" : ""}
             </Text>
           </View>
           {/* Item names */}
-          {item.items.slice(0, 3).map((orderItem: any, idx: number) => (
+          {orderItems.slice(0, 3).map((orderItem: any, idx: number) => (
             <View key={idx} style={styles.infoRow}>
               <Text style={styles.infoIcon}>  ·</Text>
               <Text style={styles.infoText} numberOfLines={1}>
@@ -267,10 +355,10 @@ export default function BusinessOwnerOrders() {
               </Text>
             </View>
           ))}
-          {item.items.length > 3 ? (
+          {orderItems.length > 3 ? (
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>  ·</Text>
-              <Text style={styles.infoText}>+{item.items.length - 3} more</Text>
+              <Text style={styles.infoText}>+{orderItems.length - 3} more</Text>
             </View>
           ) : null}
           {/* Customer info */}
@@ -421,7 +509,7 @@ export default function BusinessOwnerOrders() {
           style={styles.modalOverlay}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <View style={styles.modalSheet}>
+          <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 24 }]}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Reject Order #{rejectModal?.orderRef}</Text>
             <Text style={styles.modalSubtitle}>
@@ -472,22 +560,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F7F8FA",
   },
-
-  // ── Header
   header: {
     paddingHorizontal: 20,
     paddingBottom: 20,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    overflow: "hidden",
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "800",
     color: "#FFFFFF",
     letterSpacing: -0.5,
   },
   headerSub: {
+    marginTop: 4,
     fontSize: 13,
     color: "rgba(255,255,255,0.75)",
-    marginTop: 2,
     fontWeight: "500",
   },
 

@@ -118,8 +118,11 @@ export const useBusinessOwner = () => {
     [dispatch]
   );
 
-  const loadOrders = useCallback(async () => {
-    dispatch(setLoading(true));
+  const loadOrders = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (!silent) {
+      dispatch(setLoading(true));
+    }
     try {
       const response = await businessOwnerService.getMyOrders();
       dispatch(setOrders(response.data));
@@ -128,7 +131,9 @@ export const useBusinessOwner = () => {
       dispatch(setError(message));
       throw new Error(message);
     } finally {
-      dispatch(setLoading(false));
+      if (!silent) {
+        dispatch(setLoading(false));
+      }
     }
   }, [dispatch]);
 

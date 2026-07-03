@@ -14,6 +14,8 @@ interface UserAppState {
   banners: HomeBanner[];
   featuredProducts: Product[];
   orders: Order[];
+  // Order index for O(1) lookups
+  ordersMap: Record<string, Order>;
   favoriteBusinessIds: string[];
   stats: UserAppStats | null;
   isLoading: boolean;
@@ -27,6 +29,7 @@ const initialState: UserAppState = {
   banners: [],
   featuredProducts: [],
   orders: [],
+  ordersMap: {},
   favoriteBusinessIds: [],
   stats: null,
   isLoading: false,
@@ -61,7 +64,35 @@ const userAppSlice = createSlice({
     },
     setOrders(state, action: PayloadAction<Order[]>) {
       state.orders = action.payload;
+      // Rebuild index
+      state.ordersMap = action.payload.reduce((acc, order) => {
+        acc[order.id] = order;
+        return acc;
+      }, {} as Record<string, Order>);
       state.error = null;
+    },
+    /**
+     * Targeted update from a socket `order:updated` event.
+     * Some backends emit partial payloads (e.g. only id + status), so merge
+     * with the existing order instead of replacing it.
+     */
+    updateOrderInStore(state, action: PayloadAction<Partial<Order> & { id: string }>) {
+      const existingOrder = state.ordersMap[action.payload.id];
+      if (existingOrder) {
+        const updatedOrder = { ...existingOrder, ...action.payload };
+        state.ordersMap[action.payload.id] = updatedOrder;
+        const idx = state.orders.findIndex((o) => o.id === action.payload.id);
+        if (idx !== -1) {
+          state.orders[idx] = updatedOrder;
+        }
+      }
+    },
+    /** Patch a single business field from a socket `business:status` event. */
+    patchBusiness(state, action: PayloadAction<{ id: string } & Partial<Business>>) {
+      const idx = state.businesses.findIndex((b) => b.id === action.payload.id);
+      if (idx !== -1) {
+        state.businesses[idx] = { ...state.businesses[idx], ...action.payload };
+      }
     },
     setStats(state, action: PayloadAction<UserAppStats>) {
       state.stats = action.payload;
@@ -84,7 +115,7 @@ const userAppSlice = createSlice({
       state.error = null;
     },
     clearUserAppState() {
-      return initialState;
+      return { ...initialState, ordersMap: {} };
     },
   },
 });
@@ -97,6 +128,8 @@ export const {
   setBanners,
   setFeaturedProducts,
   setOrders,
+  updateOrderInStore,
+  patchBusiness,
   setStats,
   toggleFavoriteBusiness,
   setError,

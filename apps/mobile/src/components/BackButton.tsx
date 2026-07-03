@@ -1,5 +1,6 @@
 import { TouchableOpacity, Text, StyleSheet } from "react-native";
 import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface BackButtonProps {
   top?: number;
@@ -7,9 +8,10 @@ interface BackButtonProps {
 }
 
 export default function BackButton({ top = 12, onPress }: BackButtonProps) {
+  const insets = useSafeAreaInsets();
   return (
     <TouchableOpacity
-      style={[styles.button, { top }]}
+      style={[styles.button, { top: top + insets.top }]}
       onPress={onPress ?? (() => router.back())}
       activeOpacity={0.75}
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
