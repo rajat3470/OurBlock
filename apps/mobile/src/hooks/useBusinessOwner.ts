@@ -191,7 +191,11 @@ export const useBusinessOwner = () => {
     try {
       const data = await businessOwnerService.getAnalytics();
       dispatch(setAnalytics(data));
-    } catch { /* non-blocking */ }
+    } catch (err: unknown) {
+      const message = extractErrorMessage(err, "Failed to load analytics");
+      console.warn("[useBusinessOwner] loadAnalytics:", message);
+      dispatch(setError(message));
+    }
   }, [dispatch]);
 
   const toggleTakingOrders = useCallback(async (taking: boolean) => {

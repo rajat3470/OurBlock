@@ -169,8 +169,8 @@ export async function playNewOrderSound(): Promise<void> {
         _player = null;
       }
     }, 15000);
-  } catch {
-    // Non-fatal — vibration still alerts the user
+  } catch (err) {
+    console.warn("[OrderNotification] Sound playback failed (vibration still active):", err);
   }
 }
 
@@ -224,8 +224,8 @@ export async function handleOrderNotificationAction(
         const { businessOwnerService } = await import("./businessOwnerService");
         await businessOwnerService.updateOrderStatus(orderId, OrderStatus.CONFIRMED);
         onAccepted?.();
-      } catch {
-        // User can accept from the orders screen if this fails
+      } catch (err) {
+        console.warn("[OrderNotification] Failed to accept order from notification:", err);
       }
       router.replace("/(business-owner)/orders");
       return;

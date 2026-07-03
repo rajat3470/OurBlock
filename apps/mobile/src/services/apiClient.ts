@@ -82,8 +82,8 @@ class ApiClient {
           await AsyncStorage.setItem("accessToken", accessToken);
           await AsyncStorage.setItem("refreshToken", newRefreshToken);
           return accessToken;
-        } catch {
-          // Refresh failed — clear tokens so user is prompted to log in again
+        } catch (err) {
+          console.warn("[apiClient] Token refresh failed:", err);
           await AsyncStorage.multiRemove(["accessToken", "refreshToken"]);
           return null;
         } finally {

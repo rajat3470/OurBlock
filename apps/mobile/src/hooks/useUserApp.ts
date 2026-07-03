@@ -56,8 +56,14 @@ export const useUserApp = () => {
         // Backward-compatible fallback for older backend response shapes.
         if (businesses.length === 0) {
           const [bizFallback, featuredFallback] = await Promise.all([
-            userAppService.getBusinessesBySociety(societyId).catch(() => []),
-            userAppService.getFeaturedProducts(societyId).catch(() => []),
+            userAppService.getBusinessesBySociety(societyId).catch((err) => {
+              console.warn("[useUserApp] getBusinessesBySociety fallback failed:", err);
+              return [];
+            }),
+            userAppService.getFeaturedProducts(societyId).catch((err) => {
+              console.warn("[useUserApp] getFeaturedProducts fallback failed:", err);
+              return [];
+            }),
           ]);
           businesses = Array.isArray(bizFallback) ? bizFallback : [];
           if (featuredProducts.length === 0) {

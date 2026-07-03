@@ -104,7 +104,7 @@ class SocketService {
 
     socket.on("connect_error", (err) => {
       // Non-fatal: app works fine without real-time updates.
-      if (process.env.NODE_ENV === 'development' && !this.warnedConnectError) {
+      if (!this.warnedConnectError) {
         this.warnedConnectError = true;
         console.warn("[socket] connect error:", err.message);
       }

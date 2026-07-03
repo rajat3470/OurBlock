@@ -935,66 +935,71 @@ async function loginWithRole(
     return res.status(err.statusCode ?? 401).json({ success: false, error: err.message });
   }
 
-  // Fetch the Firestore user document to check role
-  const userDoc = await db.collection('users').doc(authResult.localId).get();
-  if (!userDoc.exists) {
-    return res.status(404).json({ success: false, error: 'User account not found' });
-  }
-
-  const userData = userDoc.data() as any;
-
-  const normalizeRole = (role: unknown): 'superAdmin' | 'businessOwner' | 'user' | null => {
-    if (typeof role !== 'string') return null;
-    const compact = role.replace(/[-_\s]/g, '').toLowerCase();
-    if (compact === 'superadmin') return 'superAdmin';
-    if (compact === 'businessowner' || compact === 'owner' || compact === 'merchant') return 'businessOwner';
-    if (compact === 'user' || compact === 'resident' || compact === 'customer') return 'user';
-    return null;
-  };
-
-  let normalizedRole = normalizeRole(userData.role);
-
-  // Repair legacy business-owner accounts that were authenticated successfully
-  // but have stale or incorrect role values in Firestore.
-  if (expectedRole === 'businessOwner' && normalizedRole !== 'businessOwner') {
-    const ownedBusinessSnap = await db
-      .collection('businesses')
-      .where('ownerId', '==', authResult.localId)
-      .limit(1)
-      .get();
-
-    if (!ownedBusinessSnap.empty) {
-      normalizedRole = 'businessOwner';
-      await Promise.all([
-        db.collection('users').doc(authResult.localId).update({
-          role: 'businessOwner',
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        }),
-        auth.setCustomUserClaims(authResult.localId, { role: 'businessOwner' }),
-      ]);
-      userData.role = 'businessOwner';
+  try {
+    // Fetch the Firestore user document to check role
+    const userDoc = await db.collection('users').doc(authResult.localId).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ success: false, error: 'User account not found' });
     }
-  }
 
-  if (normalizedRole !== expectedRole) {
-    return res.status(403).json({
-      success: false,
-      error: `This login is for ${expectedRole} accounts only`,
+    const userData = userDoc.data() as any;
+
+    const normalizeRole = (role: unknown): 'superAdmin' | 'businessOwner' | 'user' | null => {
+      if (typeof role !== 'string') return null;
+      const compact = role.replace(/[-_\s]/g, '').toLowerCase();
+      if (compact === 'superadmin') return 'superAdmin';
+      if (compact === 'businessowner' || compact === 'owner' || compact === 'merchant') return 'businessOwner';
+      if (compact === 'user' || compact === 'resident' || compact === 'customer') return 'user';
+      return null;
+    };
+
+    let normalizedRole = normalizeRole(userData.role);
+
+    // Repair legacy business-owner accounts that were authenticated successfully
+    // but have stale or incorrect role values in Firestore.
+    if (expectedRole === 'businessOwner' && normalizedRole !== 'businessOwner') {
+      const ownedBusinessSnap = await db
+        .collection('businesses')
+        .where('ownerId', '==', authResult.localId)
+        .limit(1)
+        .get();
+
+      if (!ownedBusinessSnap.empty) {
+        normalizedRole = 'businessOwner';
+        await Promise.all([
+          db.collection('users').doc(authResult.localId).update({
+            role: 'businessOwner',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          }),
+          auth.setCustomUserClaims(authResult.localId, { role: 'businessOwner' }),
+        ]);
+        userData.role = 'businessOwner';
+      }
+    }
+
+    if (normalizedRole !== expectedRole) {
+      return res.status(403).json({
+        success: false,
+        error: `This login is for ${expectedRole} accounts only`,
+      });
+    }
+
+    if (userData.status === 'suspended') {
+      return res.status(403).json({ success: false, error: 'Your account has been suspended' });
+    }
+
+    return res.json({
+      user: { id: authResult.localId, ...userData },
+      tokens: {
+        accessToken: authResult.idToken,
+        refreshToken: authResult.refreshToken,
+        expiresIn: parseInt(authResult.expiresIn, 10),
+      },
     });
+  } catch (err: any) {
+    console.error('Login role verification error:', err);
+    return res.status(500).json({ success: false, error: err.message || 'Login failed' });
   }
-
-  if (userData.status === 'suspended') {
-    return res.status(403).json({ success: false, error: 'Your account has been suspended' });
-  }
-
-  return res.json({
-    user: { id: authResult.localId, ...userData },
-    tokens: {
-      accessToken: authResult.idToken,
-      refreshToken: authResult.refreshToken,
-      expiresIn: parseInt(authResult.expiresIn, 10),
-    },
-  });
 }
 
 router.post('/superadmin/login', (req, res) => loginWithRole(req, res, 'superAdmin'));

@@ -58,7 +58,9 @@ async function notifyOrderStatusChange(
     const msg = STATUS_MESSAGES[status];
     if (!msg) return;
     await sendPushNotification(pushToken, msg.title, msg.body(orderNote));
-  } catch { /* non-blocking */ }
+  } catch (err) {
+    console.warn('notifyOrderStatusChange failed for user', userId, err);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -260,8 +262,9 @@ router.post('/', requireAuth, async (req, res) => {
         if (!snap.empty) {
           await snap.docs[0].ref.update({ usageCount: admin.firestore.FieldValue.increment(1) });
         }
-      } catch {
-        // Coupon validation failed — proceed without discount
+      } catch (couponErr: any) {
+        const couponMessage = couponErr?.message || 'Invalid coupon code';
+        return res.status(400).json({ success: false, error: couponMessage });
       }
     }
     const finalAmount = subTotal + platformFee - couponDiscount;

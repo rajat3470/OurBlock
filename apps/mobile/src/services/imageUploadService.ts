@@ -27,9 +27,10 @@ export const imageUploadService = {
       await uploadBytes(storageRef, blob);
       const downloadURL = await getDownloadURL(storageRef);
       return downloadURL;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading profile image:", error);
-      throw new Error("Failed to upload profile image");
+      const message = error?.message || "Failed to upload profile image";
+      throw new Error(`Failed to upload profile image: ${message}`);
     }
   },
 
@@ -45,9 +46,10 @@ export const imageUploadService = {
 
       const storageRef = ref(storage, path);
       await deleteObject(storageRef);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting profile image:", error);
-      throw new Error("Failed to delete profile image");
+      const message = error?.message || "Failed to delete profile image";
+      throw new Error(`Failed to delete profile image: ${message}`);
     }
   },
 

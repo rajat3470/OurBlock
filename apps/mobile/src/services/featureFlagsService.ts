@@ -97,13 +97,14 @@ class FeatureFlagsService {
         this.hasInitialized = true;
       }
       await rc.fetchAndActivate();
-    } catch {
-      // Use cached / default values on fetch failure.
+    } catch (err) {
+      console.warn("[FeatureFlags] fetchAndActivate failed, using cached/defaults:", err);
     }
 
     try {
       return buildSnapshot(rc);
-    } catch {
+    } catch (err) {
+      console.warn("[FeatureFlags] buildSnapshot failed:", err);
       return defaultSnapshot();
     }
   }
@@ -114,13 +115,14 @@ class FeatureFlagsService {
 
     try {
       await rc.fetchAndActivate();
-    } catch {
-      // Use cached / default values on fetch failure.
+    } catch (err) {
+      console.warn("[FeatureFlags] refresh fetchAndActivate failed:", err);
     }
 
     try {
       return buildSnapshot(rc);
-    } catch {
+    } catch (err) {
+      console.warn("[FeatureFlags] refresh buildSnapshot failed:", err);
       return defaultSnapshot();
     }
   }
@@ -130,7 +132,8 @@ class FeatureFlagsService {
     if (!rc) return defaultSnapshot();
     try {
       return buildSnapshot(rc);
-    } catch {
+    } catch (err) {
+      console.warn("[FeatureFlags] getSnapshot failed:", err);
       return defaultSnapshot();
     }
   }

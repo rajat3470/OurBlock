@@ -37,6 +37,7 @@ export const useSuperAdmin = () => {
       const message =
         err instanceof Error ? err.message : "Failed to load stats";
       dispatch(setError(message));
+      throw err;
     } finally {
       dispatch(setLoading(false));
     }
@@ -51,6 +52,7 @@ export const useSuperAdmin = () => {
       const message =
         err instanceof Error ? err.message : "Failed to load societies";
       dispatch(setError(message));
+      throw err;
     } finally {
       dispatch(setLoading(false));
     }
@@ -121,6 +123,7 @@ export const useSuperAdmin = () => {
       const message =
         err instanceof Error ? err.message : "Failed to load businesses";
       dispatch(setError(message));
+      throw err;
     } finally {
       dispatch(setLoading(false));
     }
@@ -225,6 +228,7 @@ export const useSuperAdmin = () => {
       const message =
         err instanceof Error ? err.message : "Failed to load users";
       dispatch(setError(message));
+      throw err;
     } finally {
       dispatch(setLoading(false));
     }

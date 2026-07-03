@@ -15,6 +15,7 @@ async function loadAdsModule() {
   try {
     return await import("react-native-google-mobile-ads");
   } catch (error) {
+    console.warn("[AdService] Mobile ads module unavailable:", error);
     return null;
   }
 }

@@ -69,7 +69,9 @@ export const OneSignalService = {
     OneSignal.User.pushSubscription
       .getIdAsync()
       .then(maybeShowVerificationDialog)
-      .catch(() => null);
+      .catch((err: unknown) => {
+        console.warn("[OneSignal] Failed to get push subscription ID:", err);
+      });
   },
 
   setupForegroundDisplay(): void {
