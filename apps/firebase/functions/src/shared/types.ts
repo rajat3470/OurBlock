@@ -173,6 +173,9 @@ export interface Order {
   deliveredAt?: Date;
   rejectionReason?: string; // If order was rejected by business owner
   rejectedAt?: Date; // Timestamp of rejection
+  rejectedBy?: 'business_owner' | 'system'; // Who initiated the rejection
+  acceptanceWindowSeconds?: number; // Owner accept/reject window (seconds)
+  autoRejectAt?: Date; // Deadline after which a pending order is auto-rejected
   trackingUpdates?: TrackingUpdate[];
   createdAt: Date;
   updatedAt: Date;
@@ -191,7 +194,7 @@ export interface TrackingUpdate {
   location?: string;
   notes?: string;
   rejectionReason?: string; // Specific reason if order was rejected
-  rejectedBy?: 'business_owner'; // Who initiated the rejection
+  rejectedBy?: 'business_owner' | 'system'; // Who initiated the rejection
 }
 
 // Address Types

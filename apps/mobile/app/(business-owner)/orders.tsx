@@ -18,6 +18,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { Order, OrderStatus } from "../../src/types";
+import AcceptanceCountdown from "../../src/components/AcceptanceCountdown";
+import { getAcceptanceDeadlineMs } from "../../src/utils/orderAcceptance";
 import { useAppDispatch } from "../../src/hooks/useRedux";
 import { prependOrder } from "../../src/store/slices/businessOwnerSlice";
 import { useSocketEvent } from "../../src/hooks/useSocket";
@@ -90,6 +92,9 @@ export default function BusinessOwnerOrders() {
   const [rejectModal, setRejectModal] = useState<{ orderId: string; orderRef: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejecting, setRejecting] = useState(false);
+  // Pending orders whose 60s window elapsed on the client before the server
+  // sweeper flipped them to rejected — used to swap the action buttons out.
+  const [expiredIds, setExpiredIds] = useState<Set<string>>(new Set());
   const insets = useSafeAreaInsets();
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityAtRef = useRef<number>(Date.now());
@@ -228,13 +233,43 @@ export default function BusinessOwnerOrders() {
     }
   };
 
+  const markExpired = useCallback((orderId: string) => {
+    setExpiredIds((prev) => {
+      if (prev.has(orderId)) return prev;
+      const next = new Set(prev);
+      next.add(orderId);
+      return next;
+    });
+  }, []);
+
+  const handleCountdownExpire = useCallback(
+    (orderId: string) => {
+      markExpired(orderId);
+      // Give the server sweeper a moment, then refetch so the card reflects the
+      // real (rejected) state instead of our optimistic "expired" placeholder.
+      refreshFallbackNow();
+    },
+    [markExpired, refreshFallbackNow]
+  );
+
   const handleAccept = async (order: Order) => {
     setAdvancing(order.id);
     try {
       await changeOrderStatus(order.id, OrderStatus.CONFIRMED);
       refreshFallbackNow();
-    } catch {
-      Alert.alert("Error", "Failed to accept order. Please try again.");
+    } catch (err) {
+      const code = (err as any)?.response?.data?.code;
+      const httpStatus = (err as any)?.response?.status;
+      if (code === "ACCEPTANCE_WINDOW_EXPIRED" || code === "ORDER_NOT_PENDING" || httpStatus === 409) {
+        markExpired(order.id);
+        refreshFallbackNow();
+        Alert.alert(
+          "Order expired",
+          "This order was auto-rejected because it wasn't accepted within 60 seconds."
+        );
+      } else {
+        Alert.alert("Error", "Failed to accept order. Please try again.");
+      }
     } finally {
       setAdvancing(null);
     }
@@ -285,6 +320,10 @@ export default function BusinessOwnerOrders() {
     const isAdvancing = advancing === item.id;
     const orderItems = Array.isArray((item as any).items) ? (item as any).items : [];
     const paymentMethod = item.paymentMethod ?? "cash";
+    const isPending = item.status === OrderStatus.PENDING;
+    const deadlineMs = isPending ? getAcceptanceDeadlineMs(item) : null;
+    const windowExpired =
+      isPending && ((deadlineMs != null && Date.now() >= deadlineMs) || expiredIds.has(item.id));
 
     return (
       <TouchableOpacity
@@ -297,7 +336,16 @@ export default function BusinessOwnerOrders() {
             <Text style={styles.orderId}>#{item.id.slice(0, 8).toUpperCase()}</Text>
             <Text style={styles.orderTime}>{timeAgo(item.createdAt)}</Text>
           </View>
-          <Text style={styles.orderAmount}>₹{item.finalAmount}</Text>
+          <View style={{ alignItems: "flex-end", gap: 4 }}>
+            <Text style={styles.orderAmount}>₹{item.finalAmount}</Text>
+            {isPending && deadlineMs != null && !windowExpired ? (
+              <AcceptanceCountdown
+                compact
+                deadlineMs={deadlineMs}
+                onExpire={() => handleCountdownExpire(item.id)}
+              />
+            ) : null}
+          </View>
         </View>
 
         {/* Status + payment row */}
@@ -383,7 +431,11 @@ export default function BusinessOwnerOrders() {
         </View>
 
         {/* Action */}
-        {item.status === OrderStatus.PENDING ? (
+        {isPending && windowExpired ? (
+          <View style={styles.terminalBanner}>
+            <Text style={styles.terminalBannerText}>🚫 Auto-rejected — no response in time</Text>
+          </View>
+        ) : item.status === OrderStatus.PENDING ? (
           <View style={styles.pendingActions}>
             <TouchableOpacity
               style={[styles.rejectBtn, isAdvancing && styles.advanceBtnDisabled]}

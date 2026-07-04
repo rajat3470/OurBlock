@@ -2,7 +2,26 @@ import { Router, Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
 import * as https from 'https';
 import { computeCouponDiscount } from './coupons';
-import { ORDER_FEES } from '../shared/constants';
+import { ORDER_FEES, ORDER_ACCEPTANCE_WINDOW_SECONDS } from '../shared/constants';
+import { autoRejectIfExpired, isExpiredPending } from '../shared/orderExpiry';
+
+/**
+ * Apply lazy auto-rejection to a page of order docs: any order still pending
+ * past its deadline is rejected on read so clients never see a stale pending
+ * status while waiting for the 1-minute sweeper.
+ */
+async function expirePendingDocs(
+  docs: FirebaseFirestore.QueryDocumentSnapshot[]
+): Promise<Array<{ id: string } & FirebaseFirestore.DocumentData>> {
+  return Promise.all(
+    docs.map(async (doc) => {
+      const data = doc.data();
+      if (!isExpiredPending(data)) return { id: doc.id, ...data };
+      const { data: effective } = await autoRejectIfExpired(db, doc.ref, data);
+      return { id: doc.id, ...effective };
+    })
+  );
+}
 
 const router = Router();
 const db = admin.firestore();
@@ -110,7 +129,7 @@ router.get('/my', requireAuth, async (req, res) => {
       .limit(limit * page)
       .get();
 
-    const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const all = await expirePendingDocs(snapshot.docs);
     const paginated = all.slice((page - 1) * limit, page * limit);
 
     return res.json({ success: true, data: paginated, total: snapshot.size, page, limit });
@@ -142,7 +161,7 @@ router.get('/business', requireAuth, async (req, res) => {
     }
 
     const snapshot = await query.limit(limit * page).get();
-    const all = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    const all = await expirePendingDocs(snapshot.docs);
     const paginated = all.slice((page - 1) * limit, page * limit);
 
     return res.json({ success: true, data: paginated, total: snapshot.size, page, limit });
@@ -168,7 +187,8 @@ router.get('/:id', requireAuth, async (req, res) => {
     }
     if (!allowed) return res.status(403).json({ success: false, error: 'Access denied' });
 
-    return res.json({ success: true, data: { id: doc.id, ...data } });
+    const { data: effective } = await autoRejectIfExpired(db, doc.ref, data);
+    return res.json({ success: true, data: { id: doc.id, ...effective } });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
@@ -290,6 +310,12 @@ router.post('/', requireAuth, async (req, res) => {
       trackingUpdates: [
         { status: 'pending', timestamp: new Date().toISOString(), notes: 'Order placed' },
       ],
+      // Owner acceptance deadline — auto-rejected by autoRejectExpiredOrders if
+      // still pending past this instant. Anchored to the real creation time.
+      acceptanceWindowSeconds: ORDER_ACCEPTANCE_WINDOW_SECONDS,
+      autoRejectAt: admin.firestore.Timestamp.fromMillis(
+        Date.now() + ORDER_ACCEPTANCE_WINDOW_SECONDS * 1000
+      ),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
@@ -328,14 +354,59 @@ router.put('/:id/status', requireAuth, async (req, res) => {
     }
 
     const trackingUpdate = { status, timestamp: new Date().toISOString(), notes: notes ?? '' };
+    const orderRef = db.collection('orders').doc(req.params.id);
 
-    await db.collection('orders').doc(req.params.id).update({
-      status,
-      trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    // When an owner accepts a still-pending order, do it in a transaction so it
+    // cannot race with the auto-reject sweeper. If the acceptance window has
+    // already lapsed (or the sweeper won), fail cleanly with 409 instead of
+    // resurrecting an order the customer has been told was rejected.
+    const isOwnerAcceptance =
+      isOwner && orderData.status === 'pending' && status !== 'cancelled' && status !== 'rejected';
 
-    const updatedDoc = await db.collection('orders').doc(req.params.id).get();
+    if (isOwnerAcceptance) {
+      try {
+        await db.runTransaction(async (tx) => {
+          const fresh = await tx.get(orderRef);
+          const data = fresh.data();
+          if (!data || data.status !== 'pending') {
+            throw new Error('ORDER_NOT_PENDING');
+          }
+          const deadlineMs = data.autoRejectAt?.toMillis?.();
+          if (deadlineMs !== undefined && Date.now() > deadlineMs) {
+            throw new Error('ACCEPTANCE_WINDOW_EXPIRED');
+          }
+          tx.update(orderRef, {
+            status,
+            trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        });
+      } catch (txErr: any) {
+        if (txErr?.message === 'ACCEPTANCE_WINDOW_EXPIRED') {
+          return res.status(409).json({
+            success: false,
+            error: 'This order expired and was auto-rejected because it was not accepted within 60 seconds.',
+            code: 'ACCEPTANCE_WINDOW_EXPIRED',
+          });
+        }
+        if (txErr?.message === 'ORDER_NOT_PENDING') {
+          return res.status(409).json({
+            success: false,
+            error: 'This order can no longer be accepted (it is no longer pending).',
+            code: 'ORDER_NOT_PENDING',
+          });
+        }
+        throw txErr;
+      }
+    } else {
+      await orderRef.update({
+        status,
+        trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    const updatedDoc = await orderRef.get();
 
     // Fire-and-forget push notification to the customer
     notifyOrderStatusChange(orderData.userId, status, orderData.businessName ?? undefined);
