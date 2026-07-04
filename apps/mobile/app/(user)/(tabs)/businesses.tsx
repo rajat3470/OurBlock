@@ -106,7 +106,7 @@ export default function UserBusinesses() {
       >
         <View style={styles.cardLeft}>
           <View style={styles.iconWrap}>
-            <Ionicons name="storefront-outline" size={22} color="#DC2626" />
+            <Ionicons name="storefront-outline" size={22} color="#0E9F6E" />
           </View>
           <View style={styles.cardBody}>
             <View style={styles.nameRow}>
@@ -148,7 +148,7 @@ export default function UserBusinesses() {
           <Ionicons
             name={isFavorite ? "heart" : "heart-outline"}
             size={18}
-            color={isFavorite ? "#FFFFFF" : "#DC2626"}
+            color={isFavorite ? "#FFFFFF" : "#0E9F6E"}
           />
         </TouchableOpacity>
       </TouchableOpacity>
@@ -157,7 +157,7 @@ export default function UserBusinesses() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#DC2626", "#991B1B"]} style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <LinearGradient colors={["#0E9F6E", "#0891B2"]} style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.headerTitle}>Shops</Text>
         <Text style={styles.headerSub}>{businesses.length} stores in your society</Text>
       </LinearGradient>
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 12,
-    backgroundColor: "#FEF2F2",
+    backgroundColor: "#ECFDF5",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   meta: {
     marginTop: 2,
     fontSize: 12,
-    color: "#DC2626",
+    color: "#0E9F6E",
     fontWeight: "600",
     textTransform: "capitalize",
   },
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   matchedItemsText: {
     marginTop: 4,
     fontSize: 11,
-    color: "#B91C1C",
+    color: "#0A7D55",
     fontWeight: "600",
   },
   favoriteBtn: {
@@ -338,11 +338,11 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FEF2F2",
+    backgroundColor: "#ECFDF5",
     marginLeft: 8,
   },
   favoriteBtnActive: {
-    backgroundColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
   },
   emptyWrap: {
     alignItems: "center",
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,

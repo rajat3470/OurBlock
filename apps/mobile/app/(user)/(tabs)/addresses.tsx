@@ -128,7 +128,7 @@ export default function AddressesScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#DC2626" />
+        <ActivityIndicator size="large" color="#0E9F6E" />
       </View>
     );
   }
@@ -136,7 +136,7 @@ export default function AddressesScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#DC2626", "#991B1B"]}
+        colors={["#0E9F6E", "#0891B2"]}
         style={[styles.header, { paddingTop: insets.top + 12 }]}
       >
         <TouchableOpacity
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   defaultBadge: {
-    backgroundColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -286,14 +286,14 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: "#FEF2F2",
+    backgroundColor: "#ECFDF5",
     borderRadius: 8,
     alignSelf: "flex-start",
   },
   setDefaultText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#DC2626",
+    color: "#0E9F6E",
   },
   emptyContainer: {
     alignItems: "center",
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     borderRadius: 42,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
     marginBottom: 16,
   },
   emptyText: {
@@ -325,11 +325,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
     justifyContent: "center",
     alignItems: "center",
     elevation: 6,
-    shadowColor: "#DC2626",
+    shadowColor: "#0E9F6E",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

@@ -1,5 +1,5 @@
 export const colors = {
-  primary: "#007AFF",
+  primary: "#0E9F6E",
   background: "#08090D",
   backgroundAlt: "#101114",
   surface: "#FFFFFF",
@@ -22,12 +22,6 @@ export const colors = {
     500: "#16A34A",
     600: "#0E8A3D",
   },
-  amber: {
-    50: "#FFF8E6",
-    100: "#FDE9BF",
-    600: "#D97706",
-    700: "#B45309",
-  },
   red: {
     50: "#FEF2F2",
     100: "#FEE2E2",
@@ -39,16 +33,56 @@ export const colors = {
     800: "#1E293B",
     900: "#0B1220",
   },
+  emerald: {
+    50: "#ECFDF5",
+    100: "#D1FAE5",
+    200: "#A7F3D0",
+    500: "#10B981",
+    600: "#0E9F6E",
+    700: "#0A7D55",
+  },
+  teal: {
+    50: "#ECFEFF",
+    100: "#CFFAFE",
+    500: "#06B6D4",
+    600: "#0891B2",
+    700: "#0E7490",
+  },
+  amber: {
+    50: "#FFFBEB",
+    100: "#FEF3C7",
+    500: "#F59E0B",
+    600: "#D97706",
+    700: "#B45309",
+  },
+} as const;
+
+/**
+ * Customer ("user") app brand palette — Emerald-Teal + Amber.
+ * Emerald/teal is the primary brand color (headers, links, active states);
+ * amber is the accent used for calls-to-action and promo highlights.
+ */
+export const brand = {
+  primary: "#0E9F6E",
+  primaryDark: "#0A7D55",
+  teal: "#0891B2",
+  accent: "#F59E0B",
+  accentDark: "#D97706",
+  soft: "#ECFDF5",
+  softStrong: "#D1FAE5",
+  accentSoft: "#FEF3C7",
+  heroGradient: ["#0E9F6E", "#0891B2"] as const,
+  ctaGradient: ["#F59E0B", "#D97706"] as const,
 } as const;
 
 export const gradients = {
   appBackground: ["#07080C", "#111215", "#17181C"],
   superAdmin: ["#2563EB", "#4F46E5"],
   businessOwner: ["#0F9F68", "#0A7D55"],
-  user: ["#09090B", "#7F1D1D"],
+  user: ["#0E9F6E", "#0891B2"],
   ctaBlue: ["#2563EB", "#0A5CFF"],
   ctaGreen: ["#16A34A", "#0E8A3D"],
-  ctaAmber: ["#DC2626", "#991B1B"],
+  ctaAmber: ["#F59E0B", "#D97706"],
 } as const;
 
 export const fonts = {
@@ -121,8 +155,8 @@ export const roleTheme = {
     gradient: gradients.businessOwner,
   },
   user: {
-    accent: colors.red[600],
-    soft: colors.red[100],
+    accent: colors.emerald[600],
+    soft: colors.emerald[100],
     gradient: gradients.user,
   },
 } as const;

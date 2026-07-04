@@ -11,7 +11,7 @@ interface UserTabIconProps {
 export default function UserTabIcon({ iconName, focused }: UserTabIconProps) {
   if (focused) {
     return (
-      <LinearGradient colors={["#DC2626", "#111111"]} style={[styles.focusedWrap, { marginBottom: 4 }]}>
+      <LinearGradient colors={["#0E9F6E", "#0891B2"]} style={[styles.focusedWrap, { marginBottom: 4 }]}>
         <Ionicons name={iconName} size={20} color="#FFFFFF" />
       </LinearGradient>
     );
@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#DC2626",
+    shadowColor: "#0E9F6E",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.22,
     shadowRadius: 10,

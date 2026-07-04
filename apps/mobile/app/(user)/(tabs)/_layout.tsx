@@ -61,7 +61,7 @@ function FloatingCartBar() {
       >
         {/* Layer 1: Spinning gear fills the entire FAB */}
         <Animated.View style={[StyleSheet.absoluteFillObject, styles.gearLayer, gearStyle]}>
-          <Ionicons name="settings" size={68} color="#DC2626" />
+          <Ionicons name="settings" size={68} color="#0E9F6E" />
         </Animated.View>
 
         {/* Layer 2: White disc — always locked to center */}
@@ -71,7 +71,7 @@ function FloatingCartBar() {
 
         {/* Layer 3: Cart icon — always locked to center */}
         <View style={styles.centerOverlay}>
-          <Ionicons name="cart" size={24} color="#DC2626" />
+          <Ionicons name="cart" size={24} color="#0E9F6E" />
         </View>
 
         {/* Item count badge */}
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     zIndex: 100,
-    shadowColor: "#991B1B",
+    shadowColor: "#0A7D55",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
     shadowRadius: 16,
@@ -139,9 +139,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 3,
     borderWidth: 1.5,
-    borderColor: "#DC2626",
+    borderColor: "#0E9F6E",
   },
-  badgeText: { fontSize: 10, fontWeight: "800", color: "#DC2626" },
+  badgeText: { fontSize: 10, fontWeight: "800", color: "#0E9F6E" },
 });
 
 export default function TabsLayout() {
@@ -150,7 +150,7 @@ export default function TabsLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: "#DC2626",
+          tabBarActiveTintColor: "#0E9F6E",
           tabBarInactiveTintColor: "#9CA3AF",
           tabBarStyle: {
             backgroundColor: "#FFFFFF",

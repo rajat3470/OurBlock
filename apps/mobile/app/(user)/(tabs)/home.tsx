@@ -267,7 +267,7 @@ export default function UserHome() {
                 {img ? (
                   <Image source={{ uri: img }} style={styles.hStoreImage} contentFit="cover" />
                 ) : (
-                  <LinearGradient colors={["#FEE2E2", "#FECACA"]} style={styles.hStoreFallback}>
+                  <LinearGradient colors={["#D1FAE5", "#A7F3D0"]} style={styles.hStoreFallback}>
                     <Text style={styles.hStoreFallbackEmoji}>{categoryEmoji(biz.category)}</Text>
                   </LinearGradient>
                 )}
@@ -296,7 +296,7 @@ export default function UserHome() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#DC2626", "#991B1B", "#7F1D1D"]}
+        colors={["#0E9F6E", "#059669", "#0891B2"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.heroWrap, { paddingTop: insets.top + 14 }]}
@@ -521,7 +521,7 @@ export default function UserHome() {
           </Text>
           {cartCount > 0 ? (
             <TouchableOpacity style={styles.cartShortcut} onPress={() => router.push("/(user)/cart")}>
-              <Ionicons name="cart-outline" size={14} color="#DC2626" />
+              <Ionicons name="cart-outline" size={14} color="#0E9F6E" />
               <Text style={styles.cartShortcutText}>{cartCount}</Text>
             </TouchableOpacity>
           ) : null}
@@ -574,7 +574,7 @@ export default function UserHome() {
                       <Image source={{ uri: imageUrl }} style={styles.storeImage} contentFit="cover" />
                     ) : (
                       <LinearGradient
-                        colors={["#FEE2E2", "#FECACA"]}
+                        colors={["#D1FAE5", "#A7F3D0"]}
                         style={styles.storeImageFallback}
                       >
                         <Text style={styles.storeImageFallbackEmoji}>{categoryEmoji(business.category)}</Text>
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
   dietDot: { width: 6, height: 6, borderRadius: 3 },
   dishName: { flex: 1, fontSize: 14.5, fontWeight: "700", color: "#111827" },
   dishStore: { fontSize: 12, color: "#6B7280", marginTop: 2 },
-  dishPrice: { fontSize: 13.5, fontWeight: "800", color: "#DC2626", marginTop: 3 },
+  dishPrice: { fontSize: 13.5, fontWeight: "800", color: "#0E9F6E", marginTop: 3 },
   hRow: { paddingHorizontal: 16, gap: 12, paddingBottom: 4 },
   hStoreCard: { width: 150 },
   hStoreImageWrap: {
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     left: 8,
-    backgroundColor: "#DC2626",
+    backgroundColor: "#F59E0B",
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
   offerName: { fontSize: 13, fontWeight: "700", color: "#111827" },
   offerStore: { fontSize: 11, color: "#6B7280", marginTop: 1 },
   offerPriceRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
-  offerPrice: { fontSize: 13, fontWeight: "800", color: "#DC2626" },
+  offerPrice: { fontSize: 13, fontWeight: "800", color: "#0E9F6E" },
   offerOriginal: { fontSize: 11, color: "#9CA3AF", textDecorationLine: "line-through" },
   heroWrap: {
     borderBottomLeftRadius: 26,
@@ -785,7 +785,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   sectionTitle: { fontSize: 16, color: "#0F172A", fontWeight: "800" },
-  viewAllText: { fontSize: 12, color: "#DC2626", fontWeight: "700" },
+  viewAllText: { fontSize: 12, color: "#0E9F6E", fontWeight: "700" },
   categoryRow: { paddingHorizontal: 16, gap: 8, paddingBottom: 6 },
   categoryChip: {
     borderRadius: 999,
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     backgroundColor: "#F3F4F6",
   },
-  categoryChipActive: { backgroundColor: "#DC2626" },
+  categoryChipActive: { backgroundColor: "#0E9F6E" },
   categoryChipText: { fontSize: 12, fontWeight: "700", color: "#1E293B", textTransform: "capitalize" },
   categoryChipTextActive: { color: "#FFFFFF" },
   cartShortcut: {
@@ -802,10 +802,10 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: "#FEF2F2",
+    backgroundColor: "#ECFDF5",
     borderRadius: 999,
   },
-  cartShortcutText: { fontSize: 12, fontWeight: "800", color: "#DC2626" },
+  cartShortcutText: { fontSize: 12, fontWeight: "800", color: "#0E9F6E" },
   stateWrap: { marginHorizontal: 16, marginTop: 16, backgroundColor: "#FFFFFF", borderRadius: 14, padding: 20 },
   stateTitle: { fontSize: 15, fontWeight: "700", color: "#0F172A", textAlign: "center" },
   stateSubtitle: { marginTop: 6, fontSize: 13, color: "#64748B", textAlign: "center" },
@@ -841,13 +841,13 @@ const styles = StyleSheet.create({
   storeStatusText: { fontSize: 11, fontWeight: "800", color: "#1F2937" },
   storeBody: { paddingVertical: 12, paddingHorizontal: 12, flex: 1 },
   storeName: { fontSize: 17, fontWeight: "800", color: "#0F172A" },
-  storeMeta: { marginTop: 3, fontSize: 12, color: "#DC2626", fontWeight: "700", textTransform: "capitalize" },
+  storeMeta: { marginTop: 3, fontSize: 12, color: "#0E9F6E", fontWeight: "700", textTransform: "capitalize" },
   storeAddress: { marginTop: 4, fontSize: 12, color: "#64748B" },
-  matchedItemsText: { marginTop: 4, fontSize: 11, color: "#B91C1C", fontWeight: "600" },
+  matchedItemsText: { marginTop: 4, fontSize: 11, color: "#0A7D55", fontWeight: "600" },
   storeBottomRow: { marginTop: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   storeEta: { fontSize: 12, color: "#475569", fontWeight: "600" },
   storeCtaPill: {
-    backgroundColor: "#DC2626",
+    backgroundColor: "#F59E0B",
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
