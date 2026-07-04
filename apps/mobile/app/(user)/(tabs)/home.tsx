@@ -229,18 +229,6 @@ export default function UserHome() {
     [safeBusinesses, safeFavoriteBusinessIds]
   );
 
-  const offers = useMemo(
-    () =>
-      safeFeaturedProducts
-        .filter(
-          (p) =>
-            Number(p.discount || 0) > 0 ||
-            (p.originalPrice !== undefined && p.originalPrice > p.price)
-        )
-        .slice(0, 10),
-      [safeFeaturedProducts]
-  );
-
   const renderStoreRow = (title: string, list: Business[]) => (
     <View>
       <View style={styles.sectionHeaderRow}>
@@ -349,11 +337,17 @@ export default function UserHome() {
         >
           <View style={styles.heroTopRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.heroEyebrow}>Resident Home</Text>
-              <Text style={styles.heroTitle}>Pick a store, then shop</Text>
-              <Text style={styles.heroSubtitle} numberOfLines={1}>
-                {selectedSocietyName}
-              </Text>
+              <Text style={styles.heroBrand}>mohallaMitr</Text>
+              <Text style={styles.heroDeliverLabel}>Deliver to</Text>
+              <TouchableOpacity
+                style={styles.heroLocationRow}
+                activeOpacity={0.8}
+                onPress={() => router.push("/(user)/(tabs)/addresses")}
+              >
+                <Ionicons name="location" size={16} color="#FFFFFF" />
+                <Text style={styles.heroLocation} numberOfLines={1}>{selectedSocietyName}</Text>
+                <Ionicons name="chevron-down" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
             <TouchableOpacity style={styles.profileChip} onPress={() => router.push("/(user)/profile")}>
               <Text style={styles.profileChipText}>{(user?.firstName || "U").charAt(0).toUpperCase()}</Text>
@@ -410,89 +404,41 @@ export default function UserHome() {
       >
         {searchQuery.trim().length === 0 ? (
           <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.catTilesRow}
+            >
+              {categories
+                .filter((category) => category !== "all")
+                .map((category) => {
+                  const active = category === selectedCategory;
+                  return (
+                    <TouchableOpacity
+                      key={category}
+                      style={styles.catTile}
+                      activeOpacity={0.85}
+                      onPress={() => setSelectedCategory(active ? "all" : category)}
+                    >
+                      <View style={[styles.catIconBox, active ? styles.catIconBoxActive : null]}>
+                        <Text style={styles.catIconEmoji}>{categoryEmoji(category)}</Text>
+                      </View>
+                      <Text
+                        style={[styles.catTileLabel, active ? styles.catTileLabelActive : null]}
+                        numberOfLines={1}
+                      >
+                        {category}
+                      </Text>
+                      <View style={[styles.catUnderline, active ? styles.catUnderlineActive : null]} />
+                    </TouchableOpacity>
+                  );
+                })}
+            </ScrollView>
             {orderAgainStores.length > 0 ? renderStoreRow("Order again", orderAgainStores) : null}
             {renderPromoBanner()}
             {favoriteStores.length > 0 ? renderStoreRow("Your favorites", favoriteStores) : null}
-            {offers.length > 0 ? (
-              <View>
-                <View style={styles.sectionHeaderRow}>
-                  <Text style={styles.sectionTitle}>Offers near you</Text>
-                </View>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.hRow}
-                >
-                  {offers.map((p) => {
-                    const img = getFirstImage(p.imageUrls?.[0]);
-                    const store = businessNameById.get(p.businessId) ?? "Store";
-                    const disc = Number(p.discount || 0);
-                    return (
-                      <TouchableOpacity
-                        key={p.id}
-                        style={styles.offerCard}
-                        activeOpacity={0.9}
-                        onPress={() =>
-                          router.push({
-                            pathname: "/(user)/business",
-                            params: { id: p.businessId, highlightProductId: p.id },
-                          })
-                        }
-                      >
-                        <View style={styles.offerImageWrap}>
-                          {img ? (
-                            <Image source={{ uri: img }} style={styles.offerImage} contentFit="cover" />
-                          ) : (
-                            <View style={styles.offerFallback}>
-                              <Text style={styles.dishFallbackEmoji}>🛍️</Text>
-                            </View>
-                          )}
-                          {disc > 0 ? (
-                            <View style={styles.offerBadge}>
-                              <Text style={styles.offerBadgeText}>{disc}% OFF</Text>
-                            </View>
-                          ) : null}
-                        </View>
-                        <Text style={styles.offerName} numberOfLines={1}>{p.name}</Text>
-                        <Text style={styles.offerStore} numberOfLines={1}>{store}</Text>
-                        <View style={styles.offerPriceRow}>
-                          <Text style={styles.offerPrice}>Rs {p.price}</Text>
-                          {p.originalPrice && p.originalPrice > p.price ? (
-                            <Text style={styles.offerOriginal}>Rs {p.originalPrice}</Text>
-                          ) : null}
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            ) : null}
           </>
         ) : null}
-
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Choose a category</Text>
-          <TouchableOpacity onPress={() => router.push("/(user)/(tabs)/businesses") }>
-            <Text style={styles.viewAllText}>See all stores</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
-          {categories.map((category) => {
-            const active = category === selectedCategory;
-            return (
-              <TouchableOpacity
-                key={category}
-                style={[styles.categoryChip, active ? styles.categoryChipActive : null]}
-                onPress={() => setSelectedCategory(category)}
-              >
-                <Text style={[styles.categoryChipText, active ? styles.categoryChipTextActive : null]}>
-                  {category === "all" ? "All" : `${categoryEmoji(category)} ${category}`}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
 
         {searchQuery.trim().length > 0 && matchedDishes.length > 0 ? (
           <>
@@ -800,13 +746,15 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
   },
-  profileChipText: { fontSize: 16, fontWeight: "800", color: "#FFFFFF" },
+  profileChipText: { fontSize: 16, fontWeight: "800", color: "#0E9F6E" },
+  heroBrand: { fontSize: 12, fontWeight: "800", color: "rgba(255,255,255,0.9)", letterSpacing: 0.2 },
+  heroDeliverLabel: { marginTop: 8, fontSize: 11.5, color: "rgba(255,255,255,0.82)", fontWeight: "600" },
+  heroLocationRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  heroLocation: { fontSize: 17, fontWeight: "800", color: "#FFFFFF", maxWidth: 240 },
   searchWrap: {
     marginTop: 15,
     flexDirection: "row",
@@ -914,6 +862,24 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 16, color: "#0F172A", fontWeight: "800" },
   viewAllText: { fontSize: 12, color: "#0E9F6E", fontWeight: "700" },
+  catTilesRow: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4, gap: 14 },
+  catTile: { alignItems: "center", width: 64 },
+  catIconBox: {
+    width: 62,
+    height: 62,
+    borderRadius: 18,
+    backgroundColor: "#F1F5F9",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#EEF2F6",
+  },
+  catIconBoxActive: { backgroundColor: "#ECFDF5", borderColor: "#A7F3D0" },
+  catIconEmoji: { fontSize: 28 },
+  catTileLabel: { marginTop: 6, fontSize: 12, fontWeight: "700", color: "#475569", textTransform: "capitalize" },
+  catTileLabelActive: { color: "#B45309" },
+  catUnderline: { marginTop: 4, height: 3, width: 20, borderRadius: 2, backgroundColor: "transparent" },
+  catUnderlineActive: { backgroundColor: "#F59E0B" },
   categoryRow: { paddingHorizontal: 16, gap: 8, paddingBottom: 6 },
   categoryChip: {
     borderRadius: 999,
