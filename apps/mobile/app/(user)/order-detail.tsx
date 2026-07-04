@@ -60,7 +60,7 @@ function formatDateTime(date: Date | string): string {
 }
 
 function buildInvoiceText(order: Order): string {
-  const id = `#${order.id.slice(0, 8).toUpperCase()}`;
+  const id = `#${(order.id ?? "").slice(0, 8).toUpperCase()}`;
   const date = new Date(order.createdAt).toLocaleDateString("en-IN", {
     day: "numeric", month: "short", year: "numeric",
   });
@@ -119,7 +119,10 @@ export default function UserOrderDetail() {
       setFetching(true);
       userAppService
         .getOrder(orderId)
-        .then(setOrder)
+        .then((data) => {
+          const normalized = normalizeOrderPayload(data);
+          if (normalized?.id) setOrder(normalized);
+        })
         .catch(() => null)
         .finally(() => setFetching(false));
     }
@@ -133,7 +136,10 @@ export default function UserOrderDetail() {
         if (socketService.isConnected()) return;
         userAppService
           .getOrder(orderId)
-          .then(setOrder)
+          .then((data) => {
+            const normalized = normalizeOrderPayload(data);
+            if (normalized?.id) setOrder(normalized);
+          })
           .catch(() => null);
       };
 
@@ -169,7 +175,7 @@ export default function UserOrderDetail() {
     try {
       await Share.share({
         message: buildInvoiceText(order),
-        title: `Order #${order.id.slice(0, 8).toUpperCase()} Invoice`,
+        title: `Order #${(order.id ?? "").slice(0, 8).toUpperCase()} Invoice`,
       });
     } catch {
       /* user cancelled share */
@@ -180,7 +186,7 @@ export default function UserOrderDetail() {
 
   if (fetching) {
     return (
-      <SafeAreaScreen backgroundColor="#DC2626">
+      <SafeAreaScreen backgroundColor="#0E9F6E">
         <View style={styles.fullCenter}>
           <ActivityIndicator size="large" color="#FFFFFF" />
         </View>
@@ -209,11 +215,11 @@ export default function UserOrderDetail() {
   const addressCity = [addr?.city, addr?.state, addr?.pinCode].filter(Boolean).join(", ");
 
   return (
-    <SafeAreaScreen backgroundColor="#F8FAFC">
+    <View style={styles.screen}>
       <SafeAreaHeader
-        title={`Order #${order.id.slice(0, 8).toUpperCase()}`}
+        title={`Order #${(order.id ?? "").slice(0, 8).toUpperCase()}`}
         subtitle={formatDateTime(order.createdAt)}
-        colors={["#DC2626", "#991B1B"] as const}
+        colors={["#0E9F6E", "#0891B2"] as const}
         showBackButton
         onBackPress={() => {
           if (router.canGoBack()) {
@@ -335,7 +341,7 @@ export default function UserOrderDetail() {
                   {idx < order.trackingUpdates!.length - 1 ? <View style={styles.trackLine} /> : null}
                 </View>
                 <View style={styles.trackContent}>
-                  <Text style={[styles.trackStatus, idx === 0 && { color: "#DC2626" }]}>
+                  <Text style={[styles.trackStatus, idx === 0 && { color: "#0E9F6E" }]}>
                     {STATUS_LABEL[update.status] ?? update.status}
                   </Text>
                   <Text style={styles.trackTime}>
@@ -377,17 +383,18 @@ export default function UserOrderDetail() {
           )}
         </TouchableOpacity>
       </View>
-    </SafeAreaScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  screen: { flex: 1, backgroundColor: "#F8FAFC" },
   fullCenter: { flex: 1, justifyContent: "center", alignItems: "center" },
   notFoundText: { fontSize: 15, color: "#64748B", marginBottom: 12 },
   goBackBtn: {
     paddingHorizontal: 20, paddingVertical: 10,
-    backgroundColor: "#DC2626", borderRadius: 999,
+    backgroundColor: "#0E9F6E", borderRadius: 999,
   },
   goBackText: { color: "#FFFFFF", fontWeight: "700" },
 
@@ -436,7 +443,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: "#E2E8F0",
   },
   totalLabel: { fontSize: 15, fontWeight: "700", color: "#1E293B" },
-  totalValue: { fontSize: 15, fontWeight: "800", color: "#DC2626" },
+  totalValue: { fontSize: 15, fontWeight: "800", color: "#0E9F6E" },
 
   // Address type
   addressTypePill: {
@@ -453,7 +460,7 @@ const styles = StyleSheet.create({
     width: 10, height: 10, borderRadius: 5,
     backgroundColor: "#CBD5E1", marginTop: 3,
   },
-  trackDotActive: { backgroundColor: "#DC2626", width: 12, height: 12, borderRadius: 6 },
+  trackDotActive: { backgroundColor: "#0E9F6E", width: 12, height: 12, borderRadius: 6 },
   trackLine: { width: 2, flex: 1, backgroundColor: "#E2E8F0", marginTop: 4, minHeight: 20 },
   trackContent: { flex: 1, paddingBottom: 16 },
   trackStatus: { fontSize: 13, fontWeight: "600", color: "#1E293B" },
@@ -474,7 +481,7 @@ const styles = StyleSheet.create({
   },
   shareBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    backgroundColor: "#DC2626", borderRadius: 999, paddingVertical: 14,
+    backgroundColor: "#F59E0B", borderRadius: 999, paddingVertical: 14,
   },
   shareBtnText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
 });

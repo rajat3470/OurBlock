@@ -179,7 +179,7 @@ export default function CheckoutScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#DC2626", "#991B1B"]}
+        colors={["#0E9F6E", "#0891B2"]}
         style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
       >
         <TouchableOpacity
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginBottom: 12,
   },
-  addLink: { fontSize: 13, fontWeight: "700", color: "#DC2626" },
+  addLink: { fontSize: 13, fontWeight: "700", color: "#0E9F6E" },
   orderItemRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   noAddressWrap: { alignItems: "center", paddingVertical: 16, gap: 12 },
   noAddressText: { fontSize: 14, color: "#6B7280" },
   addAddressBtn: {
-    backgroundColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 10,
   },
-  addressCardActive: { borderColor: "#DC2626", backgroundColor: "#FEF2F2" },
+  addressCardActive: { borderColor: "#0E9F6E", backgroundColor: "#ECFDF5" },
   addressRadio: {
     paddingTop: 2,
     width: 20,
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#D1D5DB",
   },
-  radioCircleActive: { borderColor: "#DC2626", backgroundColor: "#DC2626" },
+  radioCircleActive: { borderColor: "#0E9F6E", backgroundColor: "#0E9F6E" },
   addressBody: { flex: 1, gap: 3 },
   addressTitleRow: {
     flexDirection: "row",
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 10,
   },
-  paymentCardActive: { borderColor: "#DC2626", backgroundColor: "#FEF2F2" },
+  paymentCardActive: { borderColor: "#0E9F6E", backgroundColor: "#ECFDF5" },
   paymentIcon: { fontSize: 22 },
   paymentLabel: { flex: 1, fontSize: 14, fontWeight: "700", color: "#111827" },
   comingSoonBadge: {
@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
   billValueGreen: { fontSize: 13, fontWeight: "700", color: "#059669" },
   billDivider: { height: 1, backgroundColor: "#F3F4F6", marginVertical: 6 },
   billLabelBold: { fontSize: 15, fontWeight: "800", color: "#111827" },
-  billValueBold: { fontSize: 15, fontWeight: "800", color: "#DC2626" },
+  billValueBold: { fontSize: 15, fontWeight: "800", color: "#0E9F6E" },
   bottomCta: {
     position: "absolute",
     bottom: 0,
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
   ctaTotalLabel: { fontSize: 12, color: "#6B7280" },
   ctaTotalAmount: { fontSize: 20, fontWeight: "800", color: "#111827" },
   placeOrderBtn: {
-    backgroundColor: "#DC2626",
+    backgroundColor: "#F59E0B",
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 24,
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   couponApplyBtn: {
-    backgroundColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
     borderRadius: 12,
     paddingHorizontal: 18,
     paddingVertical: 11,

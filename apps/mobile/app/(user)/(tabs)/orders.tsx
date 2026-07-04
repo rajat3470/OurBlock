@@ -316,7 +316,7 @@ export default function UserOrders() {
                   style={styles.reorderBtn}
                   onPress={() => handleReorder(item)}
                 >
-                  <Ionicons name="refresh" size={12} color="#DC2626" />
+                  <Ionicons name="refresh" size={12} color="#0E9F6E" />
                   <Text style={styles.reorderBtnText}>Reorder</Text>
                 </TouchableOpacity>
               ) : null}
@@ -355,7 +355,7 @@ export default function UserOrders() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#DC2626", "#991B1B"]}
+        colors={["#0E9F6E", "#0891B2"]}
         style={[styles.header, { paddingTop: insets.top + 16 }]}
       >
         <Text style={styles.headerTitle}>My Orders</Text>
@@ -386,7 +386,7 @@ export default function UserOrders() {
 
       {isLoading && orders.length === 0 ? (
         <View style={styles.loaderWrap}>
-          <ActivityIndicator size="large" color="#DC2626" />
+          <ActivityIndicator size="large" color="#0E9F6E" />
         </View>
       ) : (
         <FlatList
@@ -492,11 +492,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  filterBtnActive: { backgroundColor: "#DC2626", borderColor: "#DC2626" },
+  filterBtnActive: { backgroundColor: "#0E9F6E", borderColor: "#0E9F6E" },
   filterLabel: { fontSize: 12, fontWeight: "700", color: "#6B7280" },
   filterLabelActive: { color: "#FFFFFF" },
   loaderWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
-  listContent: { paddingHorizontal: 16, paddingBottom: 130 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 24 },
   card: {
     backgroundColor: "rgba(255,255,255,0.96)",
     borderRadius: 14,
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
   orderId: { fontSize: 14, fontWeight: "800", color: "#111827" },
   businessName: { fontSize: 12, color: "#6B7280", fontWeight: "600", marginTop: 2 },
   rightCol: { alignItems: "flex-end" },
-  amount: { fontSize: 16, fontWeight: "800", color: "#DC2626" },
+  amount: { fontSize: 16, fontWeight: "800", color: "#0E9F6E" },
   orderMeta: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
   itemRow: {
     flexDirection: "row",
@@ -581,14 +581,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#FEF2F2",
+    backgroundColor: "#ECFDF5",
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: "#A7F3D0",
   },
-  reorderBtnText: { fontSize: 11, fontWeight: "700", color: "#DC2626" },
+  reorderBtnText: { fontSize: 11, fontWeight: "700", color: "#0E9F6E" },
   rateBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -620,13 +620,13 @@ const styles = StyleSheet.create({
     borderRadius: 42,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
   },
   emptyTitle: { fontSize: 18, fontWeight: "700", color: "#334155" },
   emptySubtitle: { fontSize: 13, color: "#94A3B8", textAlign: "center" },
   browseBtn: {
     marginTop: 8,
-    backgroundColor: "#DC2626",
+    backgroundColor: "#F59E0B",
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 10,

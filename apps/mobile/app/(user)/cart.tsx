@@ -70,7 +70,7 @@ export default function CartScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#DC2626", "#991B1B"]}
+        colors={["#0E9F6E", "#0891B2"]}
         style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
       >
         <TouchableOpacity
@@ -107,7 +107,7 @@ export default function CartScreen() {
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
             <View style={styles.shopRow}>
               <View style={styles.shopLabelWrap}>
-                <Ionicons name="storefront-outline" size={18} color="#DC2626" />
+                <Ionicons name="storefront-outline" size={18} color="#0E9F6E" />
                 <Text style={styles.shopLabel}>{cartItems[0]?.businessName ?? "Shop"}</Text>
               </View>
             </View>
@@ -152,7 +152,7 @@ export default function CartScreen() {
 
             {subTotal < MIN_ORDER ? (
               <View style={styles.minOrderWarn}>
-                <Ionicons name="information-circle-outline" size={14} color="#991B1B" />
+                <Ionicons name="information-circle-outline" size={14} color="#B45309" />
                 <Text style={styles.minOrderWarnText}>Add Rs {MIN_ORDER - subTotal} more to reach the Rs {MIN_ORDER} minimum.</Text>
               </View>
             ) : null}
@@ -242,10 +242,10 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
   clearText: { fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.85)" },
   emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, gap: 12 },
-  emptyIconWrap: { width: 84, height: 84, borderRadius: 42, alignItems: "center", justifyContent: "center", backgroundColor: "#DC2626" },
+  emptyIconWrap: { width: 84, height: 84, borderRadius: 42, alignItems: "center", justifyContent: "center", backgroundColor: "#0E9F6E" },
   emptyTitle: { fontSize: 20, fontWeight: "800", color: "#111827" },
   emptySubtitle: { fontSize: 14, color: "#6B7280", textAlign: "center", lineHeight: 22 },
-  browseBtn: { marginTop: 8, backgroundColor: "#DC2626", borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12 },
+  browseBtn: { marginTop: 8, backgroundColor: "#F59E0B", borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12 },
   browseBtnText: { fontWeight: "800", color: "#FFFFFF", fontSize: 15 },
   scroll: { paddingBottom: 200 },
   shopRow: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#F0F0F0", marginBottom: 4 },
@@ -254,26 +254,26 @@ const styles = StyleSheet.create({
   itemCard: { flexDirection: "row", backgroundColor: "#FFFFFF", marginHorizontal: 16, marginTop: 12, borderRadius: 14, padding: 12, gap: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   itemImageWrap: { width: 72, height: 72, borderRadius: 10, overflow: "hidden", backgroundColor: "#F3F4F6" },
   itemImage: { width: 72, height: 72 },
-  itemImageFallback: { width: 72, height: 72, alignItems: "center", justifyContent: "center", backgroundColor: "#DC2626", borderRadius: 10 },
+  itemImageFallback: { width: 72, height: 72, alignItems: "center", justifyContent: "center", backgroundColor: "#0E9F6E", borderRadius: 10 },
   itemDetails: { flex: 1, gap: 4 },
   itemName: { fontSize: 14, fontWeight: "700", color: "#111827" },
   itemOptions: { fontSize: 11.5, color: "#9CA3AF", marginTop: 1 },
   itemPrice: { fontSize: 12, color: "#6B7280" },
-  itemLineTotal: { fontSize: 15, fontWeight: "800", color: "#DC2626" },
+  itemLineTotal: { fontSize: 15, fontWeight: "800", color: "#0E9F6E" },
   itemActions: { alignItems: "flex-end", gap: 8 },
-  qtyControl: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(220,38,38,0.08)", borderRadius: 10, borderWidth: 1, borderColor: "rgba(220,38,38,0.18)", overflow: "hidden" },
-  qtyBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center", backgroundColor: "#DC2626" },
+  qtyControl: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(14,159,110,0.08)", borderRadius: 10, borderWidth: 1, borderColor: "rgba(14,159,110,0.18)", overflow: "hidden" },
+  qtyBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center", backgroundColor: "#0E9F6E" },
   qtyBtnText: { fontSize: 18, color: "#FFFFFF", fontWeight: "700" },
-  qtyCount: { width: 32, textAlign: "center", fontSize: 15, fontWeight: "800", color: "#991B1B" },
+  qtyCount: { width: 32, textAlign: "center", fontSize: 15, fontWeight: "800", color: "#0A7D55" },
   removeBtn: { paddingHorizontal: 4 },
   removeText: { fontSize: 12, color: "#DC2626", fontWeight: "600" },
-  minOrderWarn: { flexDirection: "row", alignItems: "center", gap: 8, margin: 16, marginBottom: 0, backgroundColor: "#FEF2F2", borderRadius: 10, padding: 12, borderWidth: 1, borderColor: "#FECACA" },
-  minOrderWarnText: { fontSize: 12, fontWeight: "600", color: "#991B1B", flex: 1 },
-  bottomCta: { position: "absolute", bottom: 104, left: 16, right: 16, backgroundColor: "#FFFFFF", padding: 16, borderRadius: 20, shadowColor: "#DC2626", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 8 },
+  minOrderWarn: { flexDirection: "row", alignItems: "center", gap: 8, margin: 16, marginBottom: 0, backgroundColor: "#FEF3C7", borderRadius: 10, padding: 12, borderWidth: 1, borderColor: "#FDE68A" },
+  minOrderWarnText: { fontSize: 12, fontWeight: "600", color: "#B45309", flex: 1 },
+  bottomCta: { position: "absolute", bottom: 104, left: 16, right: 16, backgroundColor: "#FFFFFF", padding: 16, borderRadius: 20, shadowColor: "#0E9F6E", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 8 },
   bottomRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   totalLabel: { fontSize: 12, color: "#6B7280" },
   totalAmount: { fontSize: 18, fontWeight: "800", color: "#111827" },
-  checkoutBtn: { backgroundColor: "#DC2626", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 20 },
+  checkoutBtn: { backgroundColor: "#F59E0B", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 20 },
   checkoutBtnDisabled: { backgroundColor: "#D1D5DB" },
   checkoutText: { fontSize: 15, fontWeight: "800", color: "#FFFFFF" },
   adRewardBanner: { marginHorizontal: 16, marginTop: 12, borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "rgba(180,130,0,0.2)" },

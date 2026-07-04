@@ -171,7 +171,7 @@ export default function ProductDetailScreen() {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={["#DC2626", "#991B1B"]}
+          colors={["#0E9F6E", "#0891B2"]}
           style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
         >
         <TouchableOpacity
@@ -190,7 +190,7 @@ export default function ProductDetailScreen() {
         <View style={styles.headerRight} />
         </LinearGradient>
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color="#DC2626" />
+          <ActivityIndicator size="large" color="#0E9F6E" />
         </View>
       </View>
     );
@@ -200,7 +200,7 @@ export default function ProductDetailScreen() {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={["#DC2626", "#991B1B"]}
+          colors={["#0E9F6E", "#0891B2"]}
           style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
         >
           <TouchableOpacity
@@ -233,7 +233,7 @@ export default function ProductDetailScreen() {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={["#DC2626", "#991B1B"]}
+        colors={["#0E9F6E", "#0891B2"]}
         style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
       >
         <TouchableOpacity
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 12,
     right: 12,
-    backgroundColor: "#EF4444",
+    backgroundColor: "#F59E0B",
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#E5E7EB",
   },
-  thumbActive: { borderColor: "#DC2626" },
+  thumbActive: { borderColor: "#0E9F6E" },
   infoWrap: { padding: 16 },
   productName: {
     fontSize: 22,
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  price: { fontSize: 24, fontWeight: "800", color: "#DC2626" },
+  price: { fontSize: 24, fontWeight: "800", color: "#0E9F6E" },
   originalPrice: {
     fontSize: 16,
     color: "#9CA3AF",
@@ -582,17 +582,17 @@ const styles = StyleSheet.create({
   attrName: { fontSize: 13, color: "#6B7280", fontWeight: "600" },
   attrValue: { fontSize: 13, color: "#111827", fontWeight: "700" },
   priceSummaryWrap: {
-    backgroundColor: "#FEF2F2",
+    backgroundColor: "#ECFDF5",
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: "#A7F3D0",
     marginTop: 8,
   },
   priceSummaryTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#991B1B",
+    color: "#0A7D55",
     marginBottom: 10,
   },
   priceSummaryRow: {
@@ -604,11 +604,11 @@ const styles = StyleSheet.create({
   priceSummaryValue: { fontSize: 13, color: "#374151", fontWeight: "600" },
   priceDivider: {
     height: 1,
-    backgroundColor: "#FECACA",
+    backgroundColor: "#A7F3D0",
     marginVertical: 8,
   },
   priceSummaryLabelBold: { fontSize: 14, fontWeight: "800", color: "#111827" },
-  priceSummaryValueBold: { fontSize: 14, fontWeight: "800", color: "#DC2626" },
+  priceSummaryValueBold: { fontSize: 14, fontWeight: "800", color: "#0E9F6E" },
   priceNote: {
     fontSize: 11,
     color: "#9CA3AF",
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
   },
   outOfStockText: { fontSize: 16, fontWeight: "700", color: "#9CA3AF" },
   addToCartBtn: {
-    backgroundColor: "#DC2626",
+    backgroundColor: "#F59E0B",
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: "center",
@@ -649,10 +649,10 @@ const styles = StyleSheet.create({
   qtyControl: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(220,38,38,0.08)",
+    backgroundColor: "rgba(14,159,110,0.08)",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(220,38,38,0.18)",
+    borderColor: "rgba(14,159,110,0.18)",
     overflow: "hidden",
   },
   qtyBtn: {
@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
   },
   qtyBtnText: { fontSize: 22, color: "#FFFFFF", fontWeight: "700" },
   qtyCount: {
@@ -668,11 +668,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 18,
     fontWeight: "800",
-    color: "#991B1B",
+    color: "#0A7D55",
   },
   goToCartBtn: {
     flex: 1,
-    backgroundColor: "#DC2626",
+    backgroundColor: "#F59E0B",
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",

@@ -113,12 +113,12 @@ export default function UserProfile() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Hero header */}
-        <LinearGradient colors={["#DC2626", "#991B1B"]} style={[styles.hero, { paddingTop: insets.top + 32 }]}>
+        <LinearGradient colors={["#0E9F6E", "#0891B2"]} style={[styles.hero, { paddingTop: insets.top + 32 }]}>
           <TouchableOpacity style={styles.avatarWrap} onPress={handlePickProfilePhoto} disabled={uploadingPhoto}>
             {user?.profileImageUrl ? (
               <Image source={{ uri: user.profileImageUrl }} style={styles.avatarImage} />
             ) : (
-              <Ionicons name="person" size={40} color="#DC2626" />
+              <Ionicons name="person" size={40} color="#0E9F6E" />
             )}
             <View style={styles.cameraOverlay}>
               {uploadingPhoto ? (
@@ -138,7 +138,7 @@ export default function UserProfile() {
 
           <TouchableOpacity style={styles.row} onPress={() => router.push("/(user)/addresses")}>
             <View style={styles.rowIconWrap}>
-              <Ionicons name="location-outline" size={20} color="#DC2626" />
+              <Ionicons name="location-outline" size={20} color="#0E9F6E" />
             </View>
             <Text style={styles.rowLabel}>Manage Addresses</Text>
             <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
@@ -173,7 +173,7 @@ export default function UserProfile() {
             <>
               <TouchableOpacity style={styles.row} onPress={() => setDevDrawerVisible(true)}>
                 <View style={styles.rowIconWrap}>
-                  <Ionicons name="construct-outline" size={20} color="#DC2626" />
+                  <Ionicons name="construct-outline" size={20} color="#0E9F6E" />
                 </View>
                 <Text style={styles.rowLabel}>Developer Feature Flags</Text>
                 <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
@@ -230,7 +230,7 @@ export default function UserProfile() {
                   <Switch
                     value={featureFlags.values[key] as boolean}
                     onValueChange={(v) => { dispatch(setLocalOverride({ key, value: v })); }}
-                    trackColor={{ false: "#D1D5DB", true: "#DC2626" }}
+                    trackColor={{ false: "#D1D5DB", true: "#0E9F6E" }}
                   />
                 </View>
               ))}
@@ -263,7 +263,7 @@ export default function UserProfile() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F7F8FA" },
-  scrollContent: { paddingBottom: 130 },
+  scrollContent: { paddingBottom: 24 },
   hero: {
     paddingTop: 32,
     paddingBottom: 36,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: "#FEF2F2",
+    backgroundColor: "#ECFDF5",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
   },
   devRefreshBtn: {
     marginTop: 8,
-    backgroundColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: "center",

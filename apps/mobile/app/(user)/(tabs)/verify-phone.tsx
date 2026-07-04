@@ -91,7 +91,7 @@ export default function PhoneVerificationScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#DC2626", "#991B1B"]}
+        colors={["#0E9F6E", "#0891B2"]}
         style={[styles.header, { paddingTop: insets.top + 12 }]}
       >
         <TouchableOpacity style={styles.backBtn} onPress={() => {
@@ -269,12 +269,12 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "#FEF2F2",
+    backgroundColor: "#ECFDF5",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: "#A7F3D0",
   },
   icon: {
     fontSize: 48,
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   },
   sendBtn: {
     width: "100%",
-    backgroundColor: "#DC2626",
+    backgroundColor: "#F59E0B",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   },
   verifyBtn: {
     width: "100%",
-    backgroundColor: "#DC2626",
+    backgroundColor: "#F59E0B",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
   resendLink: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#DC2626",
+    color: "#0E9F6E",
   },
   changeNumberBtn: {
     marginTop: 16,

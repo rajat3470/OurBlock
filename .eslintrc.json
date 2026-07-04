@@ -1,5 +1,3 @@
-# mohallaMitr ESLint Configuration
-
 {
   "extends": "expo",
   "rules": {

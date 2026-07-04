@@ -140,7 +140,7 @@ export default function AddEditAddressScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#DC2626" />
+        <ActivityIndicator size="large" color="#0E9F6E" />
       </View>
     );
   }
@@ -148,7 +148,7 @@ export default function AddEditAddressScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#DC2626", "#991B1B"]}
+        colors={["#0E9F6E", "#0891B2"]}
         style={[styles.header, { paddingTop: insets.top + 12 }]}
       >
         <TouchableOpacity style={styles.backBtn} onPress={() => {
@@ -389,8 +389,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   typeBtnActive: {
-    borderColor: "#DC2626",
-    backgroundColor: "#FEF2F2",
+    borderColor: "#0E9F6E",
+    backgroundColor: "#ECFDF5",
   },
   typeBtnText: {
     fontSize: 13,
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     color: "#6B7280",
   },
   typeBtnTextActive: {
-    color: "#DC2626",
+    color: "#0E9F6E",
   },
   row: {
     flexDirection: "row",
@@ -455,8 +455,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   checkboxChecked: {
-    backgroundColor: "#DC2626",
-    borderColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
+    borderColor: "#0E9F6E",
   },
   checkmark: {
     color: "#FFFFFF",
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   saveBtn: {
-    backgroundColor: "#DC2626",
+    backgroundColor: "#F59E0B",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",

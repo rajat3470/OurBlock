@@ -460,7 +460,7 @@ export default function BusinessDetailScreen() {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={["#DC2626", "#991B1B"]}
+        colors={["#0E9F6E", "#0891B2"]}
         style={[styles.header, { paddingTop: insets.top + 12 }]}
       >
         <View style={styles.headerRow}>
@@ -846,7 +846,7 @@ const styles = StyleSheet.create({
   stateText: { fontSize: 14, color: "#6B7280", marginTop: 8 },
   errorText: { fontSize: 15, color: "#DC2626", textAlign: "center" },
   retryBtn: {
-    backgroundColor: "#DC2626",
+    backgroundColor: "#0E9F6E",
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 10,
@@ -871,9 +871,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
-  filterChipActive: { backgroundColor: "#FEF2F2", borderColor: "#DC2626" },
+  filterChipActive: { backgroundColor: "#ECFDF5", borderColor: "#0E9F6E" },
   filterChipText: { fontSize: 12.5, fontWeight: "700", color: "#374151" },
-  filterChipTextActive: { color: "#DC2626" },
+  filterChipTextActive: { color: "#0E9F6E" },
 
   sectionHeader: {
     flexDirection: "row",
@@ -909,9 +909,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   menuItemHighlighted: {
-    backgroundColor: "#FEF2F2",
+    backgroundColor: "#ECFDF5",
     borderLeftWidth: 3,
-    borderLeftColor: "#DC2626",
+    borderLeftColor: "#0E9F6E",
   },
   menuItemLeft: { flex: 1, paddingRight: 4 },
   menuItemTagRow: {
@@ -981,7 +981,7 @@ const styles = StyleSheet.create({
     minWidth: 100,
     backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
-    borderColor: "#DC2626",
+    borderColor: "#0E9F6E",
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 14,
@@ -991,8 +991,8 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  menuAddBtnText: { fontSize: 14, fontWeight: "800", color: "#DC2626", letterSpacing: 0.5 },
-  menuAddPlus: { fontSize: 14, fontWeight: "800", color: "#DC2626" },
+  menuAddBtnText: { fontSize: 14, fontWeight: "800", color: "#0E9F6E", letterSpacing: 0.5 },
+  menuAddPlus: { fontSize: 14, fontWeight: "800", color: "#0E9F6E" },
   menuQtyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1000,7 +1000,7 @@ const styles = StyleSheet.create({
     minWidth: 100,
     backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
-    borderColor: "#DC2626",
+    borderColor: "#0E9F6E",
     borderRadius: 10,
     overflow: "hidden",
     shadowColor: "#000",
@@ -1009,8 +1009,8 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  menuQtyBtn: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#FEF2F2" },
-  menuQtyBtnText: { fontSize: 16, fontWeight: "800", color: "#DC2626" },
+  menuQtyBtn: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#ECFDF5" },
+  menuQtyBtnText: { fontSize: 16, fontWeight: "800", color: "#0E9F6E" },
   menuQtyCount: {
     flex: 1,
     textAlign: "center",
@@ -1036,7 +1036,7 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   cartBarNotice: {
-    backgroundColor: "#FEF2F2",
+    backgroundColor: "#FEF3C7",
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 10,
@@ -1045,7 +1045,7 @@ const styles = StyleSheet.create({
   cartBarNoticeText: {
     fontSize: 11.5,
     fontWeight: "700",
-    color: "#991B1B",
+    color: "#B45309",
     textAlign: "center",
   },
   cartBarRow: {
@@ -1060,7 +1060,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#DC2626",
+    backgroundColor: "#F59E0B",
     borderRadius: 12,
     paddingHorizontal: 18,
     paddingVertical: 12,
@@ -1095,20 +1095,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
-  optionChipActive: { backgroundColor: "#FEF2F2", borderColor: "#DC2626" },
+  optionChipActive: { backgroundColor: "#ECFDF5", borderColor: "#0E9F6E" },
   optionChipText: { fontSize: 13, fontWeight: "700", color: "#374151" },
-  optionChipTextActive: { color: "#DC2626" },
+  optionChipTextActive: { color: "#0E9F6E" },
   modalFooter: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 18 },
   modalQtyRow: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "#DC2626",
+    borderColor: "#0E9F6E",
     borderRadius: 12,
     overflow: "hidden",
   },
-  modalQtyBtn: { paddingHorizontal: 14, paddingVertical: 11, backgroundColor: "#FEF2F2" },
-  modalQtyBtnText: { fontSize: 17, fontWeight: "800", color: "#DC2626" },
+  modalQtyBtn: { paddingHorizontal: 14, paddingVertical: 11, backgroundColor: "#ECFDF5" },
+  modalQtyBtnText: { fontSize: 17, fontWeight: "800", color: "#0E9F6E" },
   modalQtyCount: {
     minWidth: 36,
     textAlign: "center",
@@ -1118,7 +1118,7 @@ const styles = StyleSheet.create({
   },
   modalAddBtn: {
     flex: 1,
-    backgroundColor: "#DC2626",
+    backgroundColor: "#F59E0B",
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
