@@ -245,6 +245,9 @@ export default function UserHome() {
     <View>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>{title}</Text>
+        <TouchableOpacity onPress={() => router.push("/(user)/(tabs)/businesses")}>
+          <Text style={styles.viewAllText}>View all ›</Text>
+        </TouchableOpacity>
       </View>
       <ScrollView
         horizontal
@@ -257,40 +260,76 @@ export default function UserHome() {
           return (
             <TouchableOpacity
               key={biz.id}
-              style={styles.hStoreCard}
+              style={styles.oaCard}
               activeOpacity={0.9}
               onPress={() =>
                 router.push({ pathname: "/(user)/business", params: { id: biz.id } })
               }
             >
-              <View style={styles.hStoreImageWrap}>
+              <View style={styles.oaImageWrap}>
                 {img ? (
-                  <Image source={{ uri: img }} style={styles.hStoreImage} contentFit="cover" />
+                  <Image source={{ uri: img }} style={styles.oaImage} contentFit="cover" />
                 ) : (
-                  <LinearGradient colors={["#D1FAE5", "#A7F3D0"]} style={styles.hStoreFallback}>
-                    <Text style={styles.hStoreFallbackEmoji}>{categoryEmoji(biz.category)}</Text>
+                  <LinearGradient colors={["#D1FAE5", "#A7F3D0"]} style={styles.oaFallback}>
+                    <Text style={styles.oaFallbackEmoji}>{categoryEmoji(biz.category)}</Text>
                   </LinearGradient>
                 )}
-                <View
-                  style={[
-                    styles.hStatusDot,
-                    status === "open"
-                      ? styles.dotOpen
-                      : status === "paused"
-                      ? styles.dotPaused
-                      : styles.dotClosed,
-                  ]}
-                />
               </View>
-              <Text style={styles.hStoreName} numberOfLines={1}>{biz.name}</Text>
-              <Text style={styles.hStoreMeta} numberOfLines={1}>
-                ⭐ {Number(biz.rating || 0).toFixed(1)} • {biz.category}
-              </Text>
+              <View style={styles.oaBody}>
+                <View style={styles.oaLogo}>
+                  <Text style={styles.oaLogoEmoji}>{categoryEmoji(biz.category)}</Text>
+                </View>
+                <View style={styles.oaInfo}>
+                  <Text style={styles.oaName} numberOfLines={1}>{biz.name}</Text>
+                  <Text style={styles.oaCategory} numberOfLines={1}>{biz.category}</Text>
+                </View>
+                <View style={styles.oaRatingCol}>
+                  <View style={styles.oaRatingPill}>
+                    <Ionicons name="star" size={11} color="#0E9F6E" />
+                    <Text style={styles.oaRatingText}>{Number(biz.rating || 0).toFixed(1)}</Text>
+                  </View>
+                  <View style={styles.oaStatusRow}>
+                    <View
+                      style={[
+                        styles.oaStatusDot,
+                        status === "open" ? styles.dotOpen : status === "paused" ? styles.dotPaused : styles.dotClosed,
+                      ]}
+                    />
+                    <Text style={styles.oaStatusText}>
+                      {status === "open" ? "Open" : status === "paused" ? "Paused" : "Closed"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
     </View>
+  );
+
+  const renderPromoBanner = () => (
+    <TouchableOpacity
+      style={styles.promoWrap}
+      activeOpacity={0.9}
+      onPress={() => router.push("/(user)/(tabs)/businesses")}
+    >
+      <LinearGradient
+        colors={["#FBBF24", "#F59E0B"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.promoCard}
+      >
+        <View style={styles.promoTextCol}>
+          <Text style={styles.promoTitle}>Flat 20% OFF</Text>
+          <Text style={styles.promoSub}>on your first order</Text>
+          <View style={styles.promoCodePill}>
+            <Text style={styles.promoCodeText}>Use code: MOHALLA20</Text>
+          </View>
+        </View>
+        <Text style={styles.promoEmoji}>🛍️</Text>
+      </LinearGradient>
+    </TouchableOpacity>
   );
 
   return (
@@ -346,16 +385,16 @@ export default function UserHome() {
         >
           <View style={styles.heroInfoRow}>
             <View style={styles.heroInfoPill}>
-              <Ionicons name="storefront-outline" size={14} color="#FFFFFF" />
-              <Text style={styles.heroInfoText}>{safeBusinesses.length} stores</Text>
+              <Ionicons name="storefront-outline" size={13} color="#FFFFFF" />
+              <Text style={styles.heroInfoText} numberOfLines={1}>{safeBusinesses.length} stores</Text>
             </View>
             <View style={styles.heroInfoPill}>
-              <Ionicons name="shield-checkmark-outline" size={14} color="#FFFFFF" />
-              <Text style={styles.heroInfoText}>Secure checkout</Text>
+              <Ionicons name="shield-checkmark-outline" size={13} color="#FFFFFF" />
+              <Text style={styles.heroInfoText} numberOfLines={1}>Secure checkout</Text>
             </View>
             <View style={styles.heroInfoPill}>
-              <Ionicons name="wallet-outline" size={14} color="#FFFFFF" />
-              <Text style={styles.heroInfoText}>Min order Rs {ORDER_FEES.MINIMUM_ORDER}</Text>
+              <Ionicons name="wallet-outline" size={13} color="#FFFFFF" />
+              <Text style={styles.heroInfoText} numberOfLines={1}>Min Rs {ORDER_FEES.MINIMUM_ORDER}</Text>
             </View>
           </View>
         </Animated.View>
@@ -372,6 +411,7 @@ export default function UserHome() {
         {searchQuery.trim().length === 0 ? (
           <>
             {orderAgainStores.length > 0 ? renderStoreRow("Order again", orderAgainStores) : null}
+            {renderPromoBanner()}
             {favoriteStores.length > 0 ? renderStoreRow("Your favorites", favoriteStores) : null}
             {offers.length > 0 ? (
               <View>
@@ -517,7 +557,7 @@ export default function UserHome() {
 
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>
-            {searchQuery.trim().length > 0 ? "Stores" : "Select your store"}
+            {searchQuery.trim().length > 0 ? "Stores" : "Stores near you"}
           </Text>
           {cartCount > 0 ? (
             <TouchableOpacity style={styles.cartShortcut} onPress={() => router.push("/(user)/cart")}>
@@ -597,22 +637,37 @@ export default function UserHome() {
                   </View>
 
                   <View style={styles.storeBody}>
-                    <Text style={styles.storeName} numberOfLines={1}>{business.name}</Text>
-                    <Text style={styles.storeMeta} numberOfLines={1}>
-                      {categoryEmoji(business.category)} {business.category} • ⭐ {Number(business.rating || 0).toFixed(1)}
-                    </Text>
-                    <Text style={styles.storeAddress} numberOfLines={1}>{business.address}</Text>
+                    <View style={styles.storeHeaderRow}>
+                      <View style={styles.storeLogo}>
+                        <Text style={styles.storeLogoEmoji}>{categoryEmoji(business.category)}</Text>
+                      </View>
+                      <View style={styles.storeHeaderInfo}>
+                        <Text style={styles.storeName} numberOfLines={1}>{business.name}</Text>
+                        <Text style={styles.storeMeta} numberOfLines={1}>
+                          {business.category} • ⭐ {Number(business.rating || 0).toFixed(1)}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.storeCtaPill}
+                        activeOpacity={0.85}
+                        onPress={() => router.push({ pathname: "/(user)/business", params: { id: business.id } })}
+                      >
+                        <Text style={styles.storeCta}>Select Store</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.storeInfoRow}>
+                      <Ionicons name="location-outline" size={13} color="#94A3B8" />
+                      <Text style={styles.storeAddress} numberOfLines={1}>{business.address}</Text>
+                    </View>
+                    <View style={styles.storeInfoRow}>
+                      <Ionicons name="time-outline" size={13} color="#94A3B8" />
+                      <Text style={styles.storeEta}>Delivery: {eta}</Text>
+                    </View>
                     {searchQuery.trim().length > 0 && matchedItems.length > 0 ? (
                       <Text style={styles.matchedItemsText} numberOfLines={1}>
                         Items: {matchedPreview}{extraMatchedCount > 0 ? ` +${extraMatchedCount} more` : ""}
                       </Text>
                     ) : null}
-                    <View style={styles.storeBottomRow}>
-                      <Text style={styles.storeEta}>Delivery: {eta}</Text>
-                      <View style={styles.storeCtaPill}>
-                        <Text style={styles.storeCta}>Select Store</Text>
-                      </View>
-                    </View>
                   </View>
                 </TouchableOpacity>
               </Animated.View>
@@ -763,19 +818,92 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchInput: { flex: 1, fontSize: 14, color: "#111827", fontWeight: "600" },
-  heroInfoRow: { marginTop: 12, flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  heroInfoRow: { marginTop: 12, flexDirection: "row", gap: 6 },
   heroInfoPill: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
+    gap: 3,
     borderRadius: 999,
     backgroundColor: "rgba(255,255,255,0.15)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 6,
   },
-  heroInfoText: { fontSize: 11, color: "#FFFFFF", fontWeight: "700" },
+  heroInfoText: { fontSize: 10.5, color: "#FFFFFF", fontWeight: "700" },
+  oaCard: {
+    width: 252,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#EEF2F6",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  oaImageWrap: { width: "100%", height: 112, backgroundColor: "#F1F5F9" },
+  oaImage: { width: "100%", height: "100%" },
+  oaFallback: { flex: 1, alignItems: "center", justifyContent: "center" },
+  oaFallbackEmoji: { fontSize: 40 },
+  oaBody: { flexDirection: "row", alignItems: "center", gap: 8, padding: 10 },
+  oaLogo: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#ECFDF5",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+  },
+  oaLogoEmoji: { fontSize: 18 },
+  oaInfo: { flex: 1 },
+  oaName: { fontSize: 14, fontWeight: "800", color: "#0F172A" },
+  oaCategory: { fontSize: 11.5, color: "#64748B", marginTop: 1, textTransform: "capitalize" },
+  oaRatingCol: { alignItems: "flex-end", gap: 3 },
+  oaRatingPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#ECFDF5",
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  oaRatingText: { fontSize: 11.5, fontWeight: "800", color: "#0E9F6E" },
+  oaStatusRow: { flexDirection: "row", alignItems: "center", gap: 3 },
+  oaStatusDot: { width: 7, height: 7, borderRadius: 4 },
+  oaStatusText: { fontSize: 10.5, fontWeight: "700", color: "#64748B" },
+  promoWrap: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 18,
+    overflow: "hidden",
+    shadowColor: "#D97706",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  promoCard: { flexDirection: "row", alignItems: "center", padding: 18 },
+  promoTextCol: { flex: 1 },
+  promoTitle: { fontSize: 22, fontWeight: "900", color: "#FFFFFF", letterSpacing: -0.3 },
+  promoSub: { fontSize: 13.5, fontWeight: "700", color: "rgba(255,255,255,0.95)", marginTop: 2 },
+  promoCodePill: {
+    alignSelf: "flex-start",
+    marginTop: 10,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  promoCodeText: { fontSize: 12, fontWeight: "800", color: "#B45309", letterSpacing: 0.3 },
+  promoEmoji: { fontSize: 56, marginLeft: 8 },
   sectionHeaderRow: {
     marginTop: 18,
     marginBottom: 9,
@@ -840,17 +968,31 @@ const styles = StyleSheet.create({
   storeStatusClosed: { backgroundColor: "#FEE2E2" },
   storeStatusText: { fontSize: 11, fontWeight: "800", color: "#1F2937" },
   storeBody: { paddingVertical: 12, paddingHorizontal: 12, flex: 1 },
-  storeName: { fontSize: 17, fontWeight: "800", color: "#0F172A" },
-  storeMeta: { marginTop: 3, fontSize: 12, color: "#0E9F6E", fontWeight: "700", textTransform: "capitalize" },
-  storeAddress: { marginTop: 4, fontSize: 12, color: "#64748B" },
+  storeHeaderRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  storeLogo: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#ECFDF5",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#D1FAE5",
+  },
+  storeLogoEmoji: { fontSize: 22 },
+  storeHeaderInfo: { flex: 1 },
+  storeInfoRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
+  storeName: { fontSize: 16, fontWeight: "800", color: "#0F172A" },
+  storeMeta: { marginTop: 2, fontSize: 12, color: "#0E9F6E", fontWeight: "700", textTransform: "capitalize" },
+  storeAddress: { flex: 1, fontSize: 12, color: "#64748B" },
   matchedItemsText: { marginTop: 4, fontSize: 11, color: "#0A7D55", fontWeight: "600" },
   storeBottomRow: { marginTop: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   storeEta: { fontSize: 12, color: "#475569", fontWeight: "600" },
   storeCtaPill: {
     backgroundColor: "#F59E0B",
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
   storeCta: { fontSize: 12, color: "#FFFFFF", fontWeight: "800" },
 });

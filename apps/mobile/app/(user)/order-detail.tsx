@@ -60,7 +60,7 @@ function formatDateTime(date: Date | string): string {
 }
 
 function buildInvoiceText(order: Order): string {
-  const id = `#${order.id.slice(0, 8).toUpperCase()}`;
+  const id = `#${(order.id ?? "").slice(0, 8).toUpperCase()}`;
   const date = new Date(order.createdAt).toLocaleDateString("en-IN", {
     day: "numeric", month: "short", year: "numeric",
   });
@@ -119,7 +119,10 @@ export default function UserOrderDetail() {
       setFetching(true);
       userAppService
         .getOrder(orderId)
-        .then(setOrder)
+        .then((data) => {
+          const normalized = normalizeOrderPayload(data);
+          if (normalized?.id) setOrder(normalized);
+        })
         .catch(() => null)
         .finally(() => setFetching(false));
     }
@@ -133,7 +136,10 @@ export default function UserOrderDetail() {
         if (socketService.isConnected()) return;
         userAppService
           .getOrder(orderId)
-          .then(setOrder)
+          .then((data) => {
+            const normalized = normalizeOrderPayload(data);
+            if (normalized?.id) setOrder(normalized);
+          })
           .catch(() => null);
       };
 
@@ -169,7 +175,7 @@ export default function UserOrderDetail() {
     try {
       await Share.share({
         message: buildInvoiceText(order),
-        title: `Order #${order.id.slice(0, 8).toUpperCase()} Invoice`,
+        title: `Order #${(order.id ?? "").slice(0, 8).toUpperCase()} Invoice`,
       });
     } catch {
       /* user cancelled share */
@@ -211,7 +217,7 @@ export default function UserOrderDetail() {
   return (
     <SafeAreaScreen backgroundColor="#F8FAFC">
       <SafeAreaHeader
-        title={`Order #${order.id.slice(0, 8).toUpperCase()}`}
+        title={`Order #${(order.id ?? "").slice(0, 8).toUpperCase()}`}
         subtitle={formatDateTime(order.createdAt)}
         colors={["#0E9F6E", "#0891B2"] as const}
         showBackButton
