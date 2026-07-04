@@ -1,14 +1,32 @@
 import * as admin from 'firebase-admin';
-import { ORDER_AUTO_REJECT_REASON } from './constants';
+import { ORDER_AUTO_REJECT_REASON, ORDER_ACCEPTANCE_WINDOW_SECONDS } from './constants';
 
 type Db = admin.firestore.Firestore;
 type DocRef = admin.firestore.DocumentReference;
 type DocData = admin.firestore.DocumentData;
 
+/**
+ * Resolve the acceptance deadline (ms) for an order.
+ *
+ * Prefers the explicit `autoRejectAt` stamped at creation. Orders created
+ * before this feature shipped (or before the create hook was deployed) lack
+ * that field, so we derive the deadline from `createdAt + window`. This keeps
+ * legacy pending orders from being stuck on "Waiting for acceptance" forever
+ * once someone views them. Returns undefined only when neither field exists,
+ * in which case the order is left untouched.
+ */
+export function getDeadlineMs(data: DocData | undefined): number | undefined {
+  const explicit = data?.autoRejectAt?.toMillis?.();
+  if (explicit !== undefined) return explicit;
+  const createdMs = data?.createdAt?.toMillis?.();
+  if (createdMs !== undefined) return createdMs + ORDER_ACCEPTANCE_WINDOW_SECONDS * 1000;
+  return undefined;
+}
+
 /** True when an order doc is still pending and past its acceptance deadline. */
 export function isExpiredPending(data: DocData | undefined): boolean {
   if (!data || data.status !== 'pending') return false;
-  const deadlineMs = data.autoRejectAt?.toMillis?.();
+  const deadlineMs = getDeadlineMs(data);
   return deadlineMs !== undefined && Date.now() > deadlineMs;
 }
 
