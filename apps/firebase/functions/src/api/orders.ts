@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
 import * as https from 'https';
 import { computeCouponDiscount } from './coupons';
-import { ORDER_FEES } from '../shared/constants';
+import { ORDER_FEES, ORDER_ACCEPTANCE_WINDOW_SECONDS } from '../shared/constants';
 
 const router = Router();
 const db = admin.firestore();
@@ -290,6 +290,12 @@ router.post('/', requireAuth, async (req, res) => {
       trackingUpdates: [
         { status: 'pending', timestamp: new Date().toISOString(), notes: 'Order placed' },
       ],
+      // Owner acceptance deadline — auto-rejected by autoRejectExpiredOrders if
+      // still pending past this instant. Anchored to the real creation time.
+      acceptanceWindowSeconds: ORDER_ACCEPTANCE_WINDOW_SECONDS,
+      autoRejectAt: admin.firestore.Timestamp.fromMillis(
+        Date.now() + ORDER_ACCEPTANCE_WINDOW_SECONDS * 1000
+      ),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
@@ -328,14 +334,59 @@ router.put('/:id/status', requireAuth, async (req, res) => {
     }
 
     const trackingUpdate = { status, timestamp: new Date().toISOString(), notes: notes ?? '' };
+    const orderRef = db.collection('orders').doc(req.params.id);
 
-    await db.collection('orders').doc(req.params.id).update({
-      status,
-      trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    // When an owner accepts a still-pending order, do it in a transaction so it
+    // cannot race with the auto-reject sweeper. If the acceptance window has
+    // already lapsed (or the sweeper won), fail cleanly with 409 instead of
+    // resurrecting an order the customer has been told was rejected.
+    const isOwnerAcceptance =
+      isOwner && orderData.status === 'pending' && status !== 'cancelled' && status !== 'rejected';
 
-    const updatedDoc = await db.collection('orders').doc(req.params.id).get();
+    if (isOwnerAcceptance) {
+      try {
+        await db.runTransaction(async (tx) => {
+          const fresh = await tx.get(orderRef);
+          const data = fresh.data();
+          if (!data || data.status !== 'pending') {
+            throw new Error('ORDER_NOT_PENDING');
+          }
+          const deadlineMs = data.autoRejectAt?.toMillis?.();
+          if (deadlineMs !== undefined && Date.now() > deadlineMs) {
+            throw new Error('ACCEPTANCE_WINDOW_EXPIRED');
+          }
+          tx.update(orderRef, {
+            status,
+            trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        });
+      } catch (txErr: any) {
+        if (txErr?.message === 'ACCEPTANCE_WINDOW_EXPIRED') {
+          return res.status(409).json({
+            success: false,
+            error: 'This order expired and was auto-rejected because it was not accepted within 60 seconds.',
+            code: 'ACCEPTANCE_WINDOW_EXPIRED',
+          });
+        }
+        if (txErr?.message === 'ORDER_NOT_PENDING') {
+          return res.status(409).json({
+            success: false,
+            error: 'This order can no longer be accepted (it is no longer pending).',
+            code: 'ORDER_NOT_PENDING',
+          });
+        }
+        throw txErr;
+      }
+    } else {
+      await orderRef.update({
+        status,
+        trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    const updatedDoc = await orderRef.get();
 
     // Fire-and-forget push notification to the customer
     notifyOrderStatusChange(orderData.userId, status, orderData.businessName ?? undefined);

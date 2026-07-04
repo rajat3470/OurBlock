@@ -16,6 +16,8 @@ import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { Order, OrderStatus } from "../../src/types";
 import SafeAreaScreen from "../../src/components/SafeAreaScreen";
 import SafeAreaHeader from "../../src/components/SafeAreaHeader";
+import AcceptanceCountdown from "../../src/components/AcceptanceCountdown";
+import { getAcceptanceDeadlineMs } from "../../src/utils/orderAcceptance";
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; border: string; emoji: string }> = {
   [OrderStatus.PENDING]:          { label: "New Order",        color: "#D97706", bg: "#FFFBEB", border: "#FDE68A", emoji: "🔔" },
@@ -108,6 +110,7 @@ export default function BusinessOwnerOrderDetail() {
   const { orders, changeOrderStatus } = useBusinessOwner();
   const [advancing, setAdvancing] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [detailExpired, setDetailExpired] = useState(false);
 
   const order = orders.find((o) => o.id === orderId);
 
@@ -118,11 +121,26 @@ export default function BusinessOwnerOrderDetail() {
     setAdvancing(true);
     try {
       await changeOrderStatus(order.id, next);
-    } catch {
-      Alert.alert("Error", "Failed to update order status. Please try again.");
+    } catch (err) {
+      const code = (err as any)?.response?.data?.code;
+      const httpStatus = (err as any)?.response?.status;
+      if (code === "ACCEPTANCE_WINDOW_EXPIRED" || code === "ORDER_NOT_PENDING" || httpStatus === 409) {
+        setDetailExpired(true);
+        Alert.alert(
+          "Order expired",
+          "This order was auto-rejected because it wasn't accepted within 60 seconds."
+        );
+      } else {
+        Alert.alert("Error", "Failed to update order status. Please try again.");
+      }
     } finally {
       setAdvancing(false);
     }
+  };
+
+  const goReject = () => {
+    if (!order) return;
+    router.push(`/(business-owner)/orders?rejectOrderId=${order.id}`);
   };
 
   const handleShare = async () => {
@@ -156,6 +174,9 @@ export default function BusinessOwnerOrderDetail() {
   const addressLine = [addr?.street, addr?.landmark].filter(Boolean).join(", ");
   const addressCity = [addr?.city, addr?.state, addr?.pinCode].filter(Boolean).join(", ");
   const canAdvance = !!NEXT_STATUS[order.status];
+  const isPending = order.status === OrderStatus.PENDING;
+  const deadlineMs = isPending ? getAcceptanceDeadlineMs(order) : null;
+  const windowExpired = isPending && ((deadlineMs != null && Date.now() >= deadlineMs) || detailExpired);
 
   return (
     <SafeAreaScreen backgroundColor="#F8FAFC">
@@ -321,7 +342,41 @@ export default function BusinessOwnerOrderDetail() {
 
       {/* ── Footer ─────────────────────────────────────────────────── */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-        {canAdvance ? (
+        {isPending ? (
+          windowExpired ? (
+            <View style={styles.expiredBanner}>
+              <Text style={styles.expiredBannerText}>🚫 Auto-rejected — no response within 60 seconds</Text>
+            </View>
+          ) : (
+            <>
+              {deadlineMs != null ? (
+                <AcceptanceCountdown deadlineMs={deadlineMs} onExpire={() => setDetailExpired(true)} />
+              ) : null}
+              <View style={styles.pendingRow}>
+                <TouchableOpacity
+                  style={styles.rejectBtn}
+                  onPress={goReject}
+                  disabled={advancing}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.rejectBtnText}>✕ Reject</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.acceptBtn, advancing && { opacity: 0.7 }]}
+                  onPress={handleAdvance}
+                  disabled={advancing}
+                  activeOpacity={0.85}
+                >
+                  {advancing ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.acceptBtnText}>✓ Accept</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          )
+        ) : canAdvance ? (
           <TouchableOpacity
             style={[styles.advanceBtn, advancing && { opacity: 0.7 }]}
             onPress={handleAdvance}
@@ -440,6 +495,22 @@ const styles = StyleSheet.create({
     paddingVertical: 14, alignItems: "center",
   },
   advanceBtnText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+  pendingRow: { flexDirection: "row", gap: 10 },
+  rejectBtn: {
+    flex: 1, backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FECACA",
+    borderRadius: 999, paddingVertical: 14, alignItems: "center",
+  },
+  rejectBtnText: { fontSize: 15, fontWeight: "700", color: "#DC2626" },
+  acceptBtn: {
+    flex: 1, backgroundColor: "#16A34A", borderRadius: 999,
+    paddingVertical: 14, alignItems: "center",
+  },
+  acceptBtnText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+  expiredBanner: {
+    backgroundColor: "#FEF2F2", borderWidth: 1, borderColor: "#FECACA",
+    borderRadius: 12, paddingVertical: 13, alignItems: "center",
+  },
+  expiredBannerText: { fontSize: 14, fontWeight: "700", color: "#991B1B" },
   shareBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
     backgroundColor: "#16A34A", borderRadius: 999, paddingVertical: 13,

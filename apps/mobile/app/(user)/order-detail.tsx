@@ -18,6 +18,8 @@ import { useSocketEvent } from "../../src/hooks/useSocket";
 import { socketService } from "../../src/services/socketService";
 import SafeAreaScreen from "../../src/components/SafeAreaScreen";
 import SafeAreaHeader from "../../src/components/SafeAreaHeader";
+import AcceptanceCountdown from "../../src/components/AcceptanceCountdown";
+import { getAcceptanceDeadlineMs } from "../../src/utils/orderAcceptance";
 
 const STATUS_LABEL: Record<string, string> = {
   pending:        "Waiting for Acceptance",
@@ -169,6 +171,17 @@ export default function UserOrderDetail() {
     }
   });
 
+  const refetchOrder = useCallback(() => {
+    if (!orderId) return;
+    userAppService
+      .getOrder(orderId)
+      .then((data) => {
+        const normalized = normalizeOrderPayload(data);
+        if (normalized?.id) setOrder(normalized);
+      })
+      .catch(() => null);
+  }, [orderId]);
+
   const handleShare = async () => {
     if (!order) return;
     setSharing(true);
@@ -210,6 +223,8 @@ export default function UserOrderDetail() {
   const statusMeta = STATUS_COLOR[order.status] ?? STATUS_COLOR.pending;
   const orderItems = Array.isArray((order as any).items) ? (order as any).items : [];
   const paymentMethod = order.paymentMethod ?? "cash";
+  const awaitingDeadlineMs =
+    order.status === OrderStatus.PENDING ? getAcceptanceDeadlineMs(order) : null;
   const addr = order.deliveryAddress as any;
   const addressLine = [addr?.street, addr?.landmark].filter(Boolean).join(", ");
   const addressCity = [addr?.city, addr?.state, addr?.pinCode].filter(Boolean).join(", ");
@@ -252,6 +267,18 @@ export default function UserOrderDetail() {
             </Text>
           </View>
         </View>
+
+        {/* ── Awaiting store confirmation countdown ────────────────── */}
+        {order.status === OrderStatus.PENDING && awaitingDeadlineMs != null ? (
+          <View style={styles.awaitingCard}>
+            <Text style={styles.awaitingText}>Waiting for the store to confirm your order</Text>
+            <AcceptanceCountdown
+              deadlineMs={awaitingDeadlineMs}
+              onExpire={refetchOrder}
+              style={{ marginTop: 8, alignSelf: "flex-start" }}
+            />
+          </View>
+        ) : null}
 
         {/* ── Shop ─────────────────────────────────────────────────── */}
         {(order as any).businessName ? (
@@ -409,6 +436,13 @@ const styles = StyleSheet.create({
   statusInfo: { flex: 1 },
   statusLabel: { fontSize: 15, fontWeight: "700" },
   statusPayment: { fontSize: 12, fontWeight: "500", marginTop: 2, opacity: 0.8 },
+
+  // Awaiting-confirmation card
+  awaitingCard: {
+    marginHorizontal: 16, marginBottom: 4, padding: 14,
+    borderRadius: 16, borderWidth: 1, borderColor: "#FDE68A", backgroundColor: "#FFFBEB",
+  },
+  awaitingText: { fontSize: 13, fontWeight: "600", color: "#92400E" },
 
   // Sections
   section: {

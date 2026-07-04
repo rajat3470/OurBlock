@@ -40,6 +40,13 @@ export const ORDER_STATUS_FLOW = {
   rejected: [],
 } as const;
 
+// Seconds a business owner has to accept/reject a new order before it is
+// auto-rejected by the system. Keep the mobile countdown in sync with this.
+export const ORDER_ACCEPTANCE_WINDOW_SECONDS = 60;
+
+// Reason recorded on orders auto-rejected because the owner did not respond.
+export const ORDER_AUTO_REJECT_REASON = "Store didn't respond within the 60-second window";
+
 // User Roles
 export const USER_ROLES = {
   SUPER_ADMIN: 'superAdmin',

@@ -286,19 +286,57 @@ router.patch('/orders/:orderId/status', requireAuth, async (req, res) => {
       return res.status(404).json({ success: false, error: 'Order not found' });
     }
 
-    if (orderDoc.data()?.businessId !== (business as any).id) {
+    const orderData = orderDoc.data();
+    if (orderData?.businessId !== (business as any).id) {
       return res.status(403).json({ success: false, error: 'Order does not belong to your business' });
     }
 
     const trackingUpdate = { status, timestamp: new Date() };
+    const orderRef = db.collection('orders').doc(req.params.orderId);
 
-    await db.collection('orders').doc(req.params.orderId).update({
-      status,
-      trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    // Accepting a still-pending order must respect the 60s acceptance window and
+    // cannot race with the auto-reject sweeper — do it transactionally.
+    const isAcceptance = orderData?.status === 'pending' && status !== 'cancelled' && status !== 'rejected';
+    if (isAcceptance) {
+      try {
+        await db.runTransaction(async (tx) => {
+          const fresh = await tx.get(orderRef);
+          const data = fresh.data();
+          if (!data || data.status !== 'pending') throw new Error('ORDER_NOT_PENDING');
+          const deadlineMs = data.autoRejectAt?.toMillis?.();
+          if (deadlineMs !== undefined && Date.now() > deadlineMs) throw new Error('ACCEPTANCE_WINDOW_EXPIRED');
+          tx.update(orderRef, {
+            status,
+            trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        });
+      } catch (txErr: any) {
+        if (txErr?.message === 'ACCEPTANCE_WINDOW_EXPIRED') {
+          return res.status(409).json({
+            success: false,
+            error: 'This order expired and was auto-rejected because it was not accepted within 60 seconds.',
+            code: 'ACCEPTANCE_WINDOW_EXPIRED',
+          });
+        }
+        if (txErr?.message === 'ORDER_NOT_PENDING') {
+          return res.status(409).json({
+            success: false,
+            error: 'This order can no longer be accepted (it is no longer pending).',
+            code: 'ORDER_NOT_PENDING',
+          });
+        }
+        throw txErr;
+      }
+    } else {
+      await orderRef.update({
+        status,
+        trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
 
-    const updatedDoc = await db.collection('orders').doc(req.params.orderId).get();
+    const updatedDoc = await orderRef.get();
     return res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
