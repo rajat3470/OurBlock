@@ -215,7 +215,7 @@ export default function UserOrderDetail() {
   const addressCity = [addr?.city, addr?.state, addr?.pinCode].filter(Boolean).join(", ");
 
   return (
-    <SafeAreaScreen backgroundColor="#F8FAFC">
+    <View style={styles.screen}>
       <SafeAreaHeader
         title={`Order #${(order.id ?? "").slice(0, 8).toUpperCase()}`}
         subtitle={formatDateTime(order.createdAt)}
@@ -383,12 +383,13 @@ export default function UserOrderDetail() {
           )}
         </TouchableOpacity>
       </View>
-    </SafeAreaScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  screen: { flex: 1, backgroundColor: "#F8FAFC" },
   fullCenter: { flex: 1, justifyContent: "center", alignItems: "center" },
   notFoundText: { fontSize: 15, color: "#64748B", marginBottom: 12 },
   goBackBtn: {
