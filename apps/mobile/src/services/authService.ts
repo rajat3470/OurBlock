@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiClient } from "./apiClient";
 import {
   AuthResponse,
@@ -64,12 +65,25 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
-    await apiClient.post("/auth/logout", {});
-    await apiClient.clearTokens();
+    try {
+      await apiClient.post("/auth/logout", {});
+    } finally {
+      await apiClient.clearTokens();
+    }
   },
 
   async refreshToken(): Promise<AuthResponse> {
-    return apiClient.post<AuthResponse>("/auth/refresh-token", {});
+    const refreshToken = await AsyncStorage.getItem("refreshToken");
+    if (!refreshToken) {
+      throw new Error("No refresh token available");
+    }
+    const response = await apiClient.post<AuthResponse>("/auth/refresh-token", {
+      refreshToken,
+    });
+    if (response?.tokens) {
+      await apiClient.saveTokens(response.tokens);
+    }
+    return response;
   },
 
   async getCurrentUser(): Promise<{ success: boolean; data: AppUser }> {

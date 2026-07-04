@@ -8,10 +8,11 @@ import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { store } from "../src/store/index";
 import { useAppDispatch, useAppSelector } from "../src/hooks/useRedux";
-import { logout, setAuth, setHydrated } from "../src/store/slices/authSlice";
+import { logout, setAuth, setHydrated, setTokens } from "../src/store/slices/authSlice";
 import { authStateService } from "../src/services/authStateService";
 import { authService } from "../src/services/authService";
 import { apiClient } from "../src/services/apiClient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { featureFlagsService } from "../src/services/featureFlagsService";
 import { setFeatureFlagsError, setFlags, setRefreshing } from "../src/store/slices/featureFlagsSlice";
 import { initializeMobileAds } from "../src/services/adService";
@@ -137,6 +138,27 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
     };
   }, [dispatch]);
 
+  // Keep Redux in sync when tokens rotate or the refresh token is rejected.
+  useEffect(() => {
+    const unsubExpired = apiClient.onSessionExpired(() => {
+      authStateService.clearAuth().finally(() => {
+        dispatch(logout());
+      });
+    });
+
+    const unsubTokens = apiClient.onTokensUpdated((tokens) => {
+      authStateService.updateTokens(tokens).catch(() => null);
+      dispatch(setTokens(tokens));
+    });
+
+    return () => {
+      unsubExpired();
+      unsubTokens();
+    };
+  }, [dispatch]);
+
+  // Restore the persisted session and refresh the access token when needed.
+  // Network blips must not log the user out — only a rejected refresh token does.
   useEffect(() => {
     const hydrate = async () => {
       const persisted = await authStateService.loadAuth();
@@ -144,15 +166,43 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
         dispatch(setAuth(persisted));
 
         try {
+          await apiClient.ensureValidToken();
           const me = await authService.getCurrentUser();
           if (me?.data) {
-            const refreshed = { user: me.data, tokens: persisted.tokens };
+            const [[, accessToken], [, refreshToken], [, expiresAtRaw]] =
+              await AsyncStorage.multiGet([
+                "accessToken",
+                "refreshToken",
+                "tokenExpiresAt",
+              ]);
+
+            const expiresAt = expiresAtRaw
+              ? Number.parseInt(expiresAtRaw, 10)
+              : NaN;
+            const expiresIn = Number.isFinite(expiresAt)
+              ? Math.max(60, Math.floor((expiresAt - Date.now()) / 1000))
+              : persisted.tokens.expiresIn || 3600;
+
+            const refreshed = {
+              user: me.data,
+              tokens: {
+                accessToken: accessToken || persisted.tokens.accessToken,
+                refreshToken: refreshToken || persisted.tokens.refreshToken,
+                expiresIn,
+              },
+            };
             await authStateService.saveAuth(refreshed);
             dispatch(setAuth(refreshed));
           }
-        } catch {
-          await authStateService.clearAuth();
-          dispatch(logout());
+        } catch (error: any) {
+          // Stay signed in on network/transient errors. Log out only when the
+          // refresh token is gone or the account is no longer allowed.
+          const status = error?.response?.status;
+          const refreshToken = await AsyncStorage.getItem("refreshToken");
+          if (!refreshToken || status === 403) {
+            await authStateService.clearAuth();
+            dispatch(logout());
+          }
         }
       }
       dispatch(setHydrated(true));
@@ -160,6 +210,16 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
 
     hydrate();
   }, [dispatch]);
+
+  // Refresh the access token when the app returns to the foreground.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        apiClient.ensureValidToken().catch(() => null);
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   // Register push token once authenticated
   useEffect(() => {

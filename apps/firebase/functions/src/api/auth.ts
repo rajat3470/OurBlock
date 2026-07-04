@@ -568,29 +568,33 @@ router.post('/change-password', async (req, res) => {
   }
 });
 
-// Get current user
+// Get current user — used on app launch to validate/restore the session.
+// Returns 401 only for missing/invalid access tokens (client should refresh).
 router.get('/me', async (req, res) => {
   try {
-    const token = req.headers.authorization?.split('Bearer ')[1];
-    
-    if (!token) {
-      return res.status(401).json({ success: false, error: 'No token provided' });
-    }
-    
-    const decodedToken = await auth.verifyIdToken(token);
-    const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-    
+    const uid = await getAuthenticatedUid(req);
+    const userDoc = await db.collection('users').doc(uid).get();
+
     if (!userDoc.exists) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
-    
+
+    const userData = userDoc.data() as any;
+    if (userData?.status === 'suspended') {
+      return res.status(403).json({
+        success: false,
+        error: 'Your account has been suspended',
+        code: 'ACCOUNT_SUSPENDED',
+      });
+    }
+
     return res.json({
       success: true,
-      data: userDoc.data(),
+      data: { id: userDoc.id, ...userData },
     });
   } catch (error: any) {
     console.error('Get user error:', error);
-    return res.status(401).json({
+    return res.status(error.statusCode || 401).json({
       success: false,
       error: error.message || 'Unauthorized',
     });
@@ -1002,13 +1006,36 @@ router.post('/businessowner/login', (req, res) => loginWithRole(req, res, 'busin
 router.post('/user/login', (req, res) => loginWithRole(req, res, 'user'));
 
 // ---------------------------------------------------------------------------
-// Token refresh — exchange a Firebase refresh token for a new ID token
+// Token refresh — exchange a Firebase refresh token for a new ID token.
+// Firebase refresh tokens do not expire on a timer; they remain valid until
+// the user is disabled, the password changes, or tokens are explicitly revoked.
+// Access (ID) tokens expire ~1h and must be rotated via this endpoint.
 // ---------------------------------------------------------------------------
 router.post('/refresh-token', async (req, res) => {
-  const { refreshToken } = req.body;
+  const refreshToken =
+    req.body?.refreshToken ||
+    req.body?.refresh_token ||
+    // Allow clients that only send the refresh token as a bearer credential.
+    req.headers.authorization?.split('Bearer ')[1];
 
   if (!refreshToken) {
     return res.status(400).json({ success: false, error: 'refreshToken is required' });
+  }
+
+  // Mock tokens used in local/demo mode never expire.
+  if (typeof refreshToken === 'string' && refreshToken.startsWith('mock-')) {
+    const mockUid =
+      MOCK_TOKEN_UIDS[refreshToken.replace('refresh', 'access')] ||
+      MOCK_TOKEN_UIDS['mock-access-token-user'];
+    const userDoc = await db.collection('users').doc(mockUid).get();
+    return res.json({
+      user: userDoc.exists ? { id: mockUid, ...userDoc.data() } : { id: mockUid },
+      tokens: {
+        accessToken: refreshToken.replace('refresh', 'access'),
+        refreshToken,
+        expiresIn: 3600,
+      },
+    });
   }
 
   try {
@@ -1024,22 +1051,68 @@ router.post('/refresh-token', async (req, res) => {
     const data = await response.json() as any;
 
     if (!response.ok) {
-      return res.status(401).json({ success: false, error: 'Token refresh failed' });
+      const firebaseCode: string = data?.error?.message || data?.error || 'TOKEN_REFRESH_FAILED';
+      // Invalid / revoked refresh tokens must force a re-login on the client.
+      return res.status(401).json({
+        success: false,
+        error: 'Session expired. Please sign in again.',
+        code: firebaseCode,
+      });
     }
 
-    // Look up user to return updated user data
     const userDoc = await db.collection('users').doc(data.user_id).get();
+    if (userDoc.exists && userDoc.data()?.status === 'suspended') {
+      return res.status(403).json({
+        success: false,
+        error: 'Your account has been suspended',
+        code: 'ACCOUNT_SUSPENDED',
+      });
+    }
 
     return res.json({
       user: userDoc.exists ? { id: data.user_id, ...userDoc.data() } : { id: data.user_id },
       tokens: {
         accessToken: data.id_token,
-        refreshToken: data.refresh_token,
+        refreshToken: data.refresh_token || refreshToken,
         expiresIn: parseInt(data.expires_in, 10),
       },
     });
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    // Transient failures must not be treated as logout by the client.
+    return res.status(503).json({
+      success: false,
+      error: error.message || 'Token refresh temporarily unavailable',
+      code: 'REFRESH_UNAVAILABLE',
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Logout — client clears local tokens; server drops push registration.
+// We intentionally do NOT revoke Firebase refresh tokens here so other devices
+// stay signed in. Manual logout on this device is enforced client-side.
+// ---------------------------------------------------------------------------
+router.post('/logout', async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split('Bearer ')[1];
+    if (token && !(token in MOCK_TOKEN_UIDS) && !token.startsWith('mock-')) {
+      try {
+        const decoded = await auth.verifyIdToken(token, false);
+        await db.collection('users').doc(decoded.uid).set(
+          {
+            pushToken: admin.firestore.FieldValue.delete(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+      } catch {
+        // Access token may already be expired — local logout still succeeds.
+      }
+    }
+    return res.json({ success: true });
+  } catch {
+    // Never block the client from signing out.
+    return res.json({ success: true });
   }
 });
 

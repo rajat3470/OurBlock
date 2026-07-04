@@ -181,19 +181,18 @@ export const useAuth = () => {
   };
 
   const logoutUser = async () => {
-    // Clear local state and tokens immediately so the UI reflects logout at once.
-    // The API call is best-effort — a network/backend failure should never block logout.
+    // Update UI immediately; server notify + local token wipe are best-effort.
     socketService.disconnect();
     OneSignalService.logout();
     dispatch(logout());
     dispatch(clearUserAppState());
-    await apiClient.clearTokens();
-    await authStateService.clearAuth();
     try {
+      // Still has tokens at this point so the backend can clear push registration.
       await authService.logout();
     } catch {
-      // Ignore — server-side session invalidation is non-critical
+      await apiClient.clearTokens();
     }
+    await authStateService.clearAuth();
   };
 
   const resetPassword = async (token: string, newPassword: string) => {

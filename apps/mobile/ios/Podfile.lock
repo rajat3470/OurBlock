@@ -376,9 +376,9 @@ PODS:
     - nanopb/encode (= 3.30910.0)
   - nanopb/decode (3.30910.0)
   - nanopb/encode (3.30910.0)
-  - OneSignalXCFramework (5.2.15):
-    - OneSignalXCFramework/OneSignalComplete (= 5.2.15)
-  - OneSignalXCFramework/OneSignal (5.2.15):
+  - OneSignalXCFramework (5.5.3):
+    - OneSignalXCFramework/OneSignalComplete (= 5.5.3)
+  - OneSignalXCFramework/OneSignal (5.5.3):
     - OneSignalXCFramework/OneSignalCore
     - OneSignalXCFramework/OneSignalExtension
     - OneSignalXCFramework/OneSignalLiveActivities
@@ -386,38 +386,41 @@ PODS:
     - OneSignalXCFramework/OneSignalOSCore
     - OneSignalXCFramework/OneSignalOutcomes
     - OneSignalXCFramework/OneSignalUser
-  - OneSignalXCFramework/OneSignalComplete (5.2.15):
+  - OneSignalXCFramework/OneSignalComplete (5.5.3):
     - OneSignalXCFramework/OneSignal
     - OneSignalXCFramework/OneSignalInAppMessages
     - OneSignalXCFramework/OneSignalLocation
-  - OneSignalXCFramework/OneSignalCore (5.2.15)
-  - OneSignalXCFramework/OneSignalExtension (5.2.15):
+  - OneSignalXCFramework/OneSignalCore (5.5.3)
+  - OneSignalXCFramework/OneSignalExtension (5.5.3):
     - OneSignalXCFramework/OneSignalCore
+    - OneSignalXCFramework/OneSignalOSCore
     - OneSignalXCFramework/OneSignalOutcomes
-  - OneSignalXCFramework/OneSignalInAppMessages (5.2.15):
+  - OneSignalXCFramework/OneSignalInAppMessages (5.5.3):
     - OneSignalXCFramework/OneSignalCore
     - OneSignalXCFramework/OneSignalNotifications
     - OneSignalXCFramework/OneSignalOSCore
     - OneSignalXCFramework/OneSignalOutcomes
     - OneSignalXCFramework/OneSignalUser
-  - OneSignalXCFramework/OneSignalLiveActivities (5.2.15):
+  - OneSignalXCFramework/OneSignalLiveActivities (5.5.3):
     - OneSignalXCFramework/OneSignalCore
     - OneSignalXCFramework/OneSignalOSCore
     - OneSignalXCFramework/OneSignalUser
-  - OneSignalXCFramework/OneSignalLocation (5.2.15):
+  - OneSignalXCFramework/OneSignalLocation (5.5.3):
     - OneSignalXCFramework/OneSignalCore
     - OneSignalXCFramework/OneSignalNotifications
     - OneSignalXCFramework/OneSignalOSCore
     - OneSignalXCFramework/OneSignalUser
-  - OneSignalXCFramework/OneSignalNotifications (5.2.15):
+  - OneSignalXCFramework/OneSignalNotifications (5.5.3):
     - OneSignalXCFramework/OneSignalCore
     - OneSignalXCFramework/OneSignalExtension
+    - OneSignalXCFramework/OneSignalOSCore
     - OneSignalXCFramework/OneSignalOutcomes
-  - OneSignalXCFramework/OneSignalOSCore (5.2.15):
+  - OneSignalXCFramework/OneSignalOSCore (5.5.3):
     - OneSignalXCFramework/OneSignalCore
-  - OneSignalXCFramework/OneSignalOutcomes (5.2.15):
+  - OneSignalXCFramework/OneSignalOutcomes (5.5.3):
     - OneSignalXCFramework/OneSignalCore
-  - OneSignalXCFramework/OneSignalUser (5.2.15):
+    - OneSignalXCFramework/OneSignalOSCore
+  - OneSignalXCFramework/OneSignalUser (5.5.3):
     - OneSignalXCFramework/OneSignalCore
     - OneSignalXCFramework/OneSignalNotifications
     - OneSignalXCFramework/OneSignalOSCore
@@ -1817,9 +1820,29 @@ PODS:
     - React-RCTFBReactNativeSpec
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-  - react-native-onesignal (5.2.14):
-    - OneSignalXCFramework (= 5.2.15)
-    - React (< 1.0.0, >= 0.13.0)
+  - react-native-onesignal (5.5.3):
+    - hermes-engine
+    - OneSignalXCFramework (= 5.5.3)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-safe-area-context (5.6.2):
     - hermes-engine
     - RCTRequired
@@ -3088,12 +3111,12 @@ SPEC CHECKSUMS:
   GoogleUserMessagingPlatform: f131fa7978d2ba88d7426702b057c2cc318e6595
   GoogleUtilities: 4f2618a4a1e762a1ee134a1e2323bba9843e06da
   GTMSessionFetcher: fc75fc972958dceedee61cb662ae1da7a83a91cf
-  hermes-engine: 1aa8e7a7ed86ef46ae71f859c0b1449c8ca818c8
+  hermes-engine: f7909371d7d6b08b814e03ed198c8c37169b5a95
   libavif: 5f8e715bea24debec477006f21ef9e95432e254d
   libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
-  OneSignalXCFramework: ea9e14a95b92ad48d9b35037cbae88a9542bdea3
+  OneSignalXCFramework: f4505256255ae5fccfd33ba2eb1871ba2d4ce2bb
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
   RCTDeprecation: 9502b5eb8e3c9eb75ff5a333b2c591bab9d91e28
   RCTRequired: 0268a5d86aef1defea2e04289d74fdf3570197c1
@@ -3103,7 +3126,7 @@ SPEC CHECKSUMS:
   React: 9b033c7a99e1c8eec40960b6b2e6844e011e8bd1
   React-callinvoker: f64c8d57f45173835b6b9891cda27f1625551972
   React-Core: 341863a2597c4a2320f916b4232d280cb8a28e4b
-  React-Core-prebuilt: 162ae7d18af60d0066e1644f4e75fce15ff09721
+  React-Core-prebuilt: 30d3dd3731b64aec2df23111c46b7c937429b8e7
   React-CoreModules: 9370769c9b2b1732c58960687f4d50d9d3510efc
   React-cxxreact: 41ae74bd9eab80af9c5da6a9b4934eb97e2c7569
   React-debug: 5c23edcf01e5a23af51055912de7e435539b8c63
@@ -3131,7 +3154,7 @@ SPEC CHECKSUMS:
   React-logger: 702a49dadb10a6bd63d56b297c3350b5ea552141
   React-Mapbuffer: 9f7f3ec89517942f86aed77cb4712dedf2d327c8
   React-microtasksnativemodule: d2241f88c1cb03feed6e24c256992ba39ea84717
-  react-native-onesignal: b68c981956150f288c1585889871affcef3c0b8b
+  react-native-onesignal: 2225178e4dfe2e66c7394fdb9e8ec3848a1668f4
   react-native-safe-area-context: c5d42c4294aa175415947e23c2ac956253abfc7d
   react-native-webview: 6b41d44f853c7f8dd8b685d8d289fe33349e4e1b
   React-NativeModulesApple: 9068613f7650828eed29ead6fc0d0a1620117e6a
@@ -3167,7 +3190,7 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: 3ec8fc5d32ad422f5b805523a5a5ea5556d8b3a2
   ReactCodegen: 8b37bbd31a066c4815636d823a73b3b4c7c255a0
   ReactCommon: ba28cd4e7d9e24014d2772a80e32da020c732b00
-  ReactNativeDependencies: ad5caebe75c3f0ca23a3c002779defe5f7bb0f5a
+  ReactNativeDependencies: a1907d5b622e88038e513a64eb38c66f26de99cf
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
   RNCAsyncStorage: c8407cc394627a3a4cf56b457d594bfa822b6ab8
   RNFBApp: 4105e54d9ca4a1c10893a032268470f670181110
