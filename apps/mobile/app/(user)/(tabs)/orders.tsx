@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   filterLabel: { fontSize: 12, fontWeight: "700", color: "#6B7280" },
   filterLabelActive: { color: "#FFFFFF" },
   loaderWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
-  listContent: { paddingHorizontal: 16, paddingBottom: 130 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 24 },
   card: {
     backgroundColor: "rgba(255,255,255,0.96)",
     borderRadius: 14,

@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-    paddingBottom: 140,
+    paddingBottom: 24,
   },
   addressCard: {
     backgroundColor: "#FFFFFF",

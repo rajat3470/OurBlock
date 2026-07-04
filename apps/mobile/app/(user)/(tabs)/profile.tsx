@@ -263,7 +263,7 @@ export default function UserProfile() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F7F8FA" },
-  scrollContent: { paddingBottom: 130 },
+  scrollContent: { paddingBottom: 24 },
   hero: {
     paddingTop: 32,
     paddingBottom: 36,

@@ -627,7 +627,7 @@ export default function UserHome() {
 const styles = StyleSheet.create({
   motionWrap: { width: "100%" },
   container: { flex: 1, backgroundColor: "#F7F8FA" },
-  scrollContent: { paddingBottom: 128 },
+  scrollContent: { paddingBottom: 24 },
   resultCountText: { fontSize: 12.5, fontWeight: "700", color: "#9CA3AF" },
   dishList: { paddingHorizontal: 16, gap: 10 },
   dishCard: {

@@ -1,221 +1,204 @@
-import { useEffect } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  withRepeat,
-  Easing,
-} from "react-native-reanimated";
 import { Tabs, router } from "expo-router";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import UserTabIcon from "../../../src/components/UserTabIcon";
+import { LinearGradient } from "expo-linear-gradient";
 import { useAppSelector } from "../../../src/hooks/useRedux";
 
-function FloatingCartBar() {
-  const items = useAppSelector((state) => state.cart.items);
+type IconName = keyof typeof Ionicons.glyphMap;
+
+const TAB_META: Record<string, { label: string; icon: IconName; iconActive: IconName }> = {
+  home: { label: "Home", icon: "home-outline", iconActive: "home" },
+  businesses: { label: "Stores", icon: "storefront-outline", iconActive: "storefront" },
+  orders: { label: "Orders", icon: "receipt-outline", iconActive: "receipt" },
+  profile: { label: "Profile", icon: "person-outline", iconActive: "person" },
+};
+
+const ACTIVE = "#0E9F6E";
+const INACTIVE = "#94A3B8";
+
+function UserTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const cartItems = useAppSelector((s) => s.cart.items);
+  const totalCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
 
-  const visible = items.length > 0;
-  const totalCount = items.reduce((s, i) => s + i.quantity, 0);
+  const renderTab = (routeKey: string, routeName: string, index: number) => {
+    const meta = TAB_META[routeName];
+    if (!meta) return null;
+    const isFocused = state.index === index;
 
-  const fabScale = useSharedValue(0);
-  const rotation = useSharedValue(0);
+    const onPress = () => {
+      const event = navigation.emit({
+        type: "tabPress",
+        target: routeKey,
+        canPreventDefault: true,
+      });
+      if (!isFocused && !event.defaultPrevented) {
+        navigation.navigate(routeName);
+      }
+    };
 
-  // Gear spins forever
-  useEffect(() => {
-    rotation.value = withRepeat(
-      withTiming(360, { duration: 3000, easing: Easing.linear }),
-      -1,
-      false
-    );
-  }, []);
-
-  // Scale FAB in/out
-  useEffect(() => {
-    fabScale.value = visible
-      ? withSpring(1, { damping: 13, stiffness: 180 })
-      : withSpring(0, { damping: 16, stiffness: 220 });
-  }, [visible]);
-
-  const fabStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: fabScale.value }],
-  }));
-
-  const gearStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${rotation.value}deg` }],
-  }));
-
-  const bottomOffset = insets.bottom + 100;
-
-  return (
-    <Animated.View
-      style={[styles.fab, { bottom: bottomOffset }, fabStyle]}
-      pointerEvents={visible ? "auto" : "none"}
-    >
-      <Pressable
-        style={({ pressed }) => [styles.fabInner, pressed && styles.fabPressed]}
-        onPress={() => router.push("/(user)/cart")}
-      >
-        {/* Layer 1: Spinning gear fills the entire FAB */}
-        <Animated.View style={[StyleSheet.absoluteFillObject, styles.gearLayer, gearStyle]}>
-          <Ionicons name="settings" size={68} color="#0E9F6E" />
-        </Animated.View>
-
-        {/* Layer 2: White disc — always locked to center */}
-        <View style={styles.centerOverlay}>
-          <View style={styles.innerCircle} />
+    return (
+      <Pressable key={routeKey} style={styles.tabItem} onPress={onPress} hitSlop={8}>
+        <View style={styles.indicatorSlot}>
+          {isFocused ? <View style={styles.activeIndicator} /> : null}
         </View>
-
-        {/* Layer 3: Cart icon — always locked to center */}
-        <View style={styles.centerOverlay}>
-          <Ionicons name="cart" size={24} color="#0E9F6E" />
-        </View>
-
-        {/* Item count badge */}
-        {totalCount > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {totalCount > 9 ? "9+" : totalCount}
-            </Text>
-          </View>
-        )}
+        <Ionicons
+          name={isFocused ? meta.iconActive : meta.icon}
+          size={23}
+          color={isFocused ? ACTIVE : INACTIVE}
+        />
+        <Text style={[styles.tabLabel, { color: isFocused ? ACTIVE : INACTIVE }]}>
+          {meta.label}
+        </Text>
       </Pressable>
-    </Animated.View>
-  );
-}
+    );
+  };
 
-const styles = StyleSheet.create({
-  fab: {
-    position: "absolute",
-    right: 20,
-    width: 68,
-    height: 68,
-    zIndex: 100,
-    shadowColor: "#0A7D55",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 14,
-  },
-  fabInner: {
-    width: 68,
-    height: 68,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  fabPressed: { opacity: 0.8 },
-  gearLayer: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  // Fills the FAB and centers children — reliable centering for any child
-  centerOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  innerCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#FFFFFF",
-  },
-  badge: {
-    position: "absolute",
-    top: 4,
-    right: 2,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 3,
-    borderWidth: 1.5,
-    borderColor: "#0E9F6E",
-  },
-  badgeText: { fontSize: 10, fontWeight: "800", color: "#0E9F6E" },
-});
+  const tabs = state.routes
+    .map((route, index) => ({ route, index }))
+    .filter(({ route }) => TAB_META[route.name]);
 
-export default function TabsLayout() {
+  const left = tabs.slice(0, 2);
+  const right = tabs.slice(2);
+
   return (
-    <View style={{ flex: 1 }}>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: "#0E9F6E",
-          tabBarInactiveTintColor: "#9CA3AF",
-          tabBarStyle: {
-            backgroundColor: "#FFFFFF",
-            borderTopWidth: 0,
-            height: 76,
-            paddingBottom: 14,
-            paddingTop: 8,
-            marginHorizontal: 16,
-            marginBottom: 28,
-            borderRadius: 24,
-            position: "absolute",
-            shadowColor: "#1F2937",
-            shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: 0.18,
-            shadowRadius: 24,
-            elevation: 16,
-          },
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: "600",
-          },
-        }}
-      >
-        <Tabs.Screen
-          name="home"
-          options={{
-            title: "Home",
-            tabBarIcon: ({ focused }) => (
-              <UserTabIcon iconName="home-outline" focused={focused} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="businesses"
-          options={{
-            title: "Shops",
-            tabBarIcon: ({ focused }) => (
-              <UserTabIcon iconName="storefront-outline" focused={focused} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="orders"
-          options={{
-            title: "Orders",
-            tabBarIcon: ({ focused }) => (
-              <UserTabIcon iconName="receipt-outline" focused={focused} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="profile"
-          options={{
-            title: "Profile",
-            tabBarIcon: ({ focused }) => (
-              <UserTabIcon iconName="person-outline" focused={focused} />
-            ),
-          }}
-        />
-        <Tabs.Screen name="addresses" options={{ href: null }} />
-        <Tabs.Screen name="add-address" options={{ href: null, tabBarStyle: { display: "none" } }} />
-        <Tabs.Screen name="verify-phone" options={{ href: null }} />
-      </Tabs>
-      <FloatingCartBar />
+    <View style={[styles.bar, { height: 64 + insets.bottom, paddingBottom: insets.bottom }]}>
+      <View style={styles.side}>
+        {left.map(({ route, index }) => renderTab(route.key, route.name, index))}
+      </View>
+
+      <View style={styles.centerSlot}>
+        <Pressable
+          style={({ pressed }) => [styles.cartBtn, pressed && styles.cartBtnPressed]}
+          onPress={() => router.push("/(user)/cart")}
+          hitSlop={8}
+        >
+          <LinearGradient
+            colors={["#F59E0B", "#D97706"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.cartCircle}
+          >
+            <Ionicons name="cart" size={26} color="#FFFFFF" />
+          </LinearGradient>
+          {totalCount > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{totalCount > 9 ? "9+" : totalCount}</Text>
+            </View>
+          ) : null}
+        </Pressable>
+        <Text style={styles.cartLabel}>Cart</Text>
+      </View>
+
+      <View style={styles.side}>
+        {right.map(({ route, index }) => renderTab(route.key, route.name, index))}
+      </View>
     </View>
   );
 }
 
+const styles = StyleSheet.create({
+  bar: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#EEF2F6",
+    paddingTop: 8,
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  side: {
+    flex: 1,
+    flexDirection: "row",
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-start",
+    gap: 2,
+  },
+  indicatorSlot: {
+    height: 5,
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  activeIndicator: {
+    width: 22,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: ACTIVE,
+  },
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  centerSlot: {
+    width: 74,
+    alignItems: "center",
+  },
+  cartBtn: {
+    marginTop: -26,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 32,
+    backgroundColor: "#FFFFFF",
+    padding: 4,
+    shadowColor: "#D97706",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 12,
+  },
+  cartBtnPressed: { opacity: 0.85 },
+  cartCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cartLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#D97706",
+    marginTop: 3,
+  },
+  badge: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#0E9F6E",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
+  badgeText: { fontSize: 10, fontWeight: "800", color: "#FFFFFF" },
+});
+
+export default function TabsLayout() {
+  return (
+    <Tabs
+      tabBar={(props) => <UserTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tabs.Screen name="home" options={{ title: "Home" }} />
+      <Tabs.Screen name="businesses" options={{ title: "Shops" }} />
+      <Tabs.Screen name="orders" options={{ title: "Orders" }} />
+      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
+      <Tabs.Screen name="addresses" options={{ href: null }} />
+      <Tabs.Screen name="add-address" options={{ href: null }} />
+      <Tabs.Screen name="verify-phone" options={{ href: null }} />
+    </Tabs>
+  );
+}
