@@ -3,6 +3,25 @@ import * as admin from 'firebase-admin';
 import * as https from 'https';
 import { computeCouponDiscount } from './coupons';
 import { ORDER_FEES, ORDER_ACCEPTANCE_WINDOW_SECONDS } from '../shared/constants';
+import { autoRejectIfExpired, isExpiredPending } from '../shared/orderExpiry';
+
+/**
+ * Apply lazy auto-rejection to a page of order docs: any order still pending
+ * past its deadline is rejected on read so clients never see a stale pending
+ * status while waiting for the 1-minute sweeper.
+ */
+async function expirePendingDocs(
+  docs: FirebaseFirestore.QueryDocumentSnapshot[]
+): Promise<Array<{ id: string } & FirebaseFirestore.DocumentData>> {
+  return Promise.all(
+    docs.map(async (doc) => {
+      const data = doc.data();
+      if (!isExpiredPending(data)) return { id: doc.id, ...data };
+      const { data: effective } = await autoRejectIfExpired(db, doc.ref, data);
+      return { id: doc.id, ...effective };
+    })
+  );
+}
 
 const router = Router();
 const db = admin.firestore();
@@ -110,7 +129,7 @@ router.get('/my', requireAuth, async (req, res) => {
       .limit(limit * page)
       .get();
 
-    const all = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const all = await expirePendingDocs(snapshot.docs);
     const paginated = all.slice((page - 1) * limit, page * limit);
 
     return res.json({ success: true, data: paginated, total: snapshot.size, page, limit });
@@ -142,7 +161,7 @@ router.get('/business', requireAuth, async (req, res) => {
     }
 
     const snapshot = await query.limit(limit * page).get();
-    const all = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+    const all = await expirePendingDocs(snapshot.docs);
     const paginated = all.slice((page - 1) * limit, page * limit);
 
     return res.json({ success: true, data: paginated, total: snapshot.size, page, limit });
@@ -168,7 +187,8 @@ router.get('/:id', requireAuth, async (req, res) => {
     }
     if (!allowed) return res.status(403).json({ success: false, error: 'Access denied' });
 
-    return res.json({ success: true, data: { id: doc.id, ...data } });
+    const { data: effective } = await autoRejectIfExpired(db, doc.ref, data);
+    return res.json({ success: true, data: { id: doc.id, ...effective } });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }

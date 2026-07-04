@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
+import { autoRejectIfExpired, isExpiredPending } from '../shared/orderExpiry';
 
 const router = Router();
 const db = admin.firestore();
@@ -247,7 +248,14 @@ router.get('/orders', requireAuth, async (req, res) => {
       .offset((page - 1) * limit)
       .get();
 
-    const orders = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const orders = await Promise.all(
+      snapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        if (!isExpiredPending(data)) return { id: doc.id, ...data };
+        const { data: effective } = await autoRejectIfExpired(db, doc.ref, data);
+        return { id: doc.id, ...effective };
+      })
+    );
 
     return res.json({
       success: true,

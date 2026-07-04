@@ -182,6 +182,16 @@ export default function UserOrderDetail() {
       .catch(() => null);
   }, [orderId]);
 
+  // While the order is still awaiting acceptance, poll regardless of socket
+  // state. The auto-rejection is a time-based, server-driven change with no
+  // realtime push, so this guarantees the customer sees the flip to rejected
+  // (the GET applies lazy expiration) within a few seconds of the deadline.
+  useEffect(() => {
+    if (!orderId || order?.status !== OrderStatus.PENDING) return;
+    const timer = setInterval(refetchOrder, 3000);
+    return () => clearInterval(timer);
+  }, [orderId, order?.status, refetchOrder]);
+
   const handleShare = async () => {
     if (!order) return;
     setSharing(true);

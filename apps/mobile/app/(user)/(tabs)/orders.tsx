@@ -184,6 +184,21 @@ export default function UserOrders() {
     }, [refreshFallbackNow, startFallbackLoop, stopFallbackLoop])
   );
 
+  // Auto-rejection is a time-based, server-driven change with no realtime
+  // push, so while any order is still pending, poll regardless of socket state
+  // to reliably reflect the flip to rejected (the GET applies lazy expiration).
+  const hasPending = useMemo(
+    () => orders.some((o) => o.status === OrderStatus.PENDING),
+    [orders]
+  );
+  useEffect(() => {
+    if (!hasPending) return;
+    const timer = setInterval(() => {
+      loadMyOrders({ silent: true }).catch(() => null);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [hasPending, loadMyOrders]);
+
   // Real-time: update a single order in Redux when the business owner
   // changes its status. No full-list re-fetch needed.
   useSocketEvent<any>("order:updated", (payload) => {
