@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { ORDER_AUTO_REJECT_REASON, ORDER_ACCEPTANCE_WINDOW_SECONDS } from './constants';
 
 type Db = admin.firestore.Firestore;
@@ -68,9 +69,9 @@ export async function autoRejectIfExpired(
         status: 'rejected',
         rejectionReason: ORDER_AUTO_REJECT_REASON,
         rejectedBy: 'system',
-        rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
-        trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        rejectedAt: FieldValue.serverTimestamp(),
+        trackingUpdates: FieldValue.arrayUnion(trackingUpdate),
+        updatedAt: FieldValue.serverTimestamp(),
       });
       return true;
     });
