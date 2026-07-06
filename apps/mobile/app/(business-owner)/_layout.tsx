@@ -1,22 +1,41 @@
+import { useEffect } from "react";
 import { Tabs, useSegments } from "expo-router";
 import RoleGate from "../../src/components/RoleGate";
 import AppTabIcon from "../../src/components/AppTabIcon";
 import PendingOrderBanner from "../../src/components/PendingOrderBanner";
 import { useAppSelector } from "../../src/hooks/useRedux";
+import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { OrderStatus } from "../../src/types";
 import { useOrderNotifications } from "../../src/hooks/useOrderNotifications";
 
 export default function BusinessOwnerLayout() {
   const segments = useSegments();
   const orders = useAppSelector((state) => state.businessOwner.orders);
+  const { loadOrders } = useBusinessOwner();
   const activeOrderCount = orders.filter(
-    (o) => o.status !== OrderStatus.DELIVERED && o.status !== OrderStatus.CANCELLED
+    (o) =>
+      o.status !== OrderStatus.DELIVERED &&
+      o.status !== OrderStatus.CANCELLED &&
+      o.status !== OrderStatus.REJECTED
   ).length;
 
   // Hide banner on orders screen
   const isOrdersScreen = segments.includes("orders");
 
   useOrderNotifications();
+
+  // Auto-rejection is a time-based, server-driven change with no realtime push,
+  // and is only materialized when an order read applies lazy expiration. Poll
+  // from the layout (any tab) while a pending order exists so the tab badge and
+  // banner drop as soon as an order is auto-rejected, not just on the orders tab.
+  const hasPending = orders.some((o) => o.status === OrderStatus.PENDING);
+  useEffect(() => {
+    if (!hasPending || isOrdersScreen) return;
+    const timer = setInterval(() => {
+      loadOrders({ silent: true }).catch(() => null);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [hasPending, isOrdersScreen, loadOrders]);
 
   return (
     <RoleGate allowedRole="businessOwner">
