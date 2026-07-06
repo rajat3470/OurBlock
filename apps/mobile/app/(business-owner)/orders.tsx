@@ -140,6 +140,22 @@ export default function BusinessOwnerOrders() {
     loadOrders().catch(() => null);
   }, [loadOrders]);
 
+  // Auto-rejection is time-based and server-driven with no socket push, so the
+  // socket-gated fallback loop above never learns about it while the socket is
+  // connected. Poll unconditionally while any order is still pending so the
+  // list, tab badge and banner reflect the flip to rejected within seconds.
+  const hasPending = useMemo(
+    () => orders.some((o) => o.status === OrderStatus.PENDING),
+    [orders]
+  );
+  useEffect(() => {
+    if (!hasPending) return;
+    const timer = setInterval(() => {
+      loadOrders({ silent: true }).catch(() => null);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [hasPending, loadOrders]);
+
   // Fallback path while backend socket events are unavailable: sync only when
   // this screen is focused and socket is disconnected.
   useFocusEffect(
@@ -245,11 +261,12 @@ export default function BusinessOwnerOrders() {
   const handleCountdownExpire = useCallback(
     (orderId: string) => {
       markExpired(orderId);
-      // Give the server sweeper a moment, then refetch so the card reflects the
-      // real (rejected) state instead of our optimistic "expired" placeholder.
-      refreshFallbackNow();
+      // Refetch (regardless of socket state) so the card reflects the real
+      // rejected state — the read applies lazy expiration server-side — instead
+      // of our optimistic "expired" placeholder.
+      loadOrders({ silent: true }).catch(() => null);
     },
-    [markExpired, refreshFallbackNow]
+    [markExpired, loadOrders]
   );
 
   const handleAccept = async (order: Order) => {
