@@ -10,14 +10,22 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { useAppSelector } from "../../src/hooks/useRedux";
+import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
 import { useAuth } from "../../src/hooks/useAuth";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { businessOwnerService } from "../../src/services/businessOwnerService";
+import { userAppService } from "../../src/services/userAppService";
+import * as ImagePicker from "expo-image-picker";
+import { useToast } from "react-native-toast-notifications";
+import { Ionicons } from "@expo/vector-icons";
+import { setUser } from "../../src/store/slices/authSlice";
+import { authStateService } from "../../src/services/authStateService";
+
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value?: string | null }) {
   if (!value) return null;
@@ -34,8 +42,13 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value?: 
 
 export default function BusinessOwnerProfile() {
   const { user } = useAppSelector((state) => state.auth);
+
+
   const { logoutUser, changePassword } = useAuth();
   const { businessProfile, loadBusinessProfile } = useBusinessOwner();
+  const toast = useToast();
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const dispatch = useAppDispatch();
 
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -149,6 +162,42 @@ export default function BusinessOwnerProfile() {
 
   const insets = useSafeAreaInsets();
 
+
+  const handlePickProfilePhoto = async () => {
+    if (!user?.id) return;
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        toast.show("Please allow photo library access.", { type: "warning" });
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
+      if (result.canceled || result.assets.length === 0) return;
+      setUploadingPhoto(true);
+      const selected = result.assets[0];
+      if (!selected.base64) {
+        toast.show("Could not read selected image.", { type: "danger" });
+        return;
+      }
+      const mimeType = selected.mimeType || "image/jpeg";
+      const imageUrl = `data:${mimeType};base64,${selected.base64}`;
+      const updatedUser = await userAppService.updateProfile({ profileImageUrl: imageUrl });
+      dispatch(setUser(updatedUser));
+      await authStateService.updateUser(updatedUser);
+      toast.show("Profile photo updated.", { type: "success" });
+    } catch (error: any) {
+      toast.show(error?.message || "Failed to upload profile image", { type: "danger" });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <KeyboardAvoidingView
@@ -160,9 +209,23 @@ export default function BusinessOwnerProfile() {
             colors={["#16A34A", "#0A7D55"]}
             style={[styles.hero, { paddingTop: insets.top + 28 }]}
           >
-            <View style={styles.avatarBox}>
-              <Text style={styles.avatarEmoji}>🏪</Text>
-            </View>
+
+            <TouchableOpacity style={styles.avatarWrap} onPress={handlePickProfilePhoto} disabled={uploadingPhoto}>
+              {user?.profileImageUrl ? (
+                <Image source={{ uri: user.profileImageUrl }} style={styles.avatarImage} />
+              ) : (
+                <Ionicons name="person" size={40} color="#0E9F6E" />
+              )}
+              <View style={styles.cameraOverlay}>
+                {uploadingPhoto ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="camera" size={14} color="#FFFFFF" />
+                )}
+              </View>
+            </TouchableOpacity>
+
+
             <Text style={styles.heroName}>
               {user?.firstName} {user?.lastName}
             </Text>
@@ -185,14 +248,14 @@ export default function BusinessOwnerProfile() {
                 </View>
               </View>
               <View style={styles.sectionBody}>
-                <InfoRow icon="🏷️" label="Business Name"  value={businessProfile.name} />
-                <InfoRow icon="🗂️" label="Category"       value={businessProfile.category} />
-                <InfoRow icon="📝" label="Description"    value={businessProfile.description} />
-                <InfoRow icon="📍" label="Address"        value={businessProfile.address} />
-                <InfoRow icon="📞" label="Phone"          value={businessProfile.phone} />
-                <InfoRow icon="✉️"  label="Email"          value={businessProfile.email} />
-                <InfoRow icon="⭐" label="Rating"         value={businessProfile.rating ? `${businessProfile.rating} / 5 (${businessProfile.totalReviews ?? 0} reviews)` : null} />
-                <InfoRow icon="🔖" label="Status"         value={businessProfile.status} />
+                <InfoRow icon="🏷️" label="Business Name" value={businessProfile.name} />
+                <InfoRow icon="🗂️" label="Category" value={businessProfile.category} />
+                <InfoRow icon="📝" label="Description" value={businessProfile.description} />
+                <InfoRow icon="📍" label="Address" value={businessProfile.address} />
+                <InfoRow icon="📞" label="Phone" value={businessProfile.phone} />
+                <InfoRow icon="✉️" label="Email" value={businessProfile.email} />
+                <InfoRow icon="⭐" label="Rating" value={businessProfile.rating ? `${businessProfile.rating} / 5 (${businessProfile.totalReviews ?? 0} reviews)` : null} />
+                <InfoRow icon="🔖" label="Status" value={businessProfile.status} />
               </View>
             </View>
           ) : (
@@ -378,22 +441,85 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 32,
   },
-  avatarBox: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
+  // avatarBox: {
+  //   width: 80,
+  //   height: 80,
+  //   borderRadius: 40,
+  //   backgroundColor: "rgba(255,255,255,0.2)",
+  //   justifyContent: "center",
+  //   alignItems: "center",
+  //   marginBottom: 12,
+  //   borderWidth: 2,
+  //   borderColor: "rgba(255,255,255,0.4)",
+  // },
+
+  avatarWrap: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
+    justifyContent: "center",
     marginBottom: 12,
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.4)",
+    borderWidth: 3,
+    borderColor: "rgba(255,255,255,0.6)",
   },
-  avatarEmoji: { fontSize: 36 },
+
+
+  avatarImage: { width: 100, height: 100, borderRadius: 50 },
+  cameraOverlay: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#0E9F6E",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
+  },
   heroName: {
     fontSize: 20,
     fontWeight: "700",
     color: "#FFFFFF",
+  },
+  avatarContainer: {
+    alignSelf: "center",
+    position: "relative",
+  },
+
+  // avatarBox: {
+  //   width: 110,
+  //   height: 110,
+  //   borderRadius: 55,
+  //   backgroundColor: "#F2F2F2",
+  //   justifyContent: "center",
+  //   alignItems: "center",
+  // },
+
+  // avatarEmoji: {
+  //   fontSize: 50,
+  // },
+
+  cameraIconContainer: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "#4CAF50", // Change to your theme color
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#FFF",
+    elevation: 4, // Android shadow
+    shadowColor: "#000", // iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   heroEmail: {
     marginTop: 4,
