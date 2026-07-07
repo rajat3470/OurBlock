@@ -19,7 +19,12 @@ import { socketService } from "../../src/services/socketService";
 import SafeAreaScreen from "../../src/components/SafeAreaScreen";
 import SafeAreaHeader from "../../src/components/SafeAreaHeader";
 import AcceptanceCountdown from "../../src/components/AcceptanceCountdown";
-import { getAcceptanceDeadlineMs } from "../../src/utils/orderAcceptance";
+import {
+  getAcceptanceDeadlineMs,
+  effectiveOrderStatus,
+  ORDER_AUTO_REJECT_REASON,
+  toMillis,
+} from "../../src/utils/orderAcceptance";
 
 const STATUS_LABEL: Record<string, string> = {
   pending:        "Waiting for Acceptance",
@@ -52,8 +57,10 @@ function normalizeOrderPayload(payload: any): Order | null {
   return raw as Order;
 }
 
-function formatDateTime(date: Date | string): string {
-  const d = new Date(date);
+function formatDateTime(date: unknown): string {
+  const ms = toMillis(date);
+  if (ms == null) return "";
+  const d = new Date(ms);
   return (
     d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) +
     " at " +
@@ -63,7 +70,8 @@ function formatDateTime(date: Date | string): string {
 
 function buildInvoiceText(order: Order): string {
   const id = `#${(order.id ?? "").slice(0, 8).toUpperCase()}`;
-  const date = new Date(order.createdAt).toLocaleDateString("en-IN", {
+  const createdMs = toMillis(order.createdAt as unknown);
+  const date = (createdMs != null ? new Date(createdMs) : new Date()).toLocaleDateString("en-IN", {
     day: "numeric", month: "short", year: "numeric",
   });
   const bizName = (order as any).businessName ?? "Shop";
@@ -192,6 +200,16 @@ export default function UserOrderDetail() {
     return () => clearInterval(timer);
   }, [orderId, order?.status, refetchOrder]);
 
+  // Local ticker so the status flips to "Rejected" the instant the 60s window
+  // lapses on the client clock, even before the backend write to `rejected`
+  // materializes (or if the backend isn't deployed yet).
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (order?.status !== OrderStatus.PENDING) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [order?.status]);
+
   const handleShare = async () => {
     if (!order) return;
     setSharing(true);
@@ -230,11 +248,16 @@ export default function UserOrderDetail() {
     );
   }
 
-  const statusMeta = STATUS_COLOR[order.status] ?? STATUS_COLOR.pending;
+  const displayStatus = effectiveOrderStatus(order, now);
+  const statusMeta = STATUS_COLOR[displayStatus] ?? STATUS_COLOR.pending;
   const orderItems = Array.isArray((order as any).items) ? (order as any).items : [];
   const paymentMethod = order.paymentMethod ?? "cash";
   const awaitingDeadlineMs =
-    order.status === OrderStatus.PENDING ? getAcceptanceDeadlineMs(order) : null;
+    displayStatus === OrderStatus.PENDING ? getAcceptanceDeadlineMs(order) : null;
+  const rejectionReason =
+    displayStatus === OrderStatus.REJECTED
+      ? (order as any).rejectionReason ?? ORDER_AUTO_REJECT_REASON
+      : null;
   const addr = order.deliveryAddress as any;
   const addressLine = [addr?.street, addr?.landmark].filter(Boolean).join(", ");
   const addressCity = [addr?.city, addr?.state, addr?.pinCode].filter(Boolean).join(", ");
@@ -265,7 +288,7 @@ export default function UserOrderDetail() {
           <Text style={styles.statusEmoji}>{statusMeta.emoji}</Text>
           <View style={styles.statusInfo}>
             <Text style={[styles.statusLabel, { color: statusMeta.text }]}>
-              {STATUS_LABEL[order.status] ?? order.status}
+              {STATUS_LABEL[displayStatus] ?? displayStatus}
             </Text>
             <Text style={[styles.statusPayment, { color: statusMeta.text }]}>
               {paymentMethod.toUpperCase()} ·{" "}
@@ -279,7 +302,7 @@ export default function UserOrderDetail() {
         </View>
 
         {/* ── Awaiting store confirmation countdown ────────────────── */}
-        {order.status === OrderStatus.PENDING && awaitingDeadlineMs != null ? (
+        {displayStatus === OrderStatus.PENDING && awaitingDeadlineMs != null ? (
           <View style={styles.awaitingCard}>
             <Text style={styles.awaitingText}>Waiting for the store to confirm your order</Text>
             <AcceptanceCountdown
@@ -393,11 +416,11 @@ export default function UserOrderDetail() {
           </View>
         ) : null}
 
-        {/* ── Rejection Reason ─────────────────────────────────────── */}
-        {order.status === OrderStatus.REJECTED && (order as any).rejectionReason ? (
+        {/* ── Rejection Reason (incl. client-side auto-reject) ─────── */}
+        {rejectionReason ? (
           <View style={[styles.section, styles.rejectionSection]}>
             <Text style={styles.rejectionTitle}>🚫 Rejection Reason</Text>
-            <Text style={styles.rejectionText}>{(order as any).rejectionReason}</Text>
+            <Text style={styles.rejectionText}>{rejectionReason}</Text>
           </View>
         ) : null}
       </ScrollView>

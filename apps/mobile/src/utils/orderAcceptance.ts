@@ -3,6 +3,10 @@ import { Order, OrderStatus } from "../types";
 /** Default owner accept/reject window, mirrors ORDER_ACCEPTANCE_WINDOW_SECONDS on the backend. */
 export const ORDER_ACCEPTANCE_WINDOW_SECONDS = 60;
 
+/** Reason shown for a time-based auto-rejection, mirrors ORDER_AUTO_REJECT_REASON on the backend. */
+export const ORDER_AUTO_REJECT_REASON =
+  "Store didn't respond within the 60-second window";
+
 /**
  * Best-effort conversion of the many shapes a timestamp can arrive in
  * (Date, ms number, seconds number, ISO string, or a serialized Firestore
@@ -77,6 +81,21 @@ export function isAcceptanceExpired(
   if (order.status !== OrderStatus.PENDING) return false;
   const remaining = getRemainingSeconds(order, nowMs);
   return remaining !== null && remaining <= 0;
+}
+
+/**
+ * The status the customer/owner should actually see. Auto-rejection is a
+ * time-based change with no realtime push and its server write can lag (or, if
+ * the backend isn't yet deployed, never happen). Once a pending order's window
+ * has lapsed on the client clock the order is effectively rejected — the server
+ * enforces the same deadline (accepting past it fails), so treating it as
+ * rejected in the UI is always correct and never flips back.
+ */
+export function effectiveOrderStatus(
+  order: Pick<Order, "autoRejectAt" | "acceptanceWindowSeconds" | "createdAt" | "status">,
+  nowMs: number = Date.now()
+): OrderStatus {
+  return isAcceptanceExpired(order, nowMs) ? OrderStatus.REJECTED : order.status;
 }
 
 /** Formats remaining seconds as `M:SS` (or `SS s` under a minute). */

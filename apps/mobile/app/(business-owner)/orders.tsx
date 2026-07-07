@@ -19,7 +19,11 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { Order, OrderStatus } from "../../src/types";
 import AcceptanceCountdown from "../../src/components/AcceptanceCountdown";
-import { getAcceptanceDeadlineMs } from "../../src/utils/orderAcceptance";
+import {
+  getAcceptanceDeadlineMs,
+  effectiveOrderStatus,
+  toMillis,
+} from "../../src/utils/orderAcceptance";
 import { useAppDispatch } from "../../src/hooks/useRedux";
 import { prependOrder } from "../../src/store/slices/businessOwnerSlice";
 import { useSocketEvent } from "../../src/hooks/useSocket";
@@ -72,9 +76,10 @@ function normalizeOrderPayload(payload: any): Order | null {
   return raw as Order;
 }
 
-function timeAgo(date: Date | string): string {
-  const d = new Date(date);
-  const diffMs = Date.now() - d.getTime();
+function timeAgo(date: unknown): string {
+  const ms = toMillis(date);
+  if (ms == null) return "";
+  const diffMs = Date.now() - ms;
   const diffMin = Math.floor(diffMs / 60000);
   if (diffMin < 1) return "just now";
   if (diffMin < 60) return `${diffMin}m ago`;
@@ -156,6 +161,16 @@ export default function BusinessOwnerOrders() {
     return () => clearInterval(timer);
   }, [hasPending, loadOrders]);
 
+  // Local ticker so counts, filters and cards recompute as each 60s window
+  // lapses — the order is treated as rejected the moment its client-side
+  // deadline passes, regardless of whether the backend write has landed yet.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!hasPending) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [hasPending]);
+
   // Fallback path while backend socket events are unavailable: sync only when
   // this screen is focused and socket is disconnected.
   useFocusEffect(
@@ -214,19 +229,22 @@ export default function BusinessOwnerOrders() {
   const counts = useMemo(
     () => ({
       all: orders.length,
-      pending: orders.filter((o) => o.status === OrderStatus.PENDING).length,
-      active: orders.filter((o) => ACTIVE_STATUSES.includes(o.status)).length,
-      done: orders.filter((o) => DONE_STATUSES.includes(o.status)).length,
+      pending: orders.filter((o) => effectiveOrderStatus(o, now) === OrderStatus.PENDING).length,
+      active: orders.filter((o) => ACTIVE_STATUSES.includes(effectiveOrderStatus(o, now))).length,
+      done: orders.filter((o) => DONE_STATUSES.includes(effectiveOrderStatus(o, now))).length,
     }),
-    [orders]
+    [orders, now]
   );
 
   const filteredOrders = useMemo(() => {
-    if (activeFilter === "pending") return orders.filter((o) => o.status === OrderStatus.PENDING);
-    if (activeFilter === "active") return orders.filter((o) => ACTIVE_STATUSES.includes(o.status));
-    if (activeFilter === "done") return orders.filter((o) => DONE_STATUSES.includes(o.status));
+    if (activeFilter === "pending")
+      return orders.filter((o) => effectiveOrderStatus(o, now) === OrderStatus.PENDING);
+    if (activeFilter === "active")
+      return orders.filter((o) => ACTIVE_STATUSES.includes(effectiveOrderStatus(o, now)));
+    if (activeFilter === "done")
+      return orders.filter((o) => DONE_STATUSES.includes(effectiveOrderStatus(o, now)));
     return orders;
-  }, [activeFilter, orders]);
+  }, [activeFilter, orders, now]);
 
   const FILTERS: { key: FilterKey; label: string; count: number }[] = [
     { key: "all",     label: "All",     count: counts.all     },
@@ -327,9 +345,13 @@ export default function BusinessOwnerOrders() {
   };
 
   const renderItem = ({ item }: { item: Order }) => {
-    const meta = STATUS_META[item.status];
-    const next = NEXT_STATUS[item.status];
-    const nextLabel = NEXT_STATUS_LABEL[item.status];
+    // Show the effective status: a pending order past its 60s window reads as
+    // rejected even before the backend write lands, so the status bar and
+    // actions never lie ("New Order" while the countdown says auto-rejected).
+    const displayStatus = effectiveOrderStatus(item, now);
+    const meta = STATUS_META[displayStatus];
+    const next = NEXT_STATUS[displayStatus];
+    const nextLabel = NEXT_STATUS_LABEL[displayStatus];
     const addr = item.deliveryAddress;
     const addressLine = addr
       ? [addr.street, addr.landmark].filter(Boolean).join(", ")
