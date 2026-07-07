@@ -22,6 +22,10 @@ import RatingModal from "../../../src/components/RatingModal";
 import RefundModal from "../../../src/components/RefundModal";
 import { useSocketEvent } from "../../../src/hooks/useSocket";
 import { socketService } from "../../../src/services/socketService";
+import {
+  effectiveOrderStatus,
+  ORDER_AUTO_REJECT_REASON,
+} from "../../../src/utils/orderAcceptance";
 import { LinearGradient } from "expo-linear-gradient";
 
 type FilterKey = "all" | "active" | "completed";
@@ -199,6 +203,16 @@ export default function UserOrders() {
     return () => clearInterval(timer);
   }, [hasPending, loadMyOrders]);
 
+  // Local ticker so a pending order flips to "Rejected" in the list the moment
+  // its 60s window lapses on the client clock — independent of when (or if) the
+  // backend write to `rejected` arrives.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!hasPending) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [hasPending]);
+
   // Real-time: update a single order in Redux when the business owner
   // changes its status. No full-list re-fetch needed.
   useSocketEvent<any>("order:updated", (payload) => {
@@ -209,18 +223,20 @@ export default function UserOrders() {
 
   const filteredOrders = useMemo(() => {
     if (activeFilter === "active") {
-      return orders.filter((item) => ACTIVE_STATUSES.includes(item.status));
+      return orders.filter((item) => ACTIVE_STATUSES.includes(effectiveOrderStatus(item, now)));
     }
     if (activeFilter === "completed") {
-      return orders.filter(
-        (item) =>
-          item.status === OrderStatus.DELIVERED ||
-          item.status === OrderStatus.CANCELLED ||
-          item.status === OrderStatus.REJECTED
-      );
+      return orders.filter((item) => {
+        const s = effectiveOrderStatus(item, now);
+        return (
+          s === OrderStatus.DELIVERED ||
+          s === OrderStatus.CANCELLED ||
+          s === OrderStatus.REJECTED
+        );
+      });
     }
     return orders;
-  }, [activeFilter, orders]);
+  }, [activeFilter, orders, now]);
 
   function handleCancel(orderId: string) {
     Alert.alert("Cancel Order", "Are you sure you want to cancel this order?", [
@@ -238,10 +254,15 @@ export default function UserOrders() {
   }
 
   const renderItem = ({ item }: { item: Order }) => {
-    const statusStyle = getStatusStyle(item.status);
+    const displayStatus = effectiveOrderStatus(item, now);
+    const statusStyle = getStatusStyle(displayStatus);
     const orderItems = Array.isArray((item as any).items) ? (item as any).items : [];
     const canCancel =
-      item.status === OrderStatus.PENDING || item.status === OrderStatus.CONFIRMED;
+      displayStatus === OrderStatus.PENDING || displayStatus === OrderStatus.CONFIRMED;
+    const rejectionReason =
+      displayStatus === OrderStatus.REJECTED
+        ? (item as any).rejectionReason ?? ORDER_AUTO_REJECT_REASON
+        : null;
 
     return (
       <TouchableOpacity
@@ -291,7 +312,7 @@ export default function UserOrders() {
             ]}
           >
             <Text style={[styles.statusText, { color: statusStyle.text }]}>
-              {STATUS_LABEL[item.status] ?? item.status}
+              {STATUS_LABEL[displayStatus] ?? displayStatus}
             </Text>
           </View>
           <Text style={styles.paymentText}>
@@ -308,13 +329,13 @@ export default function UserOrders() {
         {/* Action buttons */}
         {(() => {
           const isClosed =
-            item.status === OrderStatus.DELIVERED ||
-            item.status === OrderStatus.CANCELLED ||
-            (item.status as string) === "rejected";
+            displayStatus === OrderStatus.DELIVERED ||
+            displayStatus === OrderStatus.CANCELLED ||
+            displayStatus === OrderStatus.REJECTED;
           const showReorder = isClosed;
-          const showRate = item.status === OrderStatus.DELIVERED;
+          const showRate = displayStatus === OrderStatus.DELIVERED;
           const showRefund =
-            item.status === OrderStatus.DELIVERED && !(item as any).refundRequested;
+            displayStatus === OrderStatus.DELIVERED && !(item as any).refundRequested;
           if (!canCancel && !showReorder && !showRate && !showRefund) return null;
           return (
             <View style={styles.actionRow}>
@@ -356,11 +377,11 @@ export default function UserOrders() {
             </View>
           );
         })()}
-        {/* Show rejection reason if order was rejected */}
-        {item.status === OrderStatus.REJECTED && (item as any).rejectionReason ? (
+        {/* Show rejection reason if order was rejected (incl. client-side auto-reject) */}
+        {rejectionReason ? (
           <View style={styles.rejectionBanner}>
             <Text style={styles.rejectionLabel}>Rejection reason:</Text>
-            <Text style={styles.rejectionText}>{(item as any).rejectionReason}</Text>
+            <Text style={styles.rejectionText}>{rejectionReason}</Text>
           </View>
         ) : null}
       </TouchableOpacity>

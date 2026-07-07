@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -17,7 +17,11 @@ import { Order, OrderStatus } from "../../src/types";
 import SafeAreaScreen from "../../src/components/SafeAreaScreen";
 import SafeAreaHeader from "../../src/components/SafeAreaHeader";
 import AcceptanceCountdown from "../../src/components/AcceptanceCountdown";
-import { getAcceptanceDeadlineMs } from "../../src/utils/orderAcceptance";
+import {
+  getAcceptanceDeadlineMs,
+  effectiveOrderStatus,
+  toMillis,
+} from "../../src/utils/orderAcceptance";
 
 const STATUS_META: Record<string, { label: string; color: string; bg: string; border: string; emoji: string }> = {
   [OrderStatus.PENDING]:          { label: "New Order",        color: "#D97706", bg: "#FFFBEB", border: "#FDE68A", emoji: "🔔" },
@@ -46,8 +50,10 @@ const NEXT_LABEL: Partial<Record<OrderStatus, string>> = {
   [OrderStatus.OUT_FOR_DELIVERY]: "✅ Mark Delivered",
 };
 
-function formatDateTime(date: Date | string): string {
-  const d = new Date(date);
+function formatDateTime(date: unknown): string {
+  const ms = toMillis(date);
+  if (ms == null) return "";
+  const d = new Date(ms);
   return (
     d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) +
     " at " +
@@ -57,7 +63,8 @@ function formatDateTime(date: Date | string): string {
 
 function buildInvoiceText(order: Order): string {
   const id = `#${order.id.slice(0, 8).toUpperCase()}`;
-  const date = new Date(order.createdAt).toLocaleDateString("en-IN", {
+  const createdMs = toMillis(order.createdAt as unknown);
+  const date = (createdMs != null ? new Date(createdMs) : new Date()).toLocaleDateString("en-IN", {
     day: "numeric", month: "short", year: "numeric",
   });
   const meta = STATUS_META[order.status];
@@ -114,6 +121,15 @@ export default function BusinessOwnerOrderDetail() {
 
   const order = orders.find((o) => o.id === orderId);
 
+  // Re-tick while pending so the header/banner flip to rejected the instant the
+  // 60s window lapses, independent of the backend write.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (order?.status !== OrderStatus.PENDING) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [order?.status]);
+
   const handleAdvance = async () => {
     if (!order) return;
     const next = NEXT_STATUS[order.status];
@@ -169,14 +185,15 @@ export default function BusinessOwnerOrderDetail() {
     );
   }
 
-  const meta = STATUS_META[order.status];
+  const displayStatus = effectiveOrderStatus(order, now);
+  const meta = STATUS_META[displayStatus];
   const addr = order.deliveryAddress as any;
   const addressLine = [addr?.street, addr?.landmark].filter(Boolean).join(", ");
   const addressCity = [addr?.city, addr?.state, addr?.pinCode].filter(Boolean).join(", ");
-  const canAdvance = !!NEXT_STATUS[order.status];
+  const canAdvance = !!NEXT_STATUS[displayStatus];
   const isPending = order.status === OrderStatus.PENDING;
   const deadlineMs = isPending ? getAcceptanceDeadlineMs(order) : null;
-  const windowExpired = isPending && ((deadlineMs != null && Date.now() >= deadlineMs) || detailExpired);
+  const windowExpired = isPending && ((deadlineMs != null && now >= deadlineMs) || detailExpired);
 
   return (
     <SafeAreaScreen backgroundColor="#F8FAFC">
@@ -331,11 +348,14 @@ export default function BusinessOwnerOrderDetail() {
           </View>
         ) : null}
 
-        {/* ── Rejection ────────────────────────────────────────────── */}
-        {order.status === OrderStatus.REJECTED && (order as any).rejectionReason ? (
+        {/* ── Rejection (incl. client-side auto-reject) ────────────── */}
+        {displayStatus === OrderStatus.REJECTED ? (
           <View style={[styles.section, styles.rejectionSection]}>
             <Text style={styles.rejectionTitle}>🚫 Rejection Reason</Text>
-            <Text style={styles.rejectionText}>{(order as any).rejectionReason}</Text>
+            <Text style={styles.rejectionText}>
+              {(order as any).rejectionReason ??
+                "Store didn't respond within the 60-second window"}
+            </Text>
           </View>
         ) : null}
       </ScrollView>

@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppSelector } from "../hooks/useRedux";
 import { OrderStatus } from "../types";
+import { effectiveOrderStatus } from "../utils/orderAcceptance";
 
 interface PendingOrderBannerProps {
   visible?: boolean;
@@ -15,7 +17,19 @@ export default function PendingOrderBanner({ visible = true }: PendingOrderBanne
   const orders = useAppSelector((state) => state.businessOwner.orders);
   const isLoading = useAppSelector((state) => state.businessOwner.isLoading);
 
-  const pendingCount = orders.filter((o) => o.status === OrderStatus.PENDING).length;
+  const hasPending = orders.some((o) => o.status === OrderStatus.PENDING);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!hasPending) return;
+    const timer = setInterval(() => setNow(Date.now()), 2000);
+    return () => clearInterval(timer);
+  }, [hasPending]);
+
+  // Count only orders still genuinely awaiting acceptance — a pending order past
+  // its 60s window is effectively rejected and must not inflate the banner.
+  const pendingCount = orders.filter(
+    (o) => effectiveOrderStatus(o, now) === OrderStatus.PENDING
+  ).length;
 
   if (!visible || pendingCount === 0 || isLoading) return null;
 
