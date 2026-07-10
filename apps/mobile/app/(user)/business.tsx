@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,266 +6,62 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
-  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useToast } from "react-native-toast-notifications";
-import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
-import { useFeatureFlags } from "../../src/hooks/useFeatureFlags";
-import { NativeAdCard } from "../../src/components/NativeAdCard";
-import { MenuSkeleton } from "../../src/components/Skeleton";
-import { PressableScale } from "../../src/components/PressableScale";
-import { addItem, clearCart, updateQuantity } from "../../src/store/slices/cartSlice";
-import { patchBusiness } from "../../src/store/slices/userAppSlice";
-import { userAppService } from "../../src/services/userAppService";
-import { Business, Product, ProductAttribute } from "../../src/types";
-import { unitStepLabel, displayQuantity, maxCartSteps } from "../../src/utils/helpers";
-import { useUserApp } from "../../src/hooks/useUserApp";
-import { useSocketEvent } from "../../src/hooks/useSocket";
-import { ORDER_FEES } from "../../src/constants";
-
-const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
-
-function getBusinessOrderStatus(business: Business): "open" | "paused" | "closed" {
-  if (business.status !== "active") return "closed";
-  let withinHours = true;
-  if (business.operatingHours) {
-    const now = new Date();
-    const dayKey = DAYS[now.getDay()];
-    const hours = business.operatingHours[dayKey];
-    if (!hours || hours.isClosed) {
-      withinHours = false;
-    } else {
-      const pad = (n: number) => n.toString().padStart(2, "0");
-      const current = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-      withinHours = current >= hours.open && current < hours.close;
-    }
-  }
-  if (!withinHours) return "closed";
-  if (business.isTakingOrders === false) return "paused";
-  return "open";
-}
-
-function getFirstImageUrl(images?: string[]) {
-  return images?.find((url) => typeof url === "string" && url.trim().length > 0) ?? null;
-}
-
-type DietFilter = "all" | "veg" | "nonveg" | "bestseller";
-
-type MenuSection = { title: string; data: Product[] };
-
-const BESTSELLER_RE = /bestseller|recommended|popular/i;
-
-function isBestsellerProduct(product: Product) {
-  return (product.tags ?? []).some((tag) => BESTSELLER_RE.test(tag));
-}
-
-function groupAttributes(attributes?: ProductAttribute[]) {
-  const map = new Map<string, string[]>();
-  (attributes ?? []).forEach((attr) => {
-    const values = map.get(attr.name) ?? [];
-    if (!values.includes(attr.value)) values.push(attr.value);
-    map.set(attr.name, values);
-  });
-  return Array.from(map.entries()).map(([name, values]) => ({ name, values }));
-}
+import { NativeAdCard } from "@components/NativeAdCard";
+import { MenuSkeleton } from "@components/Skeleton";
+import { PressableScale } from "@components/PressableScale";
+import { Product } from "@/types";
+import { useBusinessDetail, DietFilter } from "@hooks/useBusinessDetail";
+import content from "@/content/business.json";
 
 export default function BusinessDetailScreen() {
-  const toast = useToast();
-  const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
-  const { id: businessId, highlightProductId } = useLocalSearchParams<{
-    id: string;
-    highlightProductId?: string;
-  }>();
-  const listRef = useRef<SectionList<Product, MenuSection>>(null);
-
-  const cartItems = useAppSelector((state) => state.cart.items);
-  const cartBusinessId = useAppSelector((state) => state.cart.businessId);
-
-  const { businesses } = useUserApp();
-  const { isNativeListingEnabled } = useFeatureFlags();
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [dietFilter, setDietFilter] = useState<DietFilter>("all");
-  const [highlightId, setHighlightId] = useState<string | null>(highlightProductId ?? null);
-  const [customizeProduct, setCustomizeProduct] = useState<Product | null>(null);
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
-  const [customizeQty, setCustomizeQty] = useState(1);
-
-  // Derive orderable status from business state
-  const bizOrderStatus = business ? getBusinessOrderStatus(business) : "open";
-  const isOrderable = bizOrderStatus === "open";
-
-  // Real-time: reflect business pause/resume instantly while the resident
-  // is browsing this shop. Filtered by businessId so events from other
-  // businesses are ignored without any Redux overhead.
-  useSocketEvent<{ businessId: string; isTakingOrders?: boolean; status?: string }>(
-    "business:status",
-    (data) => {
-      if (data.businessId !== businessId) return;
-      dispatch(patchBusiness({ id: data.businessId, ...data }));
-      setBusiness((prev) => (prev ? { ...prev, ...data } : prev));
-    }
-  );
-
-  const minOrder =
-    business?.minimumOrderAmount && business.minimumOrderAmount > 0
-      ? business.minimumOrderAmount
-      : ORDER_FEES.MINIMUM_ORDER;
-
-  const bizCartItems = useMemo(
-    () => cartItems.filter((i) => i.businessId === businessId),
-    [cartItems, businessId]
-  );
-  const bizCartCount = bizCartItems.reduce((acc, i) => acc + i.quantity, 0);
-  const bizSubtotal = bizCartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
-
-  const hasVeg = useMemo(() => products.some((p) => p.isVeg === true), [products]);
-  const hasNonVeg = useMemo(() => products.some((p) => p.isVeg === false), [products]);
-  const hasBestseller = useMemo(() => products.some(isBestsellerProduct), [products]);
-
-  const filteredProducts = useMemo(() => {
-    if (dietFilter === "veg") return products.filter((p) => p.isVeg === true);
-    if (dietFilter === "nonveg") return products.filter((p) => p.isVeg === false);
-    if (dietFilter === "bestseller") return products.filter(isBestsellerProduct);
-    return products;
-  }, [products, dietFilter]);
-
-  const sections = useMemo<MenuSection[]>(() => {
-    const map = new Map<string, Product[]>();
-    filteredProducts.forEach((p) => {
-      const key =
-        (p.menuSection && p.menuSection.trim()) ||
-        (p.category && p.category.trim()) ||
-        "Menu";
-      const arr = map.get(key) ?? [];
-      arr.push(p);
-      map.set(key, arr);
-    });
-    return Array.from(map.entries()).map(([title, data]) => ({ title, data }));
-  }, [filteredProducts]);
-
-  useEffect(() => {
-    setHighlightId(highlightProductId ?? null);
-  }, [highlightProductId]);
-
-  useEffect(() => {
-    if (!highlightId || sections.length === 0) return;
-    let sectionIndex = -1;
-    let itemIndex = -1;
-    for (let s = 0; s < sections.length; s += 1) {
-      const idx = sections[s].data.findIndex((p) => p.id === highlightId);
-      if (idx >= 0) {
-        sectionIndex = s;
-        itemIndex = idx;
-        break;
-      }
-    }
-    if (sectionIndex < 0) return;
-    const scrollTimer = setTimeout(() => {
-      listRef.current?.scrollToLocation({
-        sectionIndex,
-        itemIndex,
-        viewPosition: 0.35,
-        animated: true,
-      });
-    }, 350);
-    const clearTimer = setTimeout(() => setHighlightId(null), 3200);
-    return () => {
-      clearTimeout(scrollTimer);
-      clearTimeout(clearTimer);
-    };
-  }, [highlightId, sections]);
-
-  useEffect(() => {
-    if (!businessId) return;
-
-    // Try to find business from existing state first
-    const localBiz = businesses.find((b) => b.id === businessId);
-    if (localBiz) setBusiness(localBiz);
-
-    // Fetch products for this business
-    setIsLoading(true);
-    setError(null);
-    userAppService
-      .getProductsByBusiness(businessId)
-      .then((data) => {
-        setProducts(data);
-      })
-      .catch(() => {
-        setError("Could not load products. Please try again.");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [businessId]);
-
-  const openCustomize = (product: Product) => {
-    const groups = groupAttributes(product.attributes);
-    const initial: Record<string, string> = {};
-    groups.forEach((group) => {
-      initial[group.name] = group.values[0];
-    });
-    setSelectedOptions(initial);
-    setCustomizeQty(1);
-    setCustomizeProduct(product);
-  };
-
-  const commitCustomize = () => {
-    const product = customizeProduct;
-    if (!product) return;
-    const imageUrl = getFirstImageUrl(product.imageUrls);
-    const maxSteps = maxCartSteps(product.stock, product.unit, product.unitStep);
-    const selectedAttributes = Object.entries(selectedOptions).map(([name, value]) => ({
-      name,
-      value,
-    }));
-    const run = () => {
-      dispatch(
-        addItem({
-          productId: product.id,
-          productName: product.name,
-          productImage: imageUrl,
-          businessId: product.businessId,
-          businessName: business?.name ?? "Local Store",
-          price: product.price,
-          quantity: customizeQty,
-          maxQuantity: maxSteps,
-          unit: product.unit,
-          unitStep: product.unitStep,
-          selectedAttributes: selectedAttributes.length ? selectedAttributes : undefined,
-        })
-      );
-      toast.show(`${product.name} added`, { type: "success" });
-      setCustomizeProduct(null);
-    };
-    if (cartBusinessId && cartBusinessId !== product.businessId) {
-      Alert.alert(
-        "Replace cart items?",
-        "Your cart has items from another shop. Continue to clear cart and add this item?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Yes, replace",
-            style: "destructive",
-            onPress: () => {
-              dispatch(clearCart());
-              run();
-            },
-          },
-        ]
-      );
-      return;
-    }
-    run();
-  };
+  const {
+    listRef,
+    cartItems,
+    business,
+    products,
+    isLoading,
+    error,
+    dietFilter,
+    setDietFilter,
+    highlightId,
+    customizeProduct,
+    setCustomizeProduct,
+    selectedOptions,
+    setSelectedOptions,
+    customizeQty,
+    setCustomizeQty,
+    bizOrderStatus,
+    isOrderable,
+    minOrder,
+    bizCartCount,
+    bizSubtotal,
+    hasVeg,
+    hasNonVeg,
+    hasBestseller,
+    sections,
+    isNativeListingEnabled,
+    openCustomize,
+    commitCustomize,
+    handleAddPress,
+    decreaseQty,
+    increaseQty,
+    loadProducts,
+    goBack,
+    goToCart,
+    goToProduct,
+    displayQuantity,
+    unitStepLabel,
+    maxCartSteps,
+    isBestsellerProduct,
+    groupAttributes,
+    getFirstImageUrl,
+  } = useBusinessDetail();
 
   const renderMenuItem = ({ item: product }: { item: Product }) => {
     const imageUrl = getFirstImageUrl(product.imageUrls);
@@ -277,56 +72,11 @@ export default function BusinessDetailScreen() {
     const bestseller = isBestsellerProduct(product);
     const highlighted = product.id === highlightId;
 
-    function addProductToCart() {
-      dispatch(
-        addItem({
-          productId: product.id,
-          productName: product.name,
-          productImage: imageUrl,
-          businessId: product.businessId,
-          businessName: business?.name ?? "Local Store",
-          price: product.price,
-          quantity: 1,
-          maxQuantity: maxSteps,
-          unit: product.unit,
-          unitStep: product.unitStep,
-        })
-      );
-      toast.show(`${product.name} added`, { type: "success" });
-    }
-
-    function handleAddPress() {
-      if (cartBusinessId && cartBusinessId !== product.businessId) {
-        Alert.alert(
-          "Replace cart items?",
-          "Your cart has items from another shop. Continue to clear cart and add this item?",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Yes, replace",
-              style: "destructive",
-              onPress: () => {
-                dispatch(clearCart());
-                addProductToCart();
-              },
-            },
-          ]
-        );
-        return;
-      }
-      addProductToCart();
-    }
-
     return (
       <TouchableOpacity
         style={[styles.menuItem, highlighted ? styles.menuItemHighlighted : null]}
         activeOpacity={0.85}
-        onPress={() =>
-          router.push({
-            pathname: "/(user)/product",
-            params: { id: product.id, businessId: product.businessId },
-          })
-        }
+        onPress={() => goToProduct(product)}
       >
         <View style={styles.menuItemLeft}>
           <View style={styles.menuItemTagRow}>
@@ -347,7 +97,7 @@ export default function BusinessDetailScreen() {
             ) : null}
             {bestseller ? (
               <View style={styles.bestsellerPill}>
-                <Text style={styles.bestsellerText}>★ Bestseller</Text>
+                <Text style={styles.bestsellerText}>{content.bestseller}</Text>
               </View>
             ) : null}
           </View>
@@ -358,13 +108,13 @@ export default function BusinessDetailScreen() {
 
           <View style={styles.menuItemPriceRow}>
             <Text style={styles.menuItemPrice}>
-              Rs {product.price}{uLabel ? `/${uLabel}` : ""}
+              {content.currency} {product.price}{uLabel ? `/${uLabel}` : ""}
             </Text>
             {product.originalPrice && product.originalPrice > product.price ? (
-              <Text style={styles.menuItemOriginalPrice}>Rs {product.originalPrice}</Text>
+              <Text style={styles.menuItemOriginalPrice}>{content.currency} {product.originalPrice}</Text>
             ) : null}
             {discount > 0 ? (
-              <Text style={styles.menuItemDiscount}>{discount}% OFF</Text>
+              <Text style={styles.menuItemDiscount}>{discount}{content.discountSuffix}</Text>
             ) : null}
           </View>
 
@@ -381,12 +131,12 @@ export default function BusinessDetailScreen() {
               <Image source={{ uri: imageUrl }} style={styles.menuItemImage} contentFit="cover" />
             ) : (
               <View style={styles.menuItemImageFallback}>
-                <Text style={styles.menuItemFallbackEmoji}>🛍️</Text>
+                <Text style={styles.menuItemFallbackEmoji}>{content.states.fallbackEmoji}</Text>
               </View>
             )}
             {product.stock <= 0 ? (
               <View style={styles.menuItemOosOverlay}>
-                <Text style={styles.menuItemOosText}>Out of Stock</Text>
+                <Text style={styles.menuItemOosText}>{content.outOfStock}</Text>
               </View>
             ) : null}
           </View>
@@ -402,11 +152,11 @@ export default function BusinessDetailScreen() {
                   if (product.attributes && product.attributes.length > 0) {
                     openCustomize(product);
                   } else {
-                    handleAddPress();
+                    handleAddPress(product);
                   }
                 }}
               >
-                <Text style={styles.menuAddBtnText}>ADD</Text>
+                <Text style={styles.menuAddBtnText}>{content.addBtn}</Text>
                 <Text style={styles.menuAddPlus}>+</Text>
               </PressableScale>
             ) : (
@@ -417,7 +167,7 @@ export default function BusinessDetailScreen() {
                   accessibilityLabel={`Decrease quantity of ${product.name}`}
                   onPress={(e) => {
                     e.stopPropagation();
-                    dispatch(updateQuantity({ productId: product.id, quantity: qty - 1 }));
+                    decreaseQty(product, qty);
                   }}
                 >
                   <Text style={styles.menuQtyBtnText}>−</Text>
@@ -434,16 +184,7 @@ export default function BusinessDetailScreen() {
                   accessibilityLabel={`Increase quantity of ${product.name}`}
                   onPress={(e) => {
                     e.stopPropagation();
-                    if (qty >= maxSteps) {
-                      toast.show(
-                        product.unit && product.unit !== "piece"
-                          ? `Only ${product.stock}${product.unit} available`
-                          : `Only ${product.stock} available`,
-                        { type: "warning" }
-                      );
-                      return;
-                    }
-                    dispatch(updateQuantity({ productId: product.id, quantity: qty + 1 }));
+                    increaseQty(product, qty, maxSteps);
                   }}
                 >
                   <Text style={styles.menuQtyBtnText}>+</Text>
@@ -464,26 +205,14 @@ export default function BusinessDetailScreen() {
         style={[styles.header, { paddingTop: insets.top + 12 }]}
       >
         <View style={styles.headerRow}>
-          <TouchableOpacity
-            onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace("/(user)/(tabs)/businesses");
-              }
-            }}
-            style={styles.backBtn}
-          >
+          <TouchableOpacity onPress={goBack} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <Text style={styles.headerTitle} numberOfLines={1}>
-            {business?.name ?? "Shop"}
+            {business?.name ?? content.defaultBusinessName}
           </Text>
           {bizCartCount > 0 ? (
-            <TouchableOpacity
-              style={styles.cartBadgeBtn}
-              onPress={() => router.push("/(user)/cart")}
-            >
+            <TouchableOpacity style={styles.cartBadgeBtn} onPress={goToCart}>
               <Text style={styles.cartBadgeText}>{bizCartCount}</Text>
             </TouchableOpacity>
           ) : (
@@ -528,15 +257,11 @@ export default function BusinessDetailScreen() {
       {/* Paused / closed notice banner */}
       {bizOrderStatus === "paused" ? (
         <View style={styles.orderNoticeBanner}>
-          <Text style={styles.orderNoticeText}>
-            ⏸ This shop has temporarily paused orders
-          </Text>
+          <Text style={styles.orderNoticeText}>{content.notices.paused}</Text>
         </View>
       ) : bizOrderStatus === "closed" ? (
         <View style={[styles.orderNoticeBanner, styles.orderNoticeClosedBanner]}>
-          <Text style={styles.orderNoticeText}>
-            🕐 This shop is currently closed
-          </Text>
+          <Text style={styles.orderNoticeText}>{content.notices.closed}</Text>
         </View>
       ) : null}
 
@@ -584,29 +309,15 @@ export default function BusinessDetailScreen() {
       ) : error ? (
         <View style={styles.centeredState}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryBtn}
-            onPress={() => {
-              if (!businessId) return;
-              setIsLoading(true);
-              setError(null);
-              userAppService
-                .getProductsByBusiness(businessId)
-                .then(setProducts)
-                .catch(() => setError("Could not load products. Please try again."))
-                .finally(() => setIsLoading(false));
-            }}
-          >
-            <Text style={styles.retryBtnText}>Retry</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={loadProducts}>
+            <Text style={styles.retryBtnText}>{content.states.retry}</Text>
           </TouchableOpacity>
         </View>
       ) : products.length === 0 ? (
         <View style={styles.centeredState}>
-          <Text style={styles.emptyEmoji}>🛍️</Text>
-          <Text style={styles.emptyTitle}>No products yet</Text>
-          <Text style={styles.emptySubtitle}>
-            This shop hasn't added products yet. Check back soon!
-          </Text>
+          <Text style={styles.emptyEmoji}>{content.states.noProductsEmoji}</Text>
+          <Text style={styles.emptyTitle}>{content.states.noProductsTitle}</Text>
+          <Text style={styles.emptySubtitle}>{content.states.noProductsSubtitle}</Text>
         </View>
       ) : (
         <SectionList
@@ -629,9 +340,9 @@ export default function BusinessDetailScreen() {
           }}
           ListEmptyComponent={
             <View style={styles.centeredState}>
-              <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={styles.emptyTitle}>No items match</Text>
-              <Text style={styles.emptySubtitle}>Try a different filter.</Text>
+              <Text style={styles.emptyEmoji}>{content.states.noMatchEmoji}</Text>
+              <Text style={styles.emptyTitle}>{content.states.noMatchTitle}</Text>
+              <Text style={styles.emptySubtitle}>{content.states.noMatchSubtitle}</Text>
             </View>
           }
           ListFooterComponent={
@@ -648,26 +359,26 @@ export default function BusinessDetailScreen() {
           {bizSubtotal < minOrder ? (
             <View style={styles.cartBarNotice}>
               <Text style={styles.cartBarNoticeText}>
-                Add Rs {minOrder - bizSubtotal} more to reach the Rs {minOrder} minimum
+                {content.cartBar.addMorePrefix}{minOrder - bizSubtotal}{content.cartBar.addMoreMiddle}{minOrder}{content.cartBar.addMoreSuffix}
               </Text>
             </View>
           ) : null}
           <View style={styles.cartBarRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.cartBarCount}>
-                {bizCartCount} item{bizCartCount !== 1 ? "s" : ""} · Rs {bizSubtotal}
+                {bizCartCount} {bizCartCount !== 1 ? content.cartBar.itemPlural : content.cartBar.itemSingular} · {content.currency} {bizSubtotal}
               </Text>
               <Text style={styles.cartBarSub} numberOfLines={1}>
-                {business?.name ?? "Your store"}
+                {business?.name ?? content.defaultStoreName}
               </Text>
             </View>
             <PressableScale
               style={styles.cartBarBtn}
               accessibilityRole="button"
               accessibilityLabel={`View cart, ${bizCartCount} item${bizCartCount !== 1 ? "s" : ""}, total Rs ${bizSubtotal}`}
-              onPress={() => router.push("/(user)/cart")}
+              onPress={goToCart}
             >
-              <Text style={styles.cartBarBtnText}>View Cart</Text>
+              <Text style={styles.cartBarBtnText}>{content.cartBar.viewCart}</Text>
               <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
             </PressableScale>
           </View>
@@ -768,7 +479,7 @@ export default function BusinessDetailScreen() {
                     onPress={commitCustomize}
                   >
                     <Text style={styles.modalAddBtnText}>
-                      Add Item · Rs {customizeProduct.price * customizeQty}
+                      {content.customize.addItemPrefix}{customizeProduct.price * customizeQty}
                     </Text>
                   </PressableScale>
                 </View>

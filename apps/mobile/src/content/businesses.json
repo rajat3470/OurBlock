@@ -1,0 +1,21 @@
+{
+  "header": {
+    "title": "Shops",
+    "subtitleSuffix": "stores in your society"
+  },
+  "searchPlaceholder": "Search stores or items...",
+  "status": {
+    "open": "Open",
+    "paused": "Paused",
+    "closed": "Closed"
+  },
+  "card": {
+    "itemsLabel": "Items:",
+    "moreSuffix": "more",
+    "deliveryPrefix": "~"
+  },
+  "empty": {
+    "title": "No shops found",
+    "subtitle": "Try a different search term."
+  }
+}

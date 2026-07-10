@@ -1,0 +1,36 @@
+{
+  "account": {
+    "label": "ACCOUNT",
+    "manageAddresses": "Manage Addresses",
+    "phoneVerified": "Phone Number Verified",
+    "verifiedBadge": "Verified",
+    "verifyPhone": "Verify Phone Number"
+  },
+  "signOut": "Sign Out",
+  "logout": {
+    "title": "Sign Out",
+    "message": "Are you sure you want to sign out?",
+    "cancel": "Cancel",
+    "confirm": "Sign Out"
+  },
+  "toasts": {
+    "flagsRefreshed": "Feature flags refreshed from Firebase.",
+    "flagsRefreshError": "Failed to refresh feature flags",
+    "photoPermission": "Please allow photo library access.",
+    "photoReadError": "Could not read selected image.",
+    "photoUpdated": "Profile photo updated.",
+    "photoUploadError": "Failed to upload profile image"
+  },
+  "dev": {
+    "menuLabel": "Developer Feature Flags",
+    "title": "Feature Flags (Dev)",
+    "fetchStatusLabel": "Fetch status:",
+    "lastFetchLabel": "Last fetch:",
+    "never": "never",
+    "refresh": "Refresh From Firebase",
+    "minRsLabel": "ads.rewarded.minRs:",
+    "maxRsLabel": "ads.rewarded.maxRs:",
+    "densityLabel": "ads.density.everyNthCard:",
+    "maxClaimsLabel": "ads.rewarded.maxClaimsPerDay:"
+  }
+}

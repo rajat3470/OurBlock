@@ -1,0 +1,60 @@
+{
+  "currency": "₹",
+  "invoice": {
+    "title": "🧾 ORDER INVOICE — OurBlock",
+    "divider": "─",
+    "order": "Order:",
+    "date": "Date:",
+    "shop": "Shop:",
+    "items": "ITEMS:",
+    "subtotal": "Subtotal:",
+    "platformFee": "Platform Fee:",
+    "discount": "Discount:",
+    "tax": "Tax:",
+    "total": "TOTAL:",
+    "payment": "Payment:",
+    "status": "Status:",
+    "deliveryAddress": "Delivery Address:",
+    "footer": "Powered by OurBlock 🏘️"
+  },
+  "loading": "",
+  "notFound": {
+    "title": "Order not found.",
+    "goBack": "Go Back"
+  },
+  "statusLabels": {
+    "pending": "Waiting for Acceptance",
+    "confirmed": "Accepted",
+    "preparing": "Processing",
+    "ready": "Ready to Collect",
+    "outForDelivery": "On the Way",
+    "delivered": "Completed",
+    "cancelled": "Cancelled",
+    "rejected": "Rejected"
+  },
+  "paymentStatus": {
+    "cod": "Cash on Delivery",
+    "completed": "Paid",
+    "pending": "Pending"
+  },
+  "sections": {
+    "shop": "Shop",
+    "items": "Items",
+    "itemsCountSuffix": ")",
+    "pricing": "Pricing",
+    "subtotal": "Subtotal",
+    "platformFee": "Platform Fee",
+    "discount": "Discount",
+    "tax": "Tax",
+    "total": "Total",
+    "deliveryAddress": "Delivery Address",
+    "orderNotes": "Order Notes",
+    "timeline": "Order Timeline",
+    "rejectionTitle": "🚫 Rejection Reason"
+  },
+  "awaiting": "Waiting for the store to confirm your order",
+  "share": "Share Invoice",
+  "labels": {
+    "default": "Default"
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "headerTitle": "Checkout",
+  "currency": "Rs",
+  "defaultOrderTitle": "Your Order",
+  "sections": {
+    "deliveryAddress": "Delivery Address",
+    "addNew": "+ Add New",
+    "paymentMethod": "💳 Payment Method",
+    "promoCode": "🎟️ Promo Code",
+    "billDetails": "Bill Details"
+  },
+  "payment": {
+    "cash": "Cash on Delivery",
+    "upi": "UPI",
+    "comingSoon": "Coming Soon"
+  },
+  "noAddress": {
+    "text": "No saved addresses found.",
+    "add": "Add Address"
+  },
+  "defaultBadge": "Default",
+  "coupon": {
+    "placeholder": "Enter promo code",
+    "apply": "Apply",
+    "remove": "Remove",
+    "savePrefix": "You save Rs",
+    "saveSuffix": "!"
+  },
+  "bill": {
+    "subtotalPrefix": "Subtotal (",
+    "subtotalSuffix": " items)",
+    "platformFee": "Platform Fee",
+    "deliveryFee": "Delivery Fee",
+    "free": "FREE",
+    "tax": "GST / Tax",
+    "none": "None",
+    "promoPrefix": "Promo (",
+    "promoSuffix": ")",
+    "total": "Total Amount"
+  },
+  "cta": {
+    "total": "Total",
+    "savedPrefix": " (Saved Rs ",
+    "savedSuffix": ")",
+    "placeOrder": "Place Order"
+  },
+  "toasts": {
+    "loadAddressFailed": "Failed to load addresses",
+    "enterCoupon": "Enter a coupon code",
+    "couponAppliedPrefix": "Coupon applied! You save Rs",
+    "invalidCoupon": "Invalid coupon",
+    "selectAddress": "Please select a delivery address",
+    "cartEmpty": "Cart is empty",
+    "minOrderPrefix": "Minimum order is Rs",
+    "addressNotFound": "Selected address not found",
+    "orderPlaced": "🎉 Order placed successfully!",
+    "orderFailed": "Failed to place order"
+  },
+  "confirm": {
+    "title": "Place Order",
+    "totalPrefix": "Total: Rs",
+    "paymentPrefix": "Payment:",
+    "question": "Confirm order?",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  }
+}

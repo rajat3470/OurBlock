@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,224 +5,36 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useUserApp } from "../../src/hooks/useUserApp";
-import { userAppService } from "../../src/services/userAppService";
-import { Order, OrderStatus } from "../../src/types";
-import { useSocketEvent } from "../../src/hooks/useSocket";
-import { socketService } from "../../src/services/socketService";
-import SafeAreaScreen from "../../src/components/SafeAreaScreen";
-import SafeAreaHeader from "../../src/components/SafeAreaHeader";
-import AcceptanceCountdown from "../../src/components/AcceptanceCountdown";
-import {
-  getAcceptanceDeadlineMs,
-  effectiveOrderStatus,
-  ORDER_AUTO_REJECT_REASON,
-  toMillis,
-} from "../../src/utils/orderAcceptance";
-
-const STATUS_LABEL: Record<string, string> = {
-  pending:        "Waiting for Acceptance",
-  confirmed:      "Accepted",
-  preparing:      "Processing",
-  ready:          "Ready to Collect",
-  outForDelivery: "On the Way",
-  delivered:      "Completed",
-  cancelled:      "Cancelled",
-  rejected:       "Rejected",
-};
-
-const STATUS_COLOR: Record<string, { bg: string; border: string; text: string; emoji: string }> = {
-  pending:         { bg: "#FFF7ED", border: "#FED7AA", text: "#9A3412",  emoji: "⏳" },
-  confirmed:       { bg: "#ECFDF5", border: "#A7F3D0", text: "#065F46",  emoji: "✅" },
-  preparing:       { bg: "#EFF6FF", border: "#BFDBFE", text: "#1E40AF",  emoji: "⚙️" },
-  ready:           { bg: "#F0FDF4", border: "#86EFAC", text: "#15803D",  emoji: "📦" },
-  outForDelivery:  { bg: "#FDF4FF", border: "#E9D5FF", text: "#6B21A8",  emoji: "🚚" },
-  delivered:       { bg: "#ECFDF5", border: "#6EE7B7", text: "#065F46",  emoji: "🎉" },
-  cancelled:       { bg: "#FEF2F2", border: "#FECACA", text: "#991B1B",  emoji: "✗"  },
-  rejected:        { bg: "#FEF2F2", border: "#FECACA", text: "#991B1B",  emoji: "🚫" },
-};
-
-function normalizeOrderPayload(payload: any): Order | null {
-  const raw = payload?.order ?? payload?.data ?? payload;
-  if (!raw || typeof raw !== "object") return null;
-  if (!raw.id && raw._id) {
-    return { ...raw, id: raw._id } as Order;
-  }
-  return raw as Order;
-}
-
-function formatDateTime(date: unknown): string {
-  const ms = toMillis(date);
-  if (ms == null) return "";
-  const d = new Date(ms);
-  return (
-    d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) +
-    " at " +
-    d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
-  );
-}
-
-function buildInvoiceText(order: Order): string {
-  const id = `#${(order.id ?? "").slice(0, 8).toUpperCase()}`;
-  const createdMs = toMillis(order.createdAt as unknown);
-  const date = (createdMs != null ? new Date(createdMs) : new Date()).toLocaleDateString("en-IN", {
-    day: "numeric", month: "short", year: "numeric",
-  });
-  const bizName = (order as any).businessName ?? "Shop";
-  const itemLines = (Array.isArray((order as any).items) ? (order as any).items : [])
-    .map((i: any) => `  • ${i.quantity}x ${i.productName ?? "Item"} — Rs ${i.lineTotal ?? i.price * i.quantity}`)
-    .join("\n");
-  const addr = order.deliveryAddress as any;
-  const addrParts = [addr?.street, addr?.landmark, addr?.city, addr?.state, addr?.pinCode].filter(Boolean);
-  const payLabel =
-    order.paymentStatus === "cod" ? "Cash on Delivery" :
-    order.paymentStatus === "completed" ? "Paid" : "Pending";
-
-  return [
-    "🧾 ORDER INVOICE — OurBlock",
-    "─".repeat(32),
-    `Order: ${id}`,
-    `Date:  ${date}`,
-    `Shop:  ${bizName}`,
-    "",
-    "ITEMS:",
-    itemLines,
-    "",
-    "─".repeat(32),
-    `Subtotal:     Rs ${order.subTotal}`,
-    `Platform Fee: Rs ${order.platformFee}`,
-    order.discountAmount ? `Discount:    -Rs ${order.discountAmount}` : null,
-    order.taxAmount ? `Tax:          Rs ${order.taxAmount}` : null,
-    `TOTAL:        Rs ${order.finalAmount}`,
-    "─".repeat(32),
-    "",
-    `Payment:  ${order.paymentMethod.toUpperCase()} · ${payLabel}`,
-    `Status:   ${STATUS_LABEL[order.status] ?? order.status}`,
-    "",
-    "Delivery Address:",
-    `  ${addrParts.join(", ")}`,
-    "",
-    "Powered by OurBlock 🏘️",
-  ]
-    .filter((l) => l !== null)
-    .join("\n");
-}
+import { OrderStatus } from "@/types";
+import SafeAreaScreen from "@components/SafeAreaScreen";
+import SafeAreaHeader from "@components/SafeAreaHeader";
+import AcceptanceCountdown from "@components/AcceptanceCountdown";
+import { useOrderDetail } from "@hooks/useOrderDetail";
+import content from "@/content/orderDetail.json";
 
 export default function UserOrderDetail() {
   const insets = useSafeAreaInsets();
-  const { orderId } = useLocalSearchParams<{ orderId: string }>();
-  const { orders } = useUserApp();
-  const [order, setOrder] = useState<Order | null>(
-    () => orders.find((o) => o.id === orderId) ?? null
-  );
-  const [fetching, setFetching] = useState(!order);
-  const [sharing, setSharing] = useState(false);
-
-  useEffect(() => {
-    if (!order && orderId) {
-      setFetching(true);
-      userAppService
-        .getOrder(orderId)
-        .then((data) => {
-          const normalized = normalizeOrderPayload(data);
-          if (normalized?.id) setOrder(normalized);
-        })
-        .catch(() => null)
-        .finally(() => setFetching(false));
-    }
-  }, [orderId]);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (!orderId) return;
-
-      const syncOrder = () => {
-        if (socketService.isConnected()) return;
-        userAppService
-          .getOrder(orderId)
-          .then((data) => {
-            const normalized = normalizeOrderPayload(data);
-            if (normalized?.id) setOrder(normalized);
-          })
-          .catch(() => null);
-      };
-
-      syncOrder();
-      const timer = setInterval(syncOrder, 3000);
-      return () => clearInterval(timer);
-    }, [orderId])
-  );
-
-  // Keep local state aligned when Redux orders are refreshed by another flow
-  // (e.g. pull-to-refresh, app resume, or background sync).
-  useEffect(() => {
-    if (!orderId) return;
-    const latest = orders.find((o) => o.id === orderId);
-    if (latest) {
-      setOrder(latest);
-    }
-  }, [orders, orderId]);
-
-  // Real-time: update this specific order instantly when the business owner
-  // changes its status. Filtered by ID so other orders don't cause re-renders.
-  useSocketEvent<any>("order:updated", (payload) => {
-    const updatedOrder = normalizeOrderPayload(payload);
-    if (!updatedOrder?.id) return;
-    if (updatedOrder.id === orderId) {
-      setOrder(updatedOrder);
-    }
-  });
-
-  const refetchOrder = useCallback(() => {
-    if (!orderId) return;
-    userAppService
-      .getOrder(orderId)
-      .then((data) => {
-        const normalized = normalizeOrderPayload(data);
-        if (normalized?.id) setOrder(normalized);
-      })
-      .catch(() => null);
-  }, [orderId]);
-
-  // While the order is still awaiting acceptance, poll regardless of socket
-  // state. The auto-rejection is a time-based, server-driven change with no
-  // realtime push, so this guarantees the customer sees the flip to rejected
-  // (the GET applies lazy expiration) within a few seconds of the deadline.
-  useEffect(() => {
-    if (!orderId || order?.status !== OrderStatus.PENDING) return;
-    const timer = setInterval(refetchOrder, 3000);
-    return () => clearInterval(timer);
-  }, [orderId, order?.status, refetchOrder]);
-
-  // Local ticker so the status flips to "Rejected" the instant the 60s window
-  // lapses on the client clock, even before the backend write to `rejected`
-  // materializes (or if the backend isn't deployed yet).
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (order?.status !== OrderStatus.PENDING) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [order?.status]);
-
-  const handleShare = async () => {
-    if (!order) return;
-    setSharing(true);
-    try {
-      await Share.share({
-        message: buildInvoiceText(order),
-        title: `Order #${(order.id ?? "").slice(0, 8).toUpperCase()} Invoice`,
-      });
-    } catch {
-      /* user cancelled share */
-    } finally {
-      setSharing(false);
-    }
-  };
+  const {
+    order,
+    fetching,
+    sharing,
+    displayStatus,
+    statusMeta,
+    orderItems,
+    paymentMethod,
+    awaitingDeadlineMs,
+    rejectionReason,
+    addressLine,
+    addressCity,
+    addr,
+    formatDateTime,
+    handleShare,
+    goBack,
+    refetchOrder,
+  } = useOrderDetail();
 
   if (fetching) {
     return (
@@ -235,47 +46,27 @@ export default function UserOrderDetail() {
     );
   }
 
-  if (!order) {
+  if (!order || !displayStatus || !statusMeta) {
     return (
       <SafeAreaScreen backgroundColor="#F8FAFC">
         <View style={styles.fullCenter}>
-          <Text style={styles.notFoundText}>Order not found.</Text>
-          <TouchableOpacity style={styles.goBackBtn} onPress={() => router.canGoBack() ? router.back() : router.replace("/(user)/(tabs)/orders")}>
-            <Text style={styles.goBackText}>Go Back</Text>
+          <Text style={styles.notFoundText}>{content.notFound.title}</Text>
+          <TouchableOpacity style={styles.goBackBtn} onPress={goBack}>
+            <Text style={styles.goBackText}>{content.notFound.goBack}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaScreen>
     );
   }
 
-  const displayStatus = effectiveOrderStatus(order, now);
-  const statusMeta = STATUS_COLOR[displayStatus] ?? STATUS_COLOR.pending;
-  const orderItems = Array.isArray((order as any).items) ? (order as any).items : [];
-  const paymentMethod = order.paymentMethod ?? "cash";
-  const awaitingDeadlineMs =
-    displayStatus === OrderStatus.PENDING ? getAcceptanceDeadlineMs(order) : null;
-  const rejectionReason =
-    displayStatus === OrderStatus.REJECTED
-      ? (order as any).rejectionReason ?? ORDER_AUTO_REJECT_REASON
-      : null;
-  const addr = order.deliveryAddress as any;
-  const addressLine = [addr?.street, addr?.landmark].filter(Boolean).join(", ");
-  const addressCity = [addr?.city, addr?.state, addr?.pinCode].filter(Boolean).join(", ");
-
   return (
     <View style={styles.screen}>
       <SafeAreaHeader
-        title={`Order #${(order.id ?? "").slice(0, 8).toUpperCase()}`}
+        title={`${content.invoice.order} #${(order.id ?? "").slice(0, 8).toUpperCase()}`}
         subtitle={formatDateTime(order.createdAt)}
         colors={["#0E9F6E", "#0891B2"] as const}
         showBackButton
-        onBackPress={() => {
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            router.replace("/(user)/(tabs)/orders");
-          }
-        }}
+        onBackPress={goBack}
       />
 
       <ScrollView
@@ -288,15 +79,15 @@ export default function UserOrderDetail() {
           <Text style={styles.statusEmoji}>{statusMeta.emoji}</Text>
           <View style={styles.statusInfo}>
             <Text style={[styles.statusLabel, { color: statusMeta.text }]}>
-              {STATUS_LABEL[displayStatus] ?? displayStatus}
+              {content.statusLabels[displayStatus] ?? displayStatus}
             </Text>
             <Text style={[styles.statusPayment, { color: statusMeta.text }]}>
               {paymentMethod.toUpperCase()} ·{" "}
               {order.paymentStatus === "cod"
-                ? "Cash on Delivery"
+                ? content.paymentStatus.cod
                 : order.paymentStatus === "completed"
-                ? "Paid"
-                : "Pending"}
+                ? content.paymentStatus.completed
+                : content.paymentStatus.pending}
             </Text>
           </View>
         </View>
@@ -304,7 +95,7 @@ export default function UserOrderDetail() {
         {/* ── Awaiting store confirmation countdown ────────────────── */}
         {displayStatus === OrderStatus.PENDING && awaitingDeadlineMs != null ? (
           <View style={styles.awaitingCard}>
-            <Text style={styles.awaitingText}>Waiting for the store to confirm your order</Text>
+            <Text style={styles.awaitingText}>{content.awaiting}</Text>
             <AcceptanceCountdown
               deadlineMs={awaitingDeadlineMs}
               onExpire={refetchOrder}
@@ -316,14 +107,14 @@ export default function UserOrderDetail() {
         {/* ── Shop ─────────────────────────────────────────────────── */}
         {(order as any).businessName ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Shop</Text>
+            <Text style={styles.sectionTitle}>{content.sections.shop}</Text>
             <Text style={styles.sectionValue}>{(order as any).businessName}</Text>
           </View>
         ) : null}
 
         {/* ── Items ───────────────────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Items ({orderItems.length})</Text>
+          <Text style={styles.sectionTitle}>{content.sections.items} ({orderItems.length}{content.sections.itemsCountSuffix}</Text>
           {orderItems.map((item: any, idx: number) => (
             <View key={idx} style={styles.itemRow}>
               <View style={styles.qtyBadge}>
@@ -333,7 +124,7 @@ export default function UserOrderDetail() {
                 {item.productName ?? `Item ${idx + 1}`}
               </Text>
               <Text style={styles.itemTotal}>
-                ₹{item.lineTotal ?? item.price * item.quantity}
+                {content.currency}{item.lineTotal ?? item.price * item.quantity}
               </Text>
             </View>
           ))}
@@ -341,36 +132,36 @@ export default function UserOrderDetail() {
 
         {/* ── Pricing ─────────────────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Pricing</Text>
+          <Text style={styles.sectionTitle}>{content.sections.pricing}</Text>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Subtotal</Text>
-            <Text style={styles.priceValue}>₹{order.subTotal}</Text>
+            <Text style={styles.priceLabel}>{content.sections.subtotal}</Text>
+            <Text style={styles.priceValue}>{content.currency}{order.subTotal}</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Platform Fee</Text>
-            <Text style={styles.priceValue}>₹{order.platformFee}</Text>
+            <Text style={styles.priceLabel}>{content.sections.platformFee}</Text>
+            <Text style={styles.priceValue}>{content.currency}{order.platformFee}</Text>
           </View>
           {order.discountAmount ? (
             <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Discount</Text>
-              <Text style={[styles.priceValue, { color: "#16A34A" }]}>−₹{order.discountAmount}</Text>
+              <Text style={styles.priceLabel}>{content.sections.discount}</Text>
+              <Text style={[styles.priceValue, { color: "#16A34A" }]}>−{content.currency}{order.discountAmount}</Text>
             </View>
           ) : null}
           {order.taxAmount ? (
             <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Tax</Text>
-              <Text style={styles.priceValue}>₹{order.taxAmount}</Text>
+              <Text style={styles.priceLabel}>{content.sections.tax}</Text>
+              <Text style={styles.priceValue}>{content.currency}{order.taxAmount}</Text>
             </View>
           ) : null}
           <View style={[styles.priceRow, styles.totalRow]}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>₹{order.finalAmount}</Text>
+            <Text style={styles.totalLabel}>{content.sections.total}</Text>
+            <Text style={styles.totalValue}>{content.currency}{order.finalAmount}</Text>
           </View>
         </View>
 
         {/* ── Delivery Address ─────────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Delivery Address</Text>
+          <Text style={styles.sectionTitle}>{content.sections.deliveryAddress}</Text>
           {addressLine ? <Text style={styles.sectionValue}>{addressLine}</Text> : null}
           {addressCity ? <Text style={styles.sectionSubValue}>{addressCity}</Text> : null}
           {addr?.type ? (
@@ -385,7 +176,7 @@ export default function UserOrderDetail() {
         {/* ── Notes ───────────────────────────────────────────────── */}
         {order.notes ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Order Notes</Text>
+            <Text style={styles.sectionTitle}>{content.sections.orderNotes}</Text>
             <Text style={styles.sectionValue}>{order.notes}</Text>
           </View>
         ) : null}
@@ -393,7 +184,7 @@ export default function UserOrderDetail() {
         {/* ── Tracking Timeline ───────────────────────────────────── */}
         {order.trackingUpdates && order.trackingUpdates.length > 0 ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Order Timeline</Text>
+            <Text style={styles.sectionTitle}>{content.sections.timeline}</Text>
             {[...order.trackingUpdates].reverse().map((update, idx) => (
               <View key={idx} style={styles.trackRow}>
                 <View style={styles.trackDotCol}>
@@ -402,7 +193,7 @@ export default function UserOrderDetail() {
                 </View>
                 <View style={styles.trackContent}>
                   <Text style={[styles.trackStatus, idx === 0 && { color: "#0E9F6E" }]}>
-                    {STATUS_LABEL[update.status] ?? update.status}
+                    {content.statusLabels[update.status] ?? update.status}
                   </Text>
                   <Text style={styles.trackTime}>
                     {new Date(update.timestamp).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
@@ -419,7 +210,7 @@ export default function UserOrderDetail() {
         {/* ── Rejection Reason (incl. client-side auto-reject) ─────── */}
         {rejectionReason ? (
           <View style={[styles.section, styles.rejectionSection]}>
-            <Text style={styles.rejectionTitle}>🚫 Rejection Reason</Text>
+            <Text style={styles.rejectionTitle}>{content.sections.rejectionTitle}</Text>
             <Text style={styles.rejectionText}>{rejectionReason}</Text>
           </View>
         ) : null}
@@ -438,7 +229,7 @@ export default function UserOrderDetail() {
           ) : (
             <>
               <Ionicons name="share-outline" size={18} color="#FFFFFF" />
-              <Text style={styles.shareBtnText}>Share Invoice</Text>
+              <Text style={styles.shareBtnText}>{content.share}</Text>
             </>
           )}
         </TouchableOpacity>

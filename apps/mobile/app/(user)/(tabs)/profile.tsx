@@ -1,11 +1,9 @@
-import { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Image,
   ActivityIndicator,
   Modal,
@@ -14,100 +12,33 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
-import { useToast } from "react-native-toast-notifications";
-import { authStateService } from "../../../src/services/authStateService";
-import { userAppService } from "../../../src/services/userAppService";
-import { useAppSelector, useAppDispatch } from "../../../src/hooks/useRedux";
-import { useAuth } from "../../../src/hooks/useAuth";
-import { setUser } from "../../../src/store/slices/authSlice";
-import { useFeatureFlags } from "../../../src/hooks/useFeatureFlags";
-import { featureFlagsService } from "../../../src/services/featureFlagsService";
-import {
-  setFeatureFlagsError,
-  setFlags,
-  setLocalOverride,
-  setRefreshing,
-} from "../../../src/store/slices/featureFlagsSlice";
-import type { FeatureFlags } from "../../../src/constants/featureFlags";
+import { useUserProfile } from "@hooks/useUserProfile";
+import type { FeatureFlags } from "@/constants/featureFlags";
+import content from "@/content/profile.json";
+
+const DEV_FLAGS: [string, keyof FeatureFlags][] = [
+  ["ads.enabled", "adsEnabled"],
+  ["ads.nativeFeed.enabled", "adsNativeFeedEnabled"],
+  ["ads.nativeListing.enabled", "adsNativeListingEnabled"],
+  ["ads.rewarded.enabled", "adsRewardedEnabled"],
+];
 
 export default function UserProfile() {
   const insets = useSafeAreaInsets();
-  const dispatch = useAppDispatch();
-  const toast = useToast();
-  const { user } = useAppSelector((state) => state.auth);
-  const featureFlags = useFeatureFlags();
-  const { logoutUser } = useAuth();
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [devDrawerVisible, setDevDrawerVisible] = useState(false);
-
-  const handleRefreshFeatureFlags = async () => {
-    dispatch(setRefreshing(true));
-    try {
-      const snapshot = await featureFlagsService.refresh();
-      dispatch(setFlags(snapshot));
-      dispatch(setFeatureFlagsError(null));
-      toast.show("Feature flags refreshed from Firebase.", { type: "success" });
-    } catch (error: any) {
-      dispatch(setFeatureFlagsError(error?.message || "Failed to refresh feature flags"));
-      toast.show(error?.message || "Failed to refresh feature flags", { type: "danger" });
-    } finally {
-      dispatch(setRefreshing(false));
-    }
-  };
-
-  const handlePickProfilePhoto = async () => {
-    if (!user?.id) return;
-    try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        toast.show("Please allow photo library access.", { type: "warning" });
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.5,
-        base64: true,
-      });
-      if (result.canceled || result.assets.length === 0) return;
-      setUploadingPhoto(true);
-      const selected = result.assets[0];
-      if (!selected.base64) {
-        toast.show("Could not read selected image.", { type: "danger" });
-        return;
-      }
-      const mimeType = selected.mimeType || "image/jpeg";
-      const imageUrl = `data:${mimeType};base64,${selected.base64}`;
-      const updatedUser = await userAppService.updateProfile({ profileImageUrl: imageUrl });
-      dispatch(setUser(updatedUser));
-      await authStateService.updateUser(updatedUser);
-      toast.show("Profile photo updated.", { type: "success" });
-    } catch (error: any) {
-      toast.show(error?.message || "Failed to upload profile image", { type: "danger" });
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
-
-  const handleLogout = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign Out",
-        style: "destructive",
-        onPress: () => {
-          // Navigate first, then clean up — prevents double-navigation race
-          // that crashes on iOS when RoleGate's <Redirect> and router.replace
-          // both fire simultaneously after logout() is dispatched.
-          router.replace("/(auth)/user-login");
-          logoutUser();
-        },
-      },
-    ]);
-  };
+  const {
+    user,
+    featureFlags,
+    uploadingPhoto,
+    devDrawerVisible,
+    handleRefreshFeatureFlags,
+    handlePickProfilePhoto,
+    handleLogout,
+    toggleFlag,
+    openDevDrawer,
+    closeDevDrawer,
+    goToAddresses,
+    goToVerifyPhone,
+  } = useUserProfile();
 
   return (
     <View style={styles.container}>
@@ -134,13 +65,13 @@ export default function UserProfile() {
 
         {/* Cards */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>ACCOUNT</Text>
+          <Text style={styles.sectionLabel}>{content.account.label}</Text>
 
-          <TouchableOpacity style={styles.row} onPress={() => router.push("/(user)/addresses")}>
+          <TouchableOpacity style={styles.row} onPress={goToAddresses}>
             <View style={styles.rowIconWrap}>
               <Ionicons name="location-outline" size={20} color="#0E9F6E" />
             </View>
-            <Text style={styles.rowLabel}>Manage Addresses</Text>
+            <Text style={styles.rowLabel}>{content.account.manageAddresses}</Text>
             <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
           </TouchableOpacity>
 
@@ -151,17 +82,17 @@ export default function UserProfile() {
               <View style={[styles.rowIconWrap, styles.rowIconGreen]}>
                 <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
               </View>
-              <Text style={styles.rowLabel}>Phone Number Verified</Text>
+              <Text style={styles.rowLabel}>{content.account.phoneVerified}</Text>
               <View style={styles.verifiedBadge}>
-                <Text style={styles.verifiedBadgeText}>Verified</Text>
+                <Text style={styles.verifiedBadgeText}>{content.account.verifiedBadge}</Text>
               </View>
             </View>
           ) : (
-            <TouchableOpacity style={styles.row} onPress={() => router.push("/(user)/verify-phone")}>
+            <TouchableOpacity style={styles.row} onPress={goToVerifyPhone}>
               <View style={[styles.rowIconWrap, styles.rowIconAmber]}>
                 <Ionicons name="call-outline" size={20} color="#D97706" />
               </View>
-              <Text style={styles.rowLabel}>Verify Phone Number</Text>
+              <Text style={styles.rowLabel}>{content.account.verifyPhone}</Text>
               <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
             </TouchableOpacity>
           )}
@@ -171,11 +102,11 @@ export default function UserProfile() {
         <View style={styles.section}>
           {__DEV__ ? (
             <>
-              <TouchableOpacity style={styles.row} onPress={() => setDevDrawerVisible(true)}>
+              <TouchableOpacity style={styles.row} onPress={openDevDrawer}>
                 <View style={styles.rowIconWrap}>
                   <Ionicons name="construct-outline" size={20} color="#0E9F6E" />
                 </View>
-                <Text style={styles.rowLabel}>Developer Feature Flags</Text>
+                <Text style={styles.rowLabel}>{content.dev.menuLabel}</Text>
                 <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
               </TouchableOpacity>
               <View style={styles.divider} />
@@ -184,7 +115,7 @@ export default function UserProfile() {
 
           <TouchableOpacity style={styles.signOutBtn} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={20} color="#DC2626" />
-            <Text style={styles.signOutText}>Sign Out</Text>
+            <Text style={styles.signOutText}>{content.signOut}</Text>
           </TouchableOpacity>
         </View>
 
@@ -196,50 +127,43 @@ export default function UserProfile() {
           visible={devDrawerVisible}
           transparent
           animationType="slide"
-          onRequestClose={() => setDevDrawerVisible(false)}
+          onRequestClose={closeDevDrawer}
         >
           <View style={styles.devDrawerBackdrop}>
             <View style={styles.devDrawerCard}>
               <View style={styles.devDrawerHeader}>
-                <Text style={styles.devDrawerTitle}>Feature Flags (Dev)</Text>
-                <TouchableOpacity onPress={() => setDevDrawerVisible(false)}>
+                <Text style={styles.devDrawerTitle}>{content.dev.title}</Text>
+                <TouchableOpacity onPress={closeDevDrawer}>
                   <Ionicons name="close" size={22} color="#6B7280" />
                 </TouchableOpacity>
               </View>
 
               <Text style={styles.devDrawerMeta}>
-                Fetch status: {featureFlags.lastFetchStatus}
+                {content.dev.fetchStatusLabel} {featureFlags.lastFetchStatus}
               </Text>
               <Text style={styles.devDrawerMeta}>
-                Last fetch: {featureFlags.lastFetchTime ? new Date(featureFlags.lastFetchTime).toLocaleString() : "never"}
+                {content.dev.lastFetchLabel} {featureFlags.lastFetchTime ? new Date(featureFlags.lastFetchTime).toLocaleString() : content.dev.never}
               </Text>
               {featureFlags.error ? (
                 <Text style={styles.devDrawerError}>{featureFlags.error}</Text>
               ) : null}
 
-              {(
-                [
-                  ["ads.enabled", "adsEnabled"],
-                  ["ads.nativeFeed.enabled", "adsNativeFeedEnabled"],
-                  ["ads.nativeListing.enabled", "adsNativeListingEnabled"],
-                  ["ads.rewarded.enabled", "adsRewardedEnabled"],
-                ] as [string, keyof FeatureFlags][]
-              ).map(([label, key]) => (
+              {DEV_FLAGS.map(([label, key]) => (
                 <View style={styles.devFlagRow} key={key}>
                   <Text style={styles.devFlagLabel}>{label}</Text>
                   <Switch
                     value={featureFlags.values[key] as boolean}
-                    onValueChange={(v) => { dispatch(setLocalOverride({ key, value: v })); }}
+                    onValueChange={(v) => toggleFlag(key, v)}
                     trackColor={{ false: "#D1D5DB", true: "#0E9F6E" }}
                   />
                 </View>
               ))}
 
-              <Text style={styles.devDrawerMeta}>ads.rewarded.minRs: {featureFlags.values.adsRewardedMinRs}</Text>
-              <Text style={styles.devDrawerMeta}>ads.rewarded.maxRs: {featureFlags.values.adsRewardedMaxRs}</Text>
-              <Text style={styles.devDrawerMeta}>ads.density.everyNthCard: {featureFlags.values.adsDensityEveryNthCard}</Text>
+              <Text style={styles.devDrawerMeta}>{content.dev.minRsLabel} {featureFlags.values.adsRewardedMinRs}</Text>
+              <Text style={styles.devDrawerMeta}>{content.dev.maxRsLabel} {featureFlags.values.adsRewardedMaxRs}</Text>
+              <Text style={styles.devDrawerMeta}>{content.dev.densityLabel} {featureFlags.values.adsDensityEveryNthCard}</Text>
               <Text style={styles.devDrawerMeta}>
-                ads.rewarded.maxClaimsPerDay: {featureFlags.values.adsRewardedMaxClaimsPerDay}
+                {content.dev.maxClaimsLabel} {featureFlags.values.adsRewardedMaxClaimsPerDay}
               </Text>
 
               <TouchableOpacity
@@ -250,7 +174,7 @@ export default function UserProfile() {
                 {featureFlags.isRefreshing ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <Text style={styles.devRefreshBtnText}>Refresh From Firebase</Text>
+                  <Text style={styles.devRefreshBtnText}>{content.dev.refresh}</Text>
                 )}
               </TouchableOpacity>
             </View>

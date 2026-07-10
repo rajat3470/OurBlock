@@ -1,0 +1,71 @@
+{
+  "currency": "₹",
+  "header": {
+    "title": "Promotions",
+    "subtitle": "Manage your coupon codes",
+    "newBtn": "New"
+  },
+  "empty": {
+    "emoji": "🏷️",
+    "title": "No promotions yet",
+    "sub": "Create your first coupon to attract customers.",
+    "createBtn": "Create Coupon"
+  },
+  "card": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "descPercentage": "{value}% off",
+    "descFlat": "{currency}{value} off",
+    "valuePercentage": "{value}%",
+    "valueFlat": "{currency}{value}",
+    "valueLabelPercentage": "discount",
+    "valueLabelFlat": "flat off",
+    "minOrder": "Min {currency}{amount}",
+    "maxDiscount": "Max {currency}{amount}",
+    "usage": "{count} used",
+    "usageWithLimit": "{count}/{limit} used",
+    "expiryPrefix": "Exp: ",
+    "noExpiry": "No expiry",
+    "deactivate": "Deactivate"
+  },
+  "modal": {
+    "title": "New Coupon",
+    "closeIcon": "close",
+    "codeLabel": "Coupon Code *",
+    "codePlaceholder": "e.g. SAVE20",
+    "typeLabel": "Discount Type",
+    "percentageOption": "% Percentage",
+    "flatOption": "{currency} Flat Amount",
+    "valueLabelPercentage": "Discount % *",
+    "valueLabelFlat": "Discount Amount ({currency}) *",
+    "valuePlaceholderPercentage": "e.g. 20",
+    "valuePlaceholderFlat": "e.g. 50",
+    "minOrderLabel": "Min Order Amount ({currency})",
+    "minOrderPlaceholder": "e.g. 100 (optional)",
+    "maxDiscountLabel": "Max Discount Cap ({currency})",
+    "maxDiscountPlaceholder": "e.g. 100 (optional cap)",
+    "usageLimitLabel": "Usage Limit (total redemptions)",
+    "usageLimitPlaceholder": "e.g. 100 (leave empty for unlimited)",
+    "expiryLabel": "Expiry Date (YYYY-MM-DD)",
+    "expiryPlaceholder": "e.g. 2026-12-31 (optional)",
+    "descriptionLabel": "Description (shown to customers)",
+    "descriptionPlaceholder": "e.g. Get 20% off on orders above {currency}200",
+    "createIcon": "pricetag-outline",
+    "createBtn": "Create Coupon"
+  },
+  "alerts": {
+    "missingCodeTitle": "Missing Code",
+    "missingCodeMsg": "Enter a coupon code.",
+    "invalidValueTitle": "Invalid Value",
+    "invalidValueMsg": "Enter a valid discount value.",
+    "tooHighTitle": "Too High",
+    "tooHighMsg": "Discount percentage cannot exceed 80%.",
+    "errorTitle": "Error",
+    "createErrorFallback": "Failed to create coupon.",
+    "deactivateTitle": "Deactivate Coupon",
+    "deactivateMsg": "Deactivate \"{code}\"?",
+    "cancel": "Cancel",
+    "deactivateAction": "Deactivate",
+    "deactivateError": "Could not deactivate coupon."
+  }
+}

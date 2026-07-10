@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,234 +6,63 @@ import {
   TouchableOpacity,
   TextInput,
   Animated,
-  Easing,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useAppSelector } from "../../../src/hooks/useRedux";
-import { useUserApp } from "../../../src/hooks/useUserApp";
-import { ORDER_FEES } from "../../../src/constants";
-import { Business, Product } from "../../../src/types";
-import { StoreListSkeleton } from "../../../src/components/Skeleton";
-
-const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
-
-function getBusinessStatus(business: Business): "open" | "paused" | "closed" {
-  if (business.status !== "active") return "closed";
-  let withinHours = true;
-  if (business.operatingHours) {
-    const now = new Date();
-    const dayKey = DAYS[now.getDay()];
-    const hours = business.operatingHours[dayKey];
-    if (!hours || hours.isClosed) {
-      withinHours = false;
-    } else {
-      const pad = (n: number) => n.toString().padStart(2, "0");
-      const currentTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-      withinHours = currentTime >= hours.open && currentTime < hours.close;
-    }
-  }
-  if (!withinHours) return "closed";
-  if (business.isTakingOrders === false) return "paused";
-  return "open";
-}
-
-function categoryEmoji(category: string) {
-  const key = category.toLowerCase();
-  if (key.includes("grocery")) return "🛒";
-  if (key.includes("pharmacy")) return "💊";
-  if (key.includes("restaurant")) return "🍽️";
-  if (key.includes("cafe")) return "☕";
-  if (key.includes("electronics")) return "📱";
-  return "🏬";
-}
-
-function getFirstImage(url?: string) {
-  return url && url.trim().length > 0 ? url : null;
-}
+import { Business } from "@/types";
+import { StoreListSkeleton } from "@components/Skeleton";
+import { useHomeScreen } from "@hooks/useHomeScreen";
+import content from "@/content/home.json";
 
 export default function UserHome() {
   const insets = useSafeAreaInsets();
-  const { user } = useAppSelector((state) => state.auth);
-  const cartCount = useAppSelector((state) =>
-    state.cart.items.reduce((acc, item) => acc + item.quantity, 0)
-  );
-
   const {
-    societies,
-    selectedSocietyId,
-    businesses,
-    featuredProducts,
-    orders,
-    favoriteBusinessIds,
+    user,
+    cartCount,
     isLoading,
-    initializeHome,
-    loadMyOrders,
-  } = useUserApp();
-
-  const safeSocieties = Array.isArray(societies) ? societies : [];
-  const safeBusinesses = Array.isArray(businesses) ? businesses : [];
-  const safeFeaturedProducts = Array.isArray(featuredProducts) ? featuredProducts : [];
-  const safeOrders = Array.isArray(orders) ? orders : [];
-  const safeFavoriteBusinessIds = Array.isArray(favoriteBusinessIds)
-    ? favoriteBusinessIds
-    : [];
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const entrance = useState(new Animated.Value(0))[0];
-
-  // Collapsing header: hero top + info pills shrink away on scroll, search stays.
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const [topRowH, setTopRowH] = useState(0);
-  const [infoRowH, setInfoRowH] = useState(0);
-  const measured = topRowH > 0 && infoRowH > 0;
-  const collapseDistance = Math.max(1, topRowH + infoRowH);
-  const topRowHeight = scrollY.interpolate({
-    inputRange: [0, collapseDistance],
-    outputRange: [topRowH, 0],
-    extrapolate: "clamp",
-  });
-  const infoRowHeight = scrollY.interpolate({
-    inputRange: [0, collapseDistance],
-    outputRange: [infoRowH, 0],
-    extrapolate: "clamp",
-  });
-  const collapseOpacity = scrollY.interpolate({
-    inputRange: [0, collapseDistance * 0.6],
-    outputRange: [1, 0],
-    extrapolate: "clamp",
-  });
-
-  useEffect(() => {
-    initializeHome().catch(() => null);
-    loadMyOrders().catch(() => null);
-    Animated.timing(entrance, {
-      toValue: 1,
-      duration: 380,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [initializeHome, loadMyOrders, entrance]);
-
-  const selectedSocietyName =
-    safeSocieties.find((society) => society.id === selectedSocietyId)?.name ?? "Your Society";
-
-  const categories = useMemo(() => {
-    const unique = Array.from(new Set(safeBusinesses.map((item) => item.category)));
-    return ["all", ...unique];
-  }, [safeBusinesses]);
-
-  const productMatchesByBusiness = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    const map = new Map<string, string[]>();
-    if (!query) return map;
-
-    safeFeaturedProducts.forEach((product) => {
-      const searchable = [
-        product.name,
-        product.category,
-        product.description ?? "",
-        ...(product.tags ?? []),
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      if (!searchable.includes(query)) return;
-
-      const existing = map.get(product.businessId) ?? [];
-      if (!existing.includes(product.name)) {
-        existing.push(product.name);
-      }
-      map.set(product.businessId, existing);
-    });
-
-    return map;
-  }, [safeFeaturedProducts, searchQuery]);
-
-  const filteredBusinesses = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    return safeBusinesses
-      .filter((business) => {
-        if (selectedCategory !== "all" && business.category !== selectedCategory) {
-          return false;
-        }
-        if (!query) return true;
-        const matchesStore = (
-          business.name.toLowerCase().includes(query) ||
-          business.category.toLowerCase().includes(query) ||
-          business.address.toLowerCase().includes(query)
-        );
-        return matchesStore || productMatchesByBusiness.has(business.id);
-      })
-      .sort((a, b) => {
-        if (!query) return Number(b.rating || 0) - Number(a.rating || 0);
-        const aItemHits = productMatchesByBusiness.get(a.id)?.length ?? 0;
-        const bItemHits = productMatchesByBusiness.get(b.id)?.length ?? 0;
-        if (aItemHits !== bItemHits) return bItemHits - aItemHits;
-        return Number(b.rating || 0) - Number(a.rating || 0);
-      });
-  }, [safeBusinesses, productMatchesByBusiness, searchQuery, selectedCategory]);
-
-  const businessNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    safeBusinesses.forEach((business) => map.set(business.id, business.name));
-    return map;
-  }, [safeBusinesses]);
-
-  const matchedDishes = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return [] as Product[];
-    return safeFeaturedProducts
-      .filter((product) => {
-        const searchable = [
-          product.name,
-          product.category,
-          product.description ?? "",
-          ...(product.tags ?? []),
-        ]
-          .join(" ")
-          .toLowerCase();
-        return searchable.includes(query);
-      })
-      .filter((product) => {
-        if (selectedCategory === "all") return true;
-          const biz = safeBusinesses.find((b) => b.id === product.businessId);
-        return biz?.category === selectedCategory;
-      })
-      .slice(0, 15);
-        }, [safeFeaturedProducts, searchQuery, selectedCategory, safeBusinesses]);
-
-  const orderAgainStores = useMemo(() => {
-    const seen = new Set<string>();
-    const result: Business[] = [];
-    const sorted = [...safeOrders].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    for (const order of sorted) {
-      if (seen.has(order.businessId)) continue;
-      seen.add(order.businessId);
-      const biz = safeBusinesses.find((b) => b.id === order.businessId);
-      if (biz) result.push(biz);
-      if (result.length >= 8) break;
-    }
-    return result;
-  }, [safeOrders, safeBusinesses]);
-
-  const favoriteStores = useMemo(
-    () => safeBusinesses.filter((b) => safeFavoriteBusinessIds.includes(b.id)),
-    [safeBusinesses, safeFavoriteBusinessIds]
-  );
+    safeBusinesses,
+    searchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory,
+    entrance,
+    scrollY,
+    topRowH,
+    setTopRowH,
+    infoRowH,
+    setInfoRowH,
+    measured,
+    topRowHeight,
+    infoRowHeight,
+    collapseOpacity,
+    selectedSocietyName,
+    categories,
+    productMatchesByBusiness,
+    filteredBusinesses,
+    businessNameById,
+    matchedDishes,
+    orderAgainStores,
+    favoriteStores,
+    minimumOrder,
+    goToBusinesses,
+    goToAddresses,
+    goToProfile,
+    goToCart,
+    goToBusiness,
+    goToDish,
+    getBusinessStatus,
+    categoryEmoji,
+    getFirstImage,
+  } = useHomeScreen();
 
   const renderStoreRow = (title: string, list: Business[]) => (
     <View>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>{title}</Text>
-        <TouchableOpacity onPress={() => router.push("/(user)/(tabs)/businesses")}>
-          <Text style={styles.viewAllText}>View all ›</Text>
+        <TouchableOpacity onPress={goToBusinesses}>
+          <Text style={styles.viewAllText}>{content.sections.viewAll}</Text>
         </TouchableOpacity>
       </View>
       <ScrollView
@@ -250,9 +78,7 @@ export default function UserHome() {
               key={biz.id}
               style={styles.oaCard}
               activeOpacity={0.9}
-              onPress={() =>
-                router.push({ pathname: "/(user)/business", params: { id: biz.id } })
-              }
+              onPress={() => goToBusiness(biz.id)}
             >
               <View style={styles.oaImageWrap}>
                 {img ? (
@@ -284,7 +110,7 @@ export default function UserHome() {
                       ]}
                     />
                     <Text style={styles.oaStatusText}>
-                      {status === "open" ? "Open" : status === "paused" ? "Paused" : "Closed"}
+                      {status === "open" ? content.status.open : status === "paused" ? content.status.paused : content.status.closed}
                     </Text>
                   </View>
                 </View>
@@ -300,7 +126,7 @@ export default function UserHome() {
     <TouchableOpacity
       style={styles.promoWrap}
       activeOpacity={0.9}
-      onPress={() => router.push("/(user)/(tabs)/businesses")}
+      onPress={goToBusinesses}
     >
       <LinearGradient
         colors={["#FBBF24", "#F59E0B"]}
@@ -309,13 +135,13 @@ export default function UserHome() {
         style={styles.promoCard}
       >
         <View style={styles.promoTextCol}>
-          <Text style={styles.promoTitle}>Flat 20% OFF</Text>
-          <Text style={styles.promoSub}>on your first order</Text>
+          <Text style={styles.promoTitle}>{content.promo.title}</Text>
+          <Text style={styles.promoSub}>{content.promo.subtitle}</Text>
           <View style={styles.promoCodePill}>
-            <Text style={styles.promoCodeText}>Use code: MOHALLA20</Text>
+            <Text style={styles.promoCodeText}>{content.promo.code}</Text>
           </View>
         </View>
-        <Text style={styles.promoEmoji}>🛍️</Text>
+        <Text style={styles.promoEmoji}>{content.promo.emoji}</Text>
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -337,20 +163,20 @@ export default function UserHome() {
         >
           <View style={styles.heroTopRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.heroBrand}>mohallaMitr</Text>
-              <Text style={styles.heroDeliverLabel}>Deliver to</Text>
+              <Text style={styles.heroBrand}>{content.brand}</Text>
+              <Text style={styles.heroDeliverLabel}>{content.deliverTo}</Text>
               <TouchableOpacity
                 style={styles.heroLocationRow}
                 activeOpacity={0.8}
-                onPress={() => router.push("/(user)/(tabs)/addresses")}
+                onPress={goToAddresses}
               >
                 <Ionicons name="location" size={16} color="#FFFFFF" />
                 <Text style={styles.heroLocation} numberOfLines={1}>{selectedSocietyName}</Text>
                 <Ionicons name="chevron-down" size={16} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.profileChip} onPress={() => router.push("/(user)/profile")}>
-              <Text style={styles.profileChipText}>{(user?.firstName || "U").charAt(0).toUpperCase()}</Text>
+            <TouchableOpacity style={styles.profileChip} onPress={goToProfile}>
+              <Text style={styles.profileChipText}>{(user?.firstName || content.defaultProfileInitial).charAt(0).toUpperCase()}</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -360,7 +186,7 @@ export default function UserHome() {
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search stores or items..."
+            placeholder={content.searchPlaceholder}
             placeholderTextColor="#9CA3AF"
             style={styles.searchInput}
           />
@@ -380,15 +206,15 @@ export default function UserHome() {
           <View style={styles.heroInfoRow}>
             <View style={styles.heroInfoPill}>
               <Ionicons name="storefront-outline" size={13} color="#FFFFFF" />
-              <Text style={styles.heroInfoText} numberOfLines={1}>{safeBusinesses.length} stores</Text>
+              <Text style={styles.heroInfoText} numberOfLines={1}>{safeBusinesses.length}{content.hero.storesSuffix}</Text>
             </View>
             <View style={styles.heroInfoPill}>
               <Ionicons name="shield-checkmark-outline" size={13} color="#FFFFFF" />
-              <Text style={styles.heroInfoText} numberOfLines={1}>Secure checkout</Text>
+              <Text style={styles.heroInfoText} numberOfLines={1}>{content.hero.secureCheckout}</Text>
             </View>
             <View style={styles.heroInfoPill}>
               <Ionicons name="wallet-outline" size={13} color="#FFFFFF" />
-              <Text style={styles.heroInfoText} numberOfLines={1}>Min Rs {ORDER_FEES.MINIMUM_ORDER}</Text>
+              <Text style={styles.heroInfoText} numberOfLines={1}>{content.hero.minPrefix}{minimumOrder}</Text>
             </View>
           </View>
         </Animated.View>
@@ -434,40 +260,35 @@ export default function UserHome() {
                   );
                 })}
             </ScrollView>
-            {orderAgainStores.length > 0 ? renderStoreRow("Order again", orderAgainStores) : null}
+            {orderAgainStores.length > 0 ? renderStoreRow(content.sections.orderAgain, orderAgainStores) : null}
             {renderPromoBanner()}
-            {favoriteStores.length > 0 ? renderStoreRow("Your favorites", favoriteStores) : null}
+            {favoriteStores.length > 0 ? renderStoreRow(content.sections.favorites, favoriteStores) : null}
           </>
         ) : null}
 
         {searchQuery.trim().length > 0 && matchedDishes.length > 0 ? (
           <>
             <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Dishes</Text>
-              <Text style={styles.resultCountText}>{matchedDishes.length} found</Text>
+              <Text style={styles.sectionTitle}>{content.sections.dishes}</Text>
+              <Text style={styles.resultCountText}>{matchedDishes.length}{content.sections.foundSuffix}</Text>
             </View>
             <View style={styles.dishList}>
               {matchedDishes.map((dish) => {
                 const dishImg = getFirstImage(dish.imageUrls?.[0]);
-                const storeName = businessNameById.get(dish.businessId) ?? "Store";
+                const storeName = businessNameById.get(dish.businessId) ?? content.dish.defaultStore;
                 return (
                   <TouchableOpacity
                     key={dish.id}
                     style={styles.dishCard}
                     activeOpacity={0.85}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/(user)/business",
-                        params: { id: dish.businessId, highlightProductId: dish.id },
-                      })
-                    }
+                    onPress={() => goToDish(dish)}
                   >
                     <View style={styles.dishImageWrap}>
                       {dishImg ? (
                         <Image source={{ uri: dishImg }} style={styles.dishImage} contentFit="cover" />
                       ) : (
                         <View style={styles.dishImageFallback}>
-                          <Text style={styles.dishFallbackEmoji}>🛍️</Text>
+                          <Text style={styles.dishFallbackEmoji}>{content.dish.fallbackEmoji}</Text>
                         </View>
                       )}
                     </View>
@@ -490,8 +311,8 @@ export default function UserHome() {
                         ) : null}
                         <Text style={styles.dishName} numberOfLines={1}>{dish.name}</Text>
                       </View>
-                      <Text style={styles.dishStore} numberOfLines={1}>From {storeName}</Text>
-                      <Text style={styles.dishPrice}>Rs {dish.price}</Text>
+                      <Text style={styles.dishStore} numberOfLines={1}>{content.dish.fromPrefix}{storeName}</Text>
+                      <Text style={styles.dishPrice}>{content.currency} {dish.price}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
                   </TouchableOpacity>
@@ -503,10 +324,10 @@ export default function UserHome() {
 
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>
-            {searchQuery.trim().length > 0 ? "Stores" : "Stores near you"}
+            {searchQuery.trim().length > 0 ? content.sections.storesSearch : content.sections.storesNear}
           </Text>
           {cartCount > 0 ? (
-            <TouchableOpacity style={styles.cartShortcut} onPress={() => router.push("/(user)/cart")}>
+            <TouchableOpacity style={styles.cartShortcut} onPress={goToCart}>
               <Ionicons name="cart-outline" size={14} color="#0E9F6E" />
               <Text style={styles.cartShortcutText}>{cartCount}</Text>
             </TouchableOpacity>
@@ -517,14 +338,14 @@ export default function UserHome() {
           <StoreListSkeleton rows={4} />
         ) : filteredBusinesses.length === 0 ? (
           <View style={styles.stateWrap}>
-            <Text style={styles.stateTitle}>No stores found</Text>
-            <Text style={styles.stateSubtitle}>Try changing your search or category.</Text>
+            <Text style={styles.stateTitle}>{content.empty.title}</Text>
+            <Text style={styles.stateSubtitle}>{content.empty.subtitle}</Text>
           </View>
         ) : (
           filteredBusinesses.map((business, index) => {
             const status = getBusinessStatus(business);
             const imageUrl = getFirstImage(business.bannerUrl ?? business.imageUrl);
-            const eta = business.estimatedDeliveryTime ?? "25-35 mins";
+            const eta = business.estimatedDeliveryTime ?? content.store.defaultEta;
             const matchedItems = productMatchesByBusiness.get(business.id) ?? [];
             const matchedPreview = matchedItems.slice(0, 2).join(", ");
             const extraMatchedCount = Math.max(0, matchedItems.length - 2);
@@ -553,7 +374,7 @@ export default function UserHome() {
                 <TouchableOpacity
                   style={styles.storeCard}
                   activeOpacity={0.9}
-                  onPress={() => router.push({ pathname: "/(user)/business", params: { id: business.id } })}
+                  onPress={() => goToBusiness(business.id)}
                 >
                   <View style={styles.storeImageWrap}>
                     {imageUrl ? (
@@ -577,7 +398,7 @@ export default function UserHome() {
                       ]}
                     >
                       <Text style={styles.storeStatusText}>
-                        {status === "open" ? "Open" : status === "paused" ? "Paused" : "Closed"}
+                        {status === "open" ? content.status.open : status === "paused" ? content.status.paused : content.status.closed}
                       </Text>
                     </View>
                   </View>
@@ -596,9 +417,9 @@ export default function UserHome() {
                       <TouchableOpacity
                         style={styles.storeCtaPill}
                         activeOpacity={0.85}
-                        onPress={() => router.push({ pathname: "/(user)/business", params: { id: business.id } })}
+                        onPress={() => goToBusiness(business.id)}
                       >
-                        <Text style={styles.storeCta}>Select Store</Text>
+                        <Text style={styles.storeCta}>{content.store.selectStore}</Text>
                       </TouchableOpacity>
                     </View>
                     <View style={styles.storeInfoRow}>
@@ -607,11 +428,11 @@ export default function UserHome() {
                     </View>
                     <View style={styles.storeInfoRow}>
                       <Ionicons name="time-outline" size={13} color="#94A3B8" />
-                      <Text style={styles.storeEta}>Delivery: {eta}</Text>
+                      <Text style={styles.storeEta}>{content.store.deliveryPrefix}{eta}</Text>
                     </View>
                     {searchQuery.trim().length > 0 && matchedItems.length > 0 ? (
                       <Text style={styles.matchedItemsText} numberOfLines={1}>
-                        Items: {matchedPreview}{extraMatchedCount > 0 ? ` +${extraMatchedCount} more` : ""}
+                        {content.store.itemsPrefix}{matchedPreview}{extraMatchedCount > 0 ? ` +${extraMatchedCount}${content.store.moreSuffix}` : ""}
                       </Text>
                     ) : null}
                   </View>

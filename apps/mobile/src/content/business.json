@@ -1,0 +1,54 @@
+{
+  "currency": "Rs",
+  "defaultBusinessName": "Shop",
+  "defaultStoreName": "Your store",
+  "defaultCartBusinessName": "Local Store",
+  "discountSuffix": "% OFF",
+  "bestseller": "★ Bestseller",
+  "outOfStock": "Out of Stock",
+  "addBtn": "ADD",
+  "defaultSection": "Menu",
+  "notices": {
+    "paused": "⏸ This shop has temporarily paused orders",
+    "closed": "🕐 This shop is currently closed"
+  },
+  "filters": {
+    "all": "All",
+    "veg": "🟢 Veg",
+    "nonveg": "🔴 Non-veg",
+    "bestseller": "★ Bestseller"
+  },
+  "states": {
+    "loadError": "Could not load products. Please try again.",
+    "retry": "Retry",
+    "noProductsEmoji": "🛍️",
+    "noProductsTitle": "No products yet",
+    "noProductsSubtitle": "This shop hasn't added products yet. Check back soon!",
+    "noMatchEmoji": "🔍",
+    "noMatchTitle": "No items match",
+    "noMatchSubtitle": "Try a different filter.",
+    "fallbackEmoji": "🛍️"
+  },
+  "cartBar": {
+    "addMorePrefix": "Add Rs ",
+    "addMoreMiddle": " more to reach the Rs ",
+    "addMoreSuffix": " minimum",
+    "itemSingular": "item",
+    "itemPlural": "items",
+    "viewCart": "View Cart"
+  },
+  "customize": {
+    "addItemPrefix": "Add Item · Rs "
+  },
+  "toasts": {
+    "addedSuffix": " added",
+    "onlyAvailablePrefix": "Only ",
+    "onlyAvailableSuffix": " available"
+  },
+  "replaceCart": {
+    "title": "Replace cart items?",
+    "message": "Your cart has items from another shop. Continue to clear cart and add this item?",
+    "cancel": "Cancel",
+    "confirm": "Yes, replace"
+  }
+}

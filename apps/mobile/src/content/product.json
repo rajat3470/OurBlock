@@ -1,0 +1,38 @@
+{
+  "currency": "Rs",
+  "notFound": "Product not found",
+  "imagePlaceholder": "mohallaMitr",
+  "defaultBusinessName": "Local Store",
+  "discountSuffix": "% OFF",
+  "sections": {
+    "description": "Description",
+    "details": "Details",
+    "priceDetails": "Price Details",
+    "pricePerPrefix": "Price per ",
+    "productPrice": "Product Price",
+    "platformFee": "Platform Fee",
+    "totalPrefix": "Total (1 × ",
+    "totalSuffix": ")",
+    "totalItem": "Total (1 item)"
+  },
+  "platformFeeValue": 2,
+  "priceNote": "Platform fee of Rs 2 is charged per order. No delivery or GST charges.",
+  "cart": {
+    "addToCart": "Add to Cart",
+    "outOfStock": "Out of Stock",
+    "shopPaused": "⏸ Shop Paused",
+    "shopClosed": "🕐 Shop Closed",
+    "goToCartPrefix": "Go to Cart · Rs "
+  },
+  "toasts": {
+    "addedSuffix": " added to cart",
+    "onlyStockPrefix": "Only ",
+    "onlyStockSuffix": " in stock"
+  },
+  "replaceCart": {
+    "title": "Replace cart items?",
+    "message": "Your cart has items from another shop. Continue to clear cart and add this item?",
+    "cancel": "Cancel",
+    "confirm": "Yes, replace"
+  }
+}

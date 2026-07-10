@@ -1,0 +1,36 @@
+{
+  "headerTitle": "Cart",
+  "clear": "Clear",
+  "currency": "Rs",
+  "defaultShop": "Shop",
+  "empty": {
+    "title": "Your cart is empty",
+    "subtitle": "Browse products on the home screen and add items to your cart.",
+    "browse": "Browse Products"
+  },
+  "remove": "Remove",
+  "minOrder": {
+    "prefix": "Add Rs",
+    "middle": "more to reach the Rs",
+    "suffix": "minimum."
+  },
+  "adReward": {
+    "titlePrefix": "Watch an ad, save Rs",
+    "sub": "Earn a coupon for your next order",
+    "earnedTitlePrefix": "Coupon earned! Save Rs",
+    "usePrefix": "Use code",
+    "useSuffix": "at checkout"
+  },
+  "total": "Total",
+  "checkout": "Proceed to Checkout →",
+  "alerts": {
+    "clearTitle": "Clear Cart",
+    "clearMessage": "Remove all items from cart?",
+    "cancel": "Cancel",
+    "clear": "Clear",
+    "maxStockTitle": "Max stock reached",
+    "maxStockMessage": "Only {n} units available",
+    "rewardTitle": "Reward",
+    "rewardError": "Could not issue reward. Try again later."
+  }
+}

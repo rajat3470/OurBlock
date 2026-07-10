@@ -1,0 +1,61 @@
+{
+  "header": {
+    "title": "My Orders",
+    "subtitle": "Track your purchases"
+  },
+  "filters": {
+    "all": "All",
+    "active": "Active",
+    "completed": "Completed"
+  },
+  "statusLabels": {
+    "pending": "Waiting for Acceptance",
+    "confirmed": "Accepted",
+    "preparing": "Processing",
+    "ready": "Ready to Collect",
+    "outForDelivery": "On the Way",
+    "delivered": "Completed",
+    "cancelled": "Cancelled",
+    "rejected": "Rejected"
+  },
+  "payment": {
+    "cod": "Cash on Delivery",
+    "completed": "Paid",
+    "failed": "Payment Failed",
+    "pending": "Pending"
+  },
+  "card": {
+    "defaultShop": "Shop",
+    "defaultProduct": "Product",
+    "currency": "Rs",
+    "itemSingular": "item",
+    "itemPlural": "items",
+    "subtotalLabel": "Subtotal:",
+    "platformFeeLabel": "Platform fee:",
+    "moreItems": "more items",
+    "cancel": "Cancel",
+    "reorder": "Reorder",
+    "rate": "Rate",
+    "refund": "Refund",
+    "rejectionLabel": "Rejection reason:"
+  },
+  "empty": {
+    "title": "No orders yet",
+    "subtitle": "Your placed orders will appear here.",
+    "browse": "Browse Products"
+  },
+  "alerts": {
+    "cancelTitle": "Cancel Order",
+    "cancelMessage": "Are you sure you want to cancel this order?",
+    "cancelNo": "No",
+    "cancelYes": "Yes, Cancel",
+    "replaceTitle": "Replace Cart?",
+    "replaceMessage": "You have items from another shop. Reordering will clear your current cart.",
+    "keepCart": "Keep Cart",
+    "reorder": "Reorder"
+  },
+  "toasts": {
+    "reviewSubmitted": "Review submitted. Thank you!",
+    "refundSubmitted": "Refund request submitted! We'll get back to you soon."
+  }
+}

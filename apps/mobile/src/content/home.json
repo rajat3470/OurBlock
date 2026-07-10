@@ -1,0 +1,49 @@
+{
+  "currency": "Rs",
+  "brand": "mohallaMitr",
+  "deliverTo": "Deliver to",
+  "defaultSociety": "Your Society",
+  "defaultProfileInitial": "U",
+  "searchPlaceholder": "Search stores or items...",
+  "hero": {
+    "storesSuffix": " stores",
+    "secureCheckout": "Secure checkout",
+    "minPrefix": "Min Rs "
+  },
+  "sections": {
+    "orderAgain": "Order again",
+    "favorites": "Your favorites",
+    "dishes": "Dishes",
+    "storesSearch": "Stores",
+    "storesNear": "Stores near you",
+    "viewAll": "View all ›",
+    "foundSuffix": " found"
+  },
+  "status": {
+    "open": "Open",
+    "paused": "Paused",
+    "closed": "Closed"
+  },
+  "promo": {
+    "title": "Flat 20% OFF",
+    "subtitle": "on your first order",
+    "code": "Use code: MOHALLA20",
+    "emoji": "🛍️"
+  },
+  "dish": {
+    "fromPrefix": "From ",
+    "defaultStore": "Store",
+    "fallbackEmoji": "🛍️"
+  },
+  "store": {
+    "defaultEta": "25-35 mins",
+    "selectStore": "Select Store",
+    "deliveryPrefix": "Delivery: ",
+    "itemsPrefix": "Items: ",
+    "moreSuffix": " more"
+  },
+  "empty": {
+    "title": "No stores found",
+    "subtitle": "Try changing your search or category."
+  }
+}
