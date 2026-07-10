@@ -13,7 +13,7 @@ export default function RoleGate({ allowedRole, children }: RoleGateProps) {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
 
   if (!isAuthenticated || !user) {
-    return <Redirect href="/(auth)/role-selection" />;
+    return <Redirect href="/(auth)/user-login" />;
   }
 
   if (user.role !== allowedRole) {

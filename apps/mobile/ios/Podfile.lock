@@ -220,7 +220,7 @@ PODS:
     - ExpoModulesCore
   - ExpoLinking (55.0.14):
     - ExpoModulesCore
-  - ExpoLogBox (55.0.11):
+  - ExpoLogBox (55.0.12):
     - React-Core
   - ExpoModulesCore (55.0.25):
     - ExpoModulesJSI
@@ -326,28 +326,28 @@ PODS:
     - nanopb (~> 3.30910.0)
     - PromisesObjC (~> 2.4)
   - GoogleUserMessagingPlatform (2.4.0)
-  - GoogleUtilities/AppDelegateSwizzler (8.1.1):
+  - GoogleUtilities/AppDelegateSwizzler (8.1.2):
     - GoogleUtilities/Environment
     - GoogleUtilities/Logger
     - GoogleUtilities/Network
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Environment (8.1.1):
+  - GoogleUtilities/Environment (8.1.2):
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Logger (8.1.1):
+  - GoogleUtilities/Logger (8.1.2):
     - GoogleUtilities/Environment
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Network (8.1.1):
+  - GoogleUtilities/Network (8.1.2):
     - GoogleUtilities/Logger
     - "GoogleUtilities/NSData+zlib"
     - GoogleUtilities/Privacy
     - GoogleUtilities/Reachability
-  - "GoogleUtilities/NSData+zlib (8.1.1)":
+  - "GoogleUtilities/NSData+zlib (8.1.2)":
     - GoogleUtilities/Privacy
-  - GoogleUtilities/Privacy (8.1.1)
-  - GoogleUtilities/Reachability (8.1.1):
+  - GoogleUtilities/Privacy (8.1.2)
+  - GoogleUtilities/Reachability (8.1.2):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
-  - GoogleUtilities/UserDefaults (8.1.1):
+  - GoogleUtilities/UserDefaults (8.1.2):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
   - GTMSessionFetcher/Core (4.5.0)
@@ -3084,7 +3084,7 @@ SPEC CHECKSUMS:
   ExpoKeepAwake: d0eb7a0719500d2a43fbf29b6f79e84d70c75ebf
   ExpoLinearGradient: dcbc1ca46ebfeb9d7646f49595057d161dae208e
   ExpoLinking: f9e01f5182f2653ea9d90f18fb47f1913e2f99ef
-  ExpoLogBox: 617da77cbc083627692b2ea050a3666808aef2cd
+  ExpoLogBox: a678d36477ab9544fe63e0b5328a0716539b6774
   ExpoModulesCore: 576864155b799ba51228d2db41591206dd6f0bc9
   ExpoModulesJSI: 1685389cde9f19c40f98ca0ad46d4804471486cc
   ExpoNotifications: 61c46aa5df088ff0ad41de0504a86a92333aec55
@@ -3109,7 +3109,7 @@ SPEC CHECKSUMS:
   Google-Mobile-Ads-SDK: 7db2098033ad3bfcd72a11e7503b49700a93029e
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
   GoogleUserMessagingPlatform: f131fa7978d2ba88d7426702b057c2cc318e6595
-  GoogleUtilities: 4f2618a4a1e762a1ee134a1e2323bba9843e06da
+  GoogleUtilities: 766ace00c6b10d8148408f329d10c4f051931850
   GTMSessionFetcher: fc75fc972958dceedee61cb662ae1da7a83a91cf
   hermes-engine: 1aa8e7a7ed86ef46ae71f859c0b1449c8ca818c8
   libavif: 5f8e715bea24debec477006f21ef9e95432e254d
