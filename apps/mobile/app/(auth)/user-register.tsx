@@ -4,14 +4,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUserRegistration } from "../../src/hooks/useUserRegistration";
 import { ProfileImagePicker } from "../../src/components/auth/ProfileImagePicker";
 import { SocietyPickerModal } from "../../src/components/auth/SocietyPickerModal";

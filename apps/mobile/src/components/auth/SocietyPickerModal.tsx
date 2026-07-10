@@ -3,11 +3,11 @@ import {
   Text,
   StyleSheet,
   Modal,
-  SafeAreaView,
   FlatList,
   TouchableOpacity,
   TextInput,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Society } from "@/types";
 
 interface SocietyPickerModalProps {

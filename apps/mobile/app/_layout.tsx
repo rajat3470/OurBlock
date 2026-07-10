@@ -3,6 +3,7 @@ import { ActivityIndicator, View, StyleSheet, Text, TextInput, AppState, Platfor
 import { Stack } from "expo-router";
 import { Provider } from "react-redux";
 import { ToastProvider } from "react-native-toast-notifications";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFonts, Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, Poppins_800ExtraBold } from "@expo-google-fonts/poppins";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
@@ -81,6 +82,20 @@ async function registerForPushNotificationsAsync(): Promise<string | null> {
   if (finalStatus !== "granted") return null;
   const tokenData = await Notifications.getExpoPushTokenAsync();
   return tokenData.data;
+}
+
+function ToastProviderWithSafeArea({ children }: { children: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <ToastProvider
+      placement="top"
+      duration={2500}
+      animationType="slide-in"
+      offsetTop={insets.top + 4}
+    >
+      {children}
+    </ToastProvider>
+  );
 }
 
 function AuthBootstrap({ children }: { children: React.ReactNode }) {
@@ -322,9 +337,11 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <AuthBootstrap>
-        <ToastProvider placement="top" duration={2500} animationType="slide-in">
-          <Stack screenOptions={{ headerShown: false }} />
-        </ToastProvider>
+        <SafeAreaProvider>
+          <ToastProviderWithSafeArea>
+            <Stack screenOptions={{ headerShown: false }} />
+          </ToastProviderWithSafeArea>
+        </SafeAreaProvider>
       </AuthBootstrap>
     </Provider>
   );
