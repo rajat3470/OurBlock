@@ -13,7 +13,7 @@ import {
   Modal,
   FlatList,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "../../src/hooks/useAuth";
 import { societyService } from "../../src/services/societyService";
@@ -56,7 +56,6 @@ const EMPTY_FORM: RegisterForm = {
 };
 
 export default function BusinessOwnerRegisterScreen() {
-  const insets = useSafeAreaInsets();
   const { register } = useAuth();
 
   const [form, setForm] = useState<RegisterForm>(EMPTY_FORM);
@@ -576,7 +575,7 @@ export default function BusinessOwnerRegisterScreen() {
       </Modal>
 
       {/* Back button rendered last so it captures touches above everything */}
-      <BackButton top={insets.top + 12} />
+      <BackButton top={12} />
     </SafeAreaView>
   );
 }
@@ -585,7 +584,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.authBackground,
   },
   scrollContent: {
     paddingHorizontal: 24,

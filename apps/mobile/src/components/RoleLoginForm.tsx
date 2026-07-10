@@ -86,7 +86,7 @@ export default function RoleLoginForm({
   };
 
   return (
-    <LinearGradient colors={[...gradients.appBackground]} style={styles.container}>
+    <LinearGradient colors={[...gradients.authBackground]} style={styles.container}>
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
           style={styles.flex}

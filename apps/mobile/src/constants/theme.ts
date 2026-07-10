@@ -2,6 +2,7 @@ export const colors = {
   primary: "#0E9F6E",
   background: "#08090D",
   backgroundAlt: "#101114",
+  authBackground: "#F8FAFC",
   surface: "#FFFFFF",
   surfaceAlt: "#F8FAFF",
   textPrimary: "#111827",
@@ -77,6 +78,7 @@ export const brand = {
 
 export const gradients = {
   appBackground: ["#07080C", "#111215", "#17181C"],
+  authBackground: ["#F8FAFC", "#F1F5F9", "#E2E8F0"],
   superAdmin: ["#2563EB", "#4F46E5"],
   businessOwner: ["#0F9F68", "#0A7D55"],
   user: ["#0E9F6E", "#0891B2"],

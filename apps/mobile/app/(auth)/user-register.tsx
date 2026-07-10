@@ -9,7 +9,7 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useUserRegistration } from "../../src/hooks/useUserRegistration";
 import { ProfileImagePicker } from "../../src/components/auth/ProfileImagePicker";
@@ -18,7 +18,6 @@ import { colors } from "../../src/constants/theme";
 import BackButton from "../../src/components/BackButton";
 
 export default function UserRegisterScreen() {
-  const insets = useSafeAreaInsets();
   const {
     form,
     errors,
@@ -297,7 +296,7 @@ export default function UserRegisterScreen() {
         onSearchChange={setSocietySearch}
       />
 
-      <BackButton top={insets.top + 12} />
+      <BackButton top={12} />
     </SafeAreaView>
   );
 }
@@ -306,7 +305,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.authBackground,
   },
   scrollContent: {
     paddingHorizontal: 24,
