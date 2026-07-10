@@ -112,4 +112,9 @@ export const businessOwnerService = {
   async deleteCoupon(id: string): Promise<void> {
     await apiClient.delete<any>(`/owner/coupons/${id}`);
   },
+
+  async updateBusinessImage(data: { imageUrl?: string; bannerUrl?: string }): Promise<Business> {
+    const res = await apiClient.patch<ApiEnvelope<Business>>("/owner/business/image", data);
+    return res.data;
+  },
 };

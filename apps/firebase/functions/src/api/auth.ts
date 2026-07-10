@@ -312,7 +312,7 @@ router.post('/register', async (req, res) => {
 router.post('/businessowner/register', async (req, res) => {
   try {
     const { firstName, lastName, email, password, phone, societyId,
-            businessName, businessCategory, businessAddress } = req.body;
+            businessName, businessCategory, businessAddress, businessImageUrl } = req.body;
 
     if (!firstName || !lastName || !email || !password || !phone || !societyId) {
       return res.status(400).json({
@@ -365,7 +365,7 @@ router.post('/businessowner/register', async (req, res) => {
     });
 
     // Create the business document so it appears in the admin portal
-    const businessRef = await db.collection('businesses').add({
+    const businessData: Record<string, any> = {
       name: businessName,
       category: businessCategory,
       address: businessAddress,
@@ -379,7 +379,11 @@ router.post('/businessowner/register', async (req, res) => {
       totalReviews: 0,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    };
+    if (businessImageUrl && typeof businessImageUrl === 'string') {
+      businessData.imageUrl = businessImageUrl;
+    }
+    const businessRef = await db.collection('businesses').add(businessData);
 
     // Sign in immediately after creation to get a real ID token for the client
     const authResult = await firebaseSignIn(email, password);

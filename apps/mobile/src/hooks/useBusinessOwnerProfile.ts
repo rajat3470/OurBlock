@@ -30,6 +30,7 @@ export const useBusinessOwnerProfile = () => {
   const [settingsDeliveryFee, setSettingsDeliveryFee] = useState("");
   const [settingsTags, setSettingsTags] = useState("");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isUploadingShopImage, setIsUploadingShopImage] = useState(false);
 
   const insets = useSafeAreaInsets();
 
@@ -104,6 +105,25 @@ export const useBusinessOwnerProfile = () => {
     loadBusinessProfile,
   ]);
 
+  const handleUpdateShopImage = useCallback(
+    async (imageUrl: string | null) => {
+      if (!imageUrl) return;
+      setIsUploadingShopImage(true);
+      try {
+        await businessOwnerService.updateBusinessImage({ imageUrl });
+        await loadBusinessProfile().catch(() => null);
+      } catch (err: any) {
+        Alert.alert(
+          content.alerts.errorTitle,
+          err?.response?.data?.error || err?.message || "Failed to update shop image"
+        );
+      } finally {
+        setIsUploadingShopImage(false);
+      }
+    },
+    [loadBusinessProfile]
+  );
+
   const handleChangePassword = useCallback(async () => {
     setPasswordError("");
 
@@ -166,8 +186,10 @@ export const useBusinessOwnerProfile = () => {
     settingsTags,
     setSettingsTags,
     isSavingSettings,
+    isUploadingShopImage,
     handleLogout,
     handleSaveSettings,
+    handleUpdateShopImage,
     handleChangePassword,
   };
 };

@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useBusinessOwnerProfile } from "@hooks/useBusinessOwnerProfile";
+import { ShopImagePicker } from "@/components/business-owner/ShopImagePicker";
 import content from "@/content/boProfile.json";
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value?: string | null }) {
@@ -54,8 +55,10 @@ export default function BusinessOwnerProfile() {
     settingsTags,
     setSettingsTags,
     isSavingSettings,
+    isUploadingShopImage,
     handleLogout,
     handleSaveSettings,
+    handleUpdateShopImage,
     handleChangePassword,
   } = useBusinessOwnerProfile();
 
@@ -95,6 +98,12 @@ export default function BusinessOwnerProfile() {
                 </View>
               </View>
               <View style={styles.sectionBody}>
+                <ShopImagePicker
+                  uri={businessProfile?.imageUrl || null}
+                  onImageSelected={handleUpdateShopImage}
+                  loading={isUploadingShopImage}
+                  label="Shop Image"
+                />
                 <InfoRow icon="🏷️" label={content.business.rows.name}  value={businessProfile.name} />
                 <InfoRow icon="🗂️" label={content.business.rows.category}       value={businessProfile.category} />
                 <InfoRow icon="📝" label={content.business.rows.description}    value={businessProfile.description} />

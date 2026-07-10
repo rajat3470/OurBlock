@@ -21,6 +21,7 @@ import { societyService } from "../../src/services/societyService";
 import { Society } from "../../src/types/index";
 import { colors } from "../../src/constants/theme";
 import BackButton from "../../src/components/BackButton";
+import { ShopImagePicker } from "../../src/components/business-owner/ShopImagePicker";
 
 const BUSINESS_CATEGORIES = [
   { label: "🛒  Grocery", value: "grocery" },
@@ -68,6 +69,9 @@ export default function BusinessOwnerRegisterScreen() {
   // Business category picker
   const [selectedCategory, setSelectedCategory] = useState("");
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+
+  // Shop image
+  const [businessImageUrl, setBusinessImageUrl] = useState<string | null>(null);
 
   // Society picker
   const [societies, setSocieties] = useState<Society[]>([]);
@@ -142,6 +146,7 @@ export default function BusinessOwnerRegisterScreen() {
           businessName: form.businessName.trim(),
           businessCategory: selectedCategory,
           businessAddress: form.businessAddress.trim(),
+          businessImageUrl: businessImageUrl || undefined,
         },
         "businessOwner"
       );
@@ -233,6 +238,13 @@ export default function BusinessOwnerRegisterScreen() {
               <Text style={styles.errorText}>{errors.businessAddress}</Text>
             ) : null}
           </View>
+
+          {/* Shop image */}
+          <ShopImagePicker
+            uri={businessImageUrl}
+            onImageSelected={setBusinessImageUrl}
+            label="Shop Image (optional)"
+          />
 
           {/* ── Owner Details ── */}
           <Text style={styles.sectionHeading}>Owner Details</Text>

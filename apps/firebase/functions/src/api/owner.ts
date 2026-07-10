@@ -458,6 +458,31 @@ router.patch('/business/settings', requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// PATCH /owner/business/image — update shop / banner image
+// ---------------------------------------------------------------------------
+router.patch('/business/image', requireAuth, async (req, res) => {
+  try {
+    const uid = (req as any).uid;
+    const { imageUrl, bannerUrl } = req.body;
+    const business = await getOwnerBusiness(uid);
+    if (!business) return res.status(404).json({ success: false, error: 'No business found' });
+
+    const updates: Record<string, any> = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+    if (typeof imageUrl === 'string') updates.imageUrl = imageUrl.trim() || null;
+    if (typeof bannerUrl === 'string') updates.bannerUrl = bannerUrl.trim() || null;
+    if (Object.keys(updates).length === 1) {
+      return res.status(400).json({ success: false, error: 'imageUrl or bannerUrl is required' });
+    }
+
+    await db.collection('businesses').doc((business as any).id).update(updates);
+    const updated = await db.collection('businesses').doc((business as any).id).get();
+    return res.json({ success: true, data: { id: updated.id, ...updated.data() } });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /owner/analytics — revenue (last 7 days) + popular items
 // ---------------------------------------------------------------------------
 router.get('/analytics', requireAuth, async (req, res) => {
