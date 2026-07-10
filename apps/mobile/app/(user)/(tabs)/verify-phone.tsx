@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   View,
   Text,
@@ -12,81 +11,27 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
-import { useToast } from "react-native-toast-notifications";
-import { phoneVerificationService } from "../../../src/services/phoneVerificationService";
-import type { FirebaseAuthTypes } from "@react-native-firebase/auth";
-import { useAppDispatch, useAppSelector } from "../../../src/hooks/useRedux";
-import { colors } from "../../../src/constants/theme";
-import { setUser } from "../../../src/store/slices/authSlice";
-import { authStateService } from "../../../src/services/authStateService";
+import { colors } from "@/constants/theme";
+import { usePhoneVerification } from "@hooks/usePhoneVerification";
+import content from "@/content/verifyPhone.json";
 
 export default function PhoneVerificationScreen() {
-  const dispatch = useAppDispatch();
-  const toast = useToast();
-  const params = useLocalSearchParams<{ fromRegistration?: string }>();
-  const user = useAppSelector((state) => state.auth.user);
-  const [phoneNumber, setPhoneNumber] = useState(user?.phone || "");
-  const [confirmation, setConfirmation] = useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
-  const [code, setCode] = useState("");
-  const [step, setStep] = useState<"phone" | "code">("phone");
-  const [loading, setLoading] = useState(false);
-  const cameFromRegistration = params.fromRegistration === "1";
   const insets = useSafeAreaInsets();
-
-  const handleSkip = () => {
-    router.replace("/(user)/home");
-  };
-
-  const handleSendCode = async () => {
-    if (!phoneNumber || phoneNumber.length !== 10) {
-      toast.show("Please enter a valid 10-digit phone number", { type: "danger" });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const formattedPhone = phoneVerificationService.formatPhoneNumber(phoneNumber);
-      const confirmationResult = await phoneVerificationService.sendVerificationCode(formattedPhone);
-      setConfirmation(confirmationResult);
-      setStep("code");
-      toast.show("Verification code sent to your phone", { type: "success" });
-    } catch (error: any) {
-      toast.show(error.message || "Failed to send verification code", { type: "danger" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    if (!phoneVerificationService.validateOTP(code)) {
-      toast.show("Please enter a valid 6-digit code", { type: "danger" });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await phoneVerificationService.verifyCode(confirmation!, code);
-      if (user) {
-        const updatedUser = { ...user, isPhoneVerified: true, phone: phoneNumber };
-        dispatch(setUser(updatedUser));
-        await authStateService.updateUser(updatedUser);
-      }
-      toast.show("Phone number verified successfully", { type: "success" });
-      router.replace("/(user)/home");
-    } catch (error: any) {
-      toast.show(error.message || "Invalid verification code", { type: "danger" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendCode = async () => {
-    setCode("");
-    setConfirmation(null);
-    setStep("phone");
-    await handleSendCode();
-  };
+  const {
+    phoneNumber,
+    setPhoneNumber,
+    code,
+    setCode,
+    step,
+    loading,
+    cameFromRegistration,
+    handleSkip,
+    goBack,
+    goToPhoneStep,
+    handleSendCode,
+    handleVerifyCode,
+    handleResendCode,
+  } = usePhoneVerification();
 
   return (
     <View style={styles.container}>
@@ -94,19 +39,13 @@ export default function PhoneVerificationScreen() {
         colors={["#0E9F6E", "#0891B2"]}
         style={[styles.header, { paddingTop: insets.top + 12 }]}
       >
-        <TouchableOpacity style={styles.backBtn} onPress={() => {
-          if (router.canGoBack()) {
-            router.back();
-          } else {
-            router.replace("/(user)/profile");
-          }
-        }}>
+        <TouchableOpacity style={styles.backBtn} onPress={goBack}>
           <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Verify Phone Number</Text>
+        <Text style={styles.headerTitle}>{content.headerTitle}</Text>
         {cameFromRegistration ? (
           <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
-            <Text style={styles.skipBtnText}>Skip</Text>
+            <Text style={styles.skipBtnText}>{content.skip}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.backBtn} />
@@ -124,29 +63,25 @@ export default function PhoneVerificationScreen() {
 
           {step === "phone" ? (
             <>
-              <Text style={styles.title}>Enter your phone number</Text>
-              <Text style={styles.subtitle}>
-                We'll send you a 6-digit verification code
-              </Text>
+              <Text style={styles.title}>{content.phoneStep.title}</Text>
+              <Text style={styles.subtitle}>{content.phoneStep.subtitle}</Text>
 
               <View style={styles.noticeCard}>
-                <Text style={styles.noticeText}>
-                  You can skip for now, but phone verification is mandatory when trying to order something.
-                </Text>
+                <Text style={styles.noticeText}>{content.phoneStep.notice}</Text>
               </View>
 
               <View style={styles.phoneContainer}>
                 <View style={styles.countryCode}>
-                  <Text style={styles.countryCodeText}>+91</Text>
+                  <Text style={styles.countryCodeText}>{content.countryCode}</Text>
                 </View>
                 <TextInput
                   style={styles.phoneInput}
-                  placeholder="Enter 10-digit mobile number"
+                  placeholder={content.phoneStep.placeholder}
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
                   keyboardType="phone-pad"
                   maxLength={10}
-placeholderTextColor="#9CA3AF"
+                  placeholderTextColor="#9CA3AF"
                   autoFocus
                 />
               </View>
@@ -159,26 +94,26 @@ placeholderTextColor="#9CA3AF"
                 {loading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.sendBtnText}>Send Verification Code</Text>
+                  <Text style={styles.sendBtnText}>{content.phoneStep.sendBtn}</Text>
                 )}
               </TouchableOpacity>
 
               {cameFromRegistration ? (
                 <TouchableOpacity style={styles.skipSecondaryBtn} onPress={handleSkip}>
-                  <Text style={styles.skipSecondaryText}>Skip for now</Text>
+                  <Text style={styles.skipSecondaryText}>{content.phoneStep.skipSecondary}</Text>
                 </TouchableOpacity>
               ) : null}
             </>
           ) : (
             <>
-              <Text style={styles.title}>Enter verification code</Text>
+              <Text style={styles.title}>{content.codeStep.title}</Text>
               <Text style={styles.subtitle}>
-                Enter the 6-digit code sent to +91 {phoneNumber}
+                {content.codeStep.subtitlePrefix} {phoneNumber}
               </Text>
 
               <TextInput
                 style={styles.codeInput}
-                placeholder="000000"
+                placeholder={content.codeStep.placeholder}
                 value={code}
                 onChangeText={setCode}
                 keyboardType="number-pad"
@@ -195,22 +130,19 @@ placeholderTextColor="#9CA3AF"
                 {loading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.verifyBtnText}>Verify Code</Text>
+                  <Text style={styles.verifyBtnText}>{content.codeStep.verifyBtn}</Text>
                 )}
               </TouchableOpacity>
 
               <View style={styles.resendContainer}>
-                <Text style={styles.resendText}>Didn't receive the code? </Text>
+                <Text style={styles.resendText}>{content.codeStep.resendPrompt}</Text>
                 <TouchableOpacity onPress={handleResendCode} disabled={loading}>
-                  <Text style={styles.resendLink}>Resend</Text>
+                  <Text style={styles.resendLink}>{content.codeStep.resendLink}</Text>
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity
-                style={styles.changeNumberBtn}
-                onPress={() => setStep("phone")}
-              >
-                <Text style={styles.changeNumberText}>Change phone number</Text>
+              <TouchableOpacity style={styles.changeNumberBtn} onPress={goToPhoneStep}>
+                <Text style={styles.changeNumberText}>{content.codeStep.changeNumber}</Text>
               </TouchableOpacity>
             </>
           )}

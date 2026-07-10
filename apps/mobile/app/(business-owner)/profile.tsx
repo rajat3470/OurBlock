@@ -1,10 +1,8 @@
-import { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   TextInput,
   ActivityIndicator,
   ScrollView,
@@ -12,12 +10,8 @@ import {
   Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { useAppSelector } from "../../src/hooks/useRedux";
-import { useAuth } from "../../src/hooks/useAuth";
-import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
-import { businessOwnerService } from "../../src/services/businessOwnerService";
+import { useBusinessOwnerProfile } from "@hooks/useBusinessOwnerProfile";
+import content from "@/content/boProfile.json";
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value?: string | null }) {
   if (!value) return null;
@@ -33,121 +27,37 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value?: 
 }
 
 export default function BusinessOwnerProfile() {
-  const { user } = useAppSelector((state) => state.auth);
-  const { logoutUser, changePassword } = useAuth();
-  const { businessProfile, loadBusinessProfile } = useBusinessOwner();
-
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Business settings state
-  const [showSettings, setShowSettings] = useState(false);
-  const [settingsMinOrder, setSettingsMinOrder] = useState("");
-  const [settingsDeliveryTime, setSettingsDeliveryTime] = useState("");
-  const [settingsPrepTime, setSettingsPrepTime] = useState("");
-  const [settingsDeliveryFee, setSettingsDeliveryFee] = useState("");
-  const [settingsTags, setSettingsTags] = useState("");
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
-
-  useEffect(() => {
-    loadBusinessProfile().catch(() => null);
-  }, [loadBusinessProfile]);
-
-  // Populate settings fields when businessProfile loads
-  useEffect(() => {
-    if (businessProfile) {
-      setSettingsMinOrder(String(businessProfile.minimumOrderAmount ?? ""));
-      setSettingsDeliveryTime(businessProfile.estimatedDeliveryTime ?? "");
-      setSettingsPrepTime(businessProfile.preparationTime ?? "");
-      setSettingsDeliveryFee(String(businessProfile.deliveryFee ?? ""));
-      setSettingsTags(Array.isArray(businessProfile.tags) ? businessProfile.tags.join(", ") : "");
-    }
-  }, [businessProfile]);
-
-  const handleLogout = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign Out",
-        style: "destructive",
-        onPress: async () => {
-          await logoutUser();
-          router.replace("/(auth)/business-owner-login");
-        },
-      },
-    ]);
-  };
-
-  const handleSaveSettings = async () => {
-    setIsSavingSettings(true);
-    try {
-      const minOrder = settingsMinOrder.trim() !== "" ? Number(settingsMinOrder) : undefined;
-      const fee = settingsDeliveryFee.trim() !== "" ? Number(settingsDeliveryFee) : undefined;
-      const tags = settingsTags.trim()
-        ? settingsTags.split(",").map((t) => t.trim()).filter(Boolean)
-        : undefined;
-      await businessOwnerService.updateBusinessSettings({
-        minimumOrderAmount: minOrder,
-        estimatedDeliveryTime: settingsDeliveryTime.trim() || undefined,
-        preparationTime: settingsPrepTime.trim() || undefined,
-        deliveryFee: fee,
-        tags,
-      });
-      await loadBusinessProfile().catch(() => null);
-      Alert.alert("Saved", "Business settings updated.");
-    } catch (err: any) {
-      Alert.alert("Error", err?.response?.data?.error || err?.message || "Failed to save settings.");
-    } finally {
-      setIsSavingSettings(false);
-    }
-  };
-
-  const handleChangePassword = async () => {
-    setPasswordError("");
-
-    if (newPassword.length < 8) {
-      setPasswordError("Password must be at least 8 characters.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Passwords do not match.");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      await changePassword(newPassword);
-      Alert.alert("Success", "Password changed successfully.", [
-        {
-          text: "OK",
-          onPress: () => {
-            setShowChangePassword(false);
-            setNewPassword("");
-            setConfirmPassword("");
-          },
-        },
-      ]);
-    } catch (err: any) {
-      Alert.alert(
-        "Error",
-        err?.response?.data?.error || err?.message || "Failed to change password."
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const verificationColor =
-    businessProfile?.isVerified ? "#16A34A" : "#D97706";
-  const verificationBg =
-    businessProfile?.isVerified ? "#DCFCE7" : "#FFFBEB";
-  const verificationLabel =
-    businessProfile?.isVerified ? "✓ Verified Business" : "⏳ Pending Verification";
-
-  const insets = useSafeAreaInsets();
+  const {
+    user,
+    businessProfile,
+    insets,
+    verificationMeta,
+    showChangePassword,
+    setShowChangePassword,
+    newPassword,
+    setNewPassword,
+    confirmPassword,
+    setConfirmPassword,
+    passwordError,
+    setPasswordError,
+    isSaving,
+    showSettings,
+    setShowSettings,
+    settingsMinOrder,
+    setSettingsMinOrder,
+    settingsDeliveryTime,
+    setSettingsDeliveryTime,
+    settingsPrepTime,
+    setSettingsPrepTime,
+    settingsDeliveryFee,
+    setSettingsDeliveryFee,
+    settingsTags,
+    setSettingsTags,
+    isSavingSettings,
+    handleLogout,
+    handleSaveSettings,
+    handleChangePassword,
+  } = useBusinessOwnerProfile();
 
   return (
     <View style={styles.container}>
@@ -161,7 +71,7 @@ export default function BusinessOwnerProfile() {
             style={[styles.hero, { paddingTop: insets.top + 28 }]}
           >
             <View style={styles.avatarBox}>
-              <Text style={styles.avatarEmoji}>🏪</Text>
+              <Text style={styles.avatarEmoji}>{content.hero.emoji}</Text>
             </View>
             <Text style={styles.heroName}>
               {user?.firstName} {user?.lastName}
@@ -176,31 +86,31 @@ export default function BusinessOwnerProfile() {
           {businessProfile ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionHeaderIcon}>🏬</Text>
-                <Text style={styles.sectionHeaderTitle}>My Business</Text>
-                <View style={[styles.verifiedPill, { backgroundColor: verificationBg }]}>
-                  <Text style={[styles.verifiedPillText, { color: verificationColor }]}>
-                    {verificationLabel}
+                <Text style={styles.sectionHeaderIcon}>{content.business.sectionIcon}</Text>
+                <Text style={styles.sectionHeaderTitle}>{content.business.sectionTitle}</Text>
+                <View style={[styles.verifiedPill, { backgroundColor: verificationMeta.bg }]}>
+                  <Text style={[styles.verifiedPillText, { color: verificationMeta.color }]}>
+                    {verificationMeta.label}
                   </Text>
                 </View>
               </View>
               <View style={styles.sectionBody}>
-                <InfoRow icon="🏷️" label="Business Name"  value={businessProfile.name} />
-                <InfoRow icon="🗂️" label="Category"       value={businessProfile.category} />
-                <InfoRow icon="📝" label="Description"    value={businessProfile.description} />
-                <InfoRow icon="📍" label="Address"        value={businessProfile.address} />
-                <InfoRow icon="📞" label="Phone"          value={businessProfile.phone} />
-                <InfoRow icon="✉️"  label="Email"          value={businessProfile.email} />
-                <InfoRow icon="⭐" label="Rating"         value={businessProfile.rating ? `${businessProfile.rating} / 5 (${businessProfile.totalReviews ?? 0} reviews)` : null} />
-                <InfoRow icon="🔖" label="Status"         value={businessProfile.status} />
+                <InfoRow icon="🏷️" label={content.business.rows.name}  value={businessProfile.name} />
+                <InfoRow icon="🗂️" label={content.business.rows.category}       value={businessProfile.category} />
+                <InfoRow icon="📝" label={content.business.rows.description}    value={businessProfile.description} />
+                <InfoRow icon="📍" label={content.business.rows.address}        value={businessProfile.address} />
+                <InfoRow icon="📞" label={content.business.rows.phone}          value={businessProfile.phone} />
+                <InfoRow icon="✉️"  label={content.business.rows.email}          value={businessProfile.email} />
+                <InfoRow icon="⭐" label={content.business.rows.rating}         value={businessProfile.rating ? content.business.ratingValue.replace("{rating}", String(businessProfile.rating)).replace("{reviews}", String(businessProfile.totalReviews ?? 0)) : null} />
+                <InfoRow icon="🔖" label={content.business.rows.status}         value={businessProfile.status} />
               </View>
             </View>
           ) : (
             <View style={styles.section}>
               <View style={styles.noBusinessWrap}>
-                <Text style={styles.noBusinessEmoji}>🏗️</Text>
-                <Text style={styles.noBusinessText}>No business profile found.</Text>
-                <Text style={styles.noBusinessSub}>Contact an admin to set up your business.</Text>
+                <Text style={styles.noBusinessEmoji}>{content.business.noProfileEmoji}</Text>
+                <Text style={styles.noBusinessText}>{content.business.noProfileTitle}</Text>
+                <Text style={styles.noBusinessSub}>{content.business.noProfileSub}</Text>
               </View>
             </View>
           )}
@@ -213,8 +123,8 @@ export default function BusinessOwnerProfile() {
                 onPress={() => setShowSettings((prev) => !prev)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.sectionRowIcon}>⚙️</Text>
-                <Text style={styles.sectionRowLabel}>Business Settings</Text>
+                <Text style={styles.sectionRowIcon}>{content.settings.icon}</Text>
+                <Text style={styles.sectionRowLabel}>{content.settings.label}</Text>
                 <Text style={styles.sectionRowChevron}>
                   {showSettings ? "▲" : "▼"}
                 </Text>
@@ -222,48 +132,48 @@ export default function BusinessOwnerProfile() {
 
               {showSettings && (
                 <View style={styles.changePasswordForm}>
-                  <Text style={styles.fieldLabel}>Minimum Order Amount (Rs)</Text>
+                  <Text style={styles.fieldLabel}>{content.settings.minOrder}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="e.g. 100"
+                    placeholder={content.settings.placeholders.minOrder}
                     value={settingsMinOrder}
                     onChangeText={setSettingsMinOrder}
                     keyboardType="numeric"
                     placeholderTextColor="#94A3B8"
                   />
 
-                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Estimated Delivery Time</Text>
+                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{content.settings.deliveryTime}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="e.g. 30-40 mins"
+                    placeholder={content.settings.placeholders.deliveryTime}
                     value={settingsDeliveryTime}
                     onChangeText={setSettingsDeliveryTime}
                     placeholderTextColor="#94A3B8"
                   />
 
-                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Preparation Time</Text>
+                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{content.settings.prepTime}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="e.g. 15-20 mins"
+                    placeholder={content.settings.placeholders.prepTime}
                     value={settingsPrepTime}
                     onChangeText={setSettingsPrepTime}
                     placeholderTextColor="#94A3B8"
                   />
 
-                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Delivery Fee (Rs, 0 = free)</Text>
+                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{content.settings.deliveryFee}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="e.g. 30"
+                    placeholder={content.settings.placeholders.deliveryFee}
                     value={settingsDeliveryFee}
                     onChangeText={setSettingsDeliveryFee}
                     keyboardType="numeric"
                     placeholderTextColor="#94A3B8"
                   />
 
-                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Cuisine Tags (comma-separated)</Text>
+                  <Text style={[styles.fieldLabel, { marginTop: 12 }]}>{content.settings.tags}</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="e.g. Chinese, Veg, Fast Food"
+                    placeholder={content.settings.placeholders.tags}
                     value={settingsTags}
                     onChangeText={setSettingsTags}
                     placeholderTextColor="#94A3B8"
@@ -279,7 +189,7 @@ export default function BusinessOwnerProfile() {
                     {isSavingSettings ? (
                       <ActivityIndicator color="#FFFFFF" />
                     ) : (
-                      <Text style={styles.savePasswordBtnText}>Save Settings</Text>
+                      <Text style={styles.savePasswordBtnText}>{content.settings.save}</Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -294,8 +204,8 @@ export default function BusinessOwnerProfile() {
               onPress={() => setShowChangePassword((prev) => !prev)}
               activeOpacity={0.7}
             >
-              <Text style={styles.sectionRowIcon}>🔑</Text>
-              <Text style={styles.sectionRowLabel}>Change Password</Text>
+              <Text style={styles.sectionRowIcon}>{content.password.icon}</Text>
+              <Text style={styles.sectionRowLabel}>{content.password.label}</Text>
               <Text style={styles.sectionRowChevron}>
                 {showChangePassword ? "▲" : "▼"}
               </Text>
@@ -303,10 +213,10 @@ export default function BusinessOwnerProfile() {
 
             {showChangePassword && (
               <View style={styles.changePasswordForm}>
-                <Text style={styles.fieldLabel}>New Password</Text>
+                <Text style={styles.fieldLabel}>{content.password.newPassword}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Minimum 8 characters"
+                  placeholder={content.password.placeholders.newPassword}
                   value={newPassword}
                   onChangeText={(v) => { setNewPassword(v); setPasswordError(""); }}
                   secureTextEntry
@@ -316,11 +226,11 @@ export default function BusinessOwnerProfile() {
                 />
 
                 <Text style={[styles.fieldLabel, { marginTop: 12 }]}>
-                  Confirm New Password
+                  {content.password.confirmPassword}
                 </Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Re-enter new password"
+                  placeholder={content.password.placeholders.confirmPassword}
                   value={confirmPassword}
                   onChangeText={(v) => { setConfirmPassword(v); setPasswordError(""); }}
                   secureTextEntry
@@ -342,7 +252,7 @@ export default function BusinessOwnerProfile() {
                   {isSaving ? (
                     <ActivityIndicator color="#FFFFFF" />
                   ) : (
-                    <Text style={styles.savePasswordBtnText}>Update Password</Text>
+                    <Text style={styles.savePasswordBtnText}>{content.password.update}</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -356,7 +266,7 @@ export default function BusinessOwnerProfile() {
               onPress={handleLogout}
               activeOpacity={0.8}
             >
-              <Text style={styles.logoutBtnText}>Sign Out</Text>
+              <Text style={styles.logoutBtnText}>{content.logout.buttonText}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

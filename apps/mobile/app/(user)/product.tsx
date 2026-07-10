@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,166 +5,37 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
-import { useToast } from "react-native-toast-notifications";
-import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
-import { addItem, clearCart, updateQuantity } from "../../src/store/slices/cartSlice";
-import { userAppService } from "../../src/services/userAppService";
-import { Product, Business } from "../../src/types";
-import { unitStepLabel, displayQuantity, maxCartSteps, stockBadgeInfo } from "../../src/utils/helpers";
-
-function getFirstImageUrl(images?: string[]) {
-  return images?.find((url) => typeof url === "string" && url.trim().length > 0) ?? null;
-}
-
-const DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
-
-function getBusinessOrderStatus(business: Business): "open" | "paused" | "closed" {
-  if (business.status !== "active") return "closed";
-  let withinHours = true;
-  if (business.operatingHours) {
-    const now = new Date();
-    const dayKey = DAYS[now.getDay()];
-    const hours = business.operatingHours[dayKey];
-    if (!hours || hours.isClosed) {
-      withinHours = false;
-    } else {
-      const pad = (n: number) => n.toString().padStart(2, "0");
-      const current = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-      withinHours = current >= hours.open && current < hours.close;
-    }
-  }
-  if (!withinHours) return "closed";
-  if (business.isTakingOrders === false) return "paused";
-  return "open";
-}
+import { useProductDetail } from "@hooks/useProductDetail";
+import content from "@/content/product.json";
 
 export default function ProductDetailScreen() {
-  const toast = useToast();
-  const dispatch = useAppDispatch();
-  const { id: productId, businessId: paramBizId } = useLocalSearchParams<{
-    id: string;
-    businessId?: string;
-  }>();
-
-  const cartItems = useAppSelector((state) => state.cart.items);
-  const cartBusinessId = useAppSelector((state) => state.cart.businessId);
-
-  const [product, setProduct] = useState<Product | null>(null);
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const insets = useSafeAreaInsets();
-
-  // Load product from the home feed (from redux) or fetch individually
-  const featuredProducts = useAppSelector((state) => state.userApp.featuredProducts);
-  const businesses = useAppSelector((state) => state.userApp.businesses);
-
-  useEffect(() => {
-    if (!productId) return;
-
-    // Try to find from existing state first (instant load)
-    const localProduct = featuredProducts.find((p) => p.id === productId);
-    const localBiz = businesses.find((b) => b.id === (localProduct?.businessId ?? paramBizId));
-
-    if (localProduct) {
-      setProduct(localProduct);
-      if (localBiz) setBusiness(localBiz);
-      setIsLoading(false);
-      return;
-    }
-
-    // Otherwise fetch from API
-    const fetchProduct = async () => {
-      try {
-        setIsLoading(true);
-        await Promise.all([
-          userAppService.getFeaturedProducts(""), // fallback: just show what we have
-        ]);
-        setIsLoading(false);
-      } catch {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProduct();
-  }, [productId, featuredProducts, businesses, paramBizId]);
-
-  const cartItem = cartItems.find((i) => i.productId === productId);
-  const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
-  const cartTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-
-  const qty = cartItem?.quantity ?? 0;
-  const bizOrderStatus = business ? getBusinessOrderStatus(business) : "open";
-  const isOrderable = bizOrderStatus === "open";
-
-  // Weight-aware derived values
-  const maxSteps = product ? maxCartSteps(product.stock, product.unit, product.unitStep) : 0;
-  const uLabel = product ? unitStepLabel(product.unit, product.unitStep) : "";
-
-  function addCurrentProductToCart(targetProduct: Product) {
-    dispatch(
-      addItem({
-        productId: targetProduct.id,
-        productName: targetProduct.name,
-        productImage: getFirstImageUrl(targetProduct.imageUrls),
-        businessId: targetProduct.businessId,
-        businessName: business?.name ?? "Local Store",
-        price: targetProduct.price,
-        quantity: 1,
-        maxQuantity: maxCartSteps(targetProduct.stock, targetProduct.unit, targetProduct.unitStep),
-        unit: targetProduct.unit,
-        unitStep: targetProduct.unitStep,
-      })
-    );
-    toast.show(`${targetProduct.name} added to cart`, { type: "success" });
-  }
-
-  function handleAddToCart() {
-    if (!product) return;
-
-    if (cartBusinessId && cartBusinessId !== product.businessId) {
-      Alert.alert(
-        "Replace cart items?",
-        "Your cart has items from another shop. Continue to clear cart and add this item?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Yes, replace",
-            style: "destructive",
-            onPress: () => {
-              dispatch(clearCart());
-              addCurrentProductToCart(product);
-            },
-          },
-        ]
-      );
-      return;
-    }
-
-    addCurrentProductToCart(product);
-  }
-
-  function handleIncrease() {
-    if (!product || !cartItem) return;
-    if (cartItem.quantity >= maxSteps) {
-      const stockLabel = uLabel ? `${product.stock}${product.unit}` : `${product.stock}`;
-      toast.show(`Only ${stockLabel} in stock`, { type: "warning" });
-      return;
-    }
-    dispatch(updateQuantity({ productId: product.id, quantity: cartItem.quantity + 1 }));
-  }
-
-  function handleDecrease() {
-    if (!product) return;
-    dispatch(updateQuantity({ productId: product.id, quantity: qty - 1 }));
-  }
+  const {
+    product,
+    business,
+    isLoading,
+    selectedImageIndex,
+    setSelectedImageIndex,
+    cartCount,
+    cartTotal,
+    qty,
+    bizOrderStatus,
+    isOrderable,
+    maxSteps,
+    uLabel,
+    handleAddToCart,
+    handleIncrease,
+    handleDecrease,
+    goBack,
+    goToCart,
+    displayQuantity,
+    stockBadgeInfo,
+  } = useProductDetail();
 
   if (isLoading) {
     return (
@@ -174,20 +44,11 @@ export default function ProductDetailScreen() {
           colors={["#0E9F6E", "#0891B2"]}
           style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
         >
-        <TouchableOpacity
-          onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace("/(user)/(tabs)/home");
-            }
-          }}
-          style={styles.backBtn}
-        >
-          <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }} />
-        <View style={styles.headerRight} />
+          <TouchableOpacity onPress={goBack} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }} />
+          <View style={styles.headerRight} />
         </LinearGradient>
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color="#0E9F6E" />
@@ -203,23 +64,14 @@ export default function ProductDetailScreen() {
           colors={["#0E9F6E", "#0891B2"]}
           style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
         >
-          <TouchableOpacity
-            onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace("/(user)/(tabs)/home");
-              }
-            }}
-            style={styles.backBtn}
-          >
+          <TouchableOpacity onPress={goBack} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
           </TouchableOpacity>
           <View style={{ flex: 1 }} />
           <View style={styles.headerRight} />
         </LinearGradient>
         <View style={styles.loadingWrap}>
-          <Text style={styles.notFoundText}>Product not found</Text>
+          <Text style={styles.notFoundText}>{content.notFound}</Text>
         </View>
       </View>
     );
@@ -236,26 +88,14 @@ export default function ProductDetailScreen() {
         colors={["#0E9F6E", "#0891B2"]}
         style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
       >
-        <TouchableOpacity
-          onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace("/(user)/(tabs)/home");
-            }
-          }}
-          style={styles.backBtn}
-        >
+        <TouchableOpacity onPress={goBack} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {product.name}
         </Text>
         {cartCount > 0 ? (
-          <TouchableOpacity
-            style={styles.cartBadgeBtn}
-            onPress={() => router.push("/(user)/cart")}
-          >
+          <TouchableOpacity style={styles.cartBadgeBtn} onPress={goToCart}>
             <Ionicons name="cart" size={16} color="#FFFFFF" />
             <Text style={styles.cartBadgeText}>{cartCount}</Text>
           </TouchableOpacity>
@@ -275,12 +115,12 @@ export default function ProductDetailScreen() {
             />
           ) : (
             <View style={styles.imagePlaceholder}>
-              <Text style={styles.imagePlaceholderEmoji}>mohallaMitr</Text>
+              <Text style={styles.imagePlaceholderEmoji}>{content.imagePlaceholder}</Text>
             </View>
           )}
           {discount > 0 && (
             <View style={styles.discountBadge}>
-              <Text style={styles.discountBadgeText}>{discount}% OFF</Text>
+              <Text style={styles.discountBadgeText}>{discount}{content.discountSuffix}</Text>
             </View>
           )}
         </View>
@@ -317,10 +157,10 @@ export default function ProductDetailScreen() {
 
           <View style={styles.priceRow}>
             <Text style={styles.price}>
-              Rs {product.price}{uLabel ? `/${uLabel}` : ""}
+              {content.currency} {product.price}{uLabel ? `/${uLabel}` : ""}
             </Text>
             {discount > 0 ? (
-              <Text style={styles.originalPrice}>Rs {originalPrice}</Text>
+              <Text style={styles.originalPrice}>{content.currency} {originalPrice}</Text>
             ) : null}
             {product.rating ? (
               <View style={styles.ratingBadge}>
@@ -348,14 +188,14 @@ export default function ProductDetailScreen() {
 
           {product.description ? (
             <View style={styles.descWrap}>
-              <Text style={styles.descTitle}>Description</Text>
+              <Text style={styles.descTitle}>{content.sections.description}</Text>
               <Text style={styles.descText}>{product.description}</Text>
             </View>
           ) : null}
 
           {product.attributes && product.attributes.length > 0 ? (
             <View style={styles.attrsWrap}>
-              <Text style={styles.attrsTitle}>Details</Text>
+              <Text style={styles.attrsTitle}>{content.sections.details}</Text>
               {product.attributes.map((attr, idx) => (
                 <View key={idx} style={styles.attrRow}>
                   <Text style={styles.attrName}>{attr.name}</Text>
@@ -367,25 +207,25 @@ export default function ProductDetailScreen() {
 
           {/* Pricing summary */}
           <View style={styles.priceSummaryWrap}>
-            <Text style={styles.priceSummaryTitle}>Price Details</Text>
+            <Text style={styles.priceSummaryTitle}>{content.sections.priceDetails}</Text>
             <View style={styles.priceSummaryRow}>
               <Text style={styles.priceSummaryLabel}>
-                {uLabel ? `Price per ${uLabel}` : "Product Price"}
+                {uLabel ? `${content.sections.pricePerPrefix}${uLabel}` : content.sections.productPrice}
               </Text>
-              <Text style={styles.priceSummaryValue}>Rs {product.price}</Text>
+              <Text style={styles.priceSummaryValue}>{content.currency} {product.price}</Text>
             </View>
             <View style={styles.priceSummaryRow}>
-              <Text style={styles.priceSummaryLabel}>Platform Fee</Text>
-              <Text style={styles.priceSummaryValue}>Rs 2</Text>
+              <Text style={styles.priceSummaryLabel}>{content.sections.platformFee}</Text>
+              <Text style={styles.priceSummaryValue}>{content.currency} {content.platformFeeValue}</Text>
             </View>
             <View style={styles.priceDivider} />
             <View style={styles.priceSummaryRow}>
               <Text style={styles.priceSummaryLabelBold}>
-                {uLabel ? `Total (1 × ${uLabel})` : "Total (1 item)"}
+                {uLabel ? `${content.sections.totalPrefix}${uLabel}${content.sections.totalSuffix}` : content.sections.totalItem}
               </Text>
-              <Text style={styles.priceSummaryValueBold}>Rs {product.price + 2}</Text>
+              <Text style={styles.priceSummaryValueBold}>{content.currency} {product.price + content.platformFeeValue}</Text>
             </View>
-            <Text style={styles.priceNote}>Platform fee of Rs 2 is charged per order. No delivery or GST charges.</Text>
+            <Text style={styles.priceNote}>{content.priceNote}</Text>
           </View>
         </View>
       </ScrollView>
@@ -394,17 +234,17 @@ export default function ProductDetailScreen() {
       <View style={[styles.fixedButtonContainer, { paddingBottom: insets.bottom }]}>
         {maxSteps <= 0 ? (
           <View style={styles.outOfStockBtn}>
-            <Text style={styles.outOfStockText}>Out of Stock</Text>
+            <Text style={styles.outOfStockText}>{content.cart.outOfStock}</Text>
           </View>
         ) : !isOrderable ? (
           <View style={[styles.outOfStockBtn, styles.shopNotOrderableBtn]}>
             <Text style={styles.outOfStockText}>
-              {bizOrderStatus === "paused" ? "⏸ Shop Paused" : "🕐 Shop Closed"}
+              {bizOrderStatus === "paused" ? content.cart.shopPaused : content.cart.shopClosed}
             </Text>
           </View>
         ) : qty === 0 ? (
           <TouchableOpacity style={styles.addToCartBtn} onPress={handleAddToCart}>
-            <Text style={styles.addToCartText}>Add to Cart</Text>
+            <Text style={styles.addToCartText}>{content.cart.addToCart}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.qtyRow}>
@@ -417,11 +257,8 @@ export default function ProductDetailScreen() {
                 <Text style={styles.qtyBtnText}>+</Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.goToCartBtn}
-              onPress={() => router.push("/(user)/cart")}
-            >
-              <Text style={styles.goToCartText}>Go to Cart · Rs {cartTotal + 2}</Text>
+            <TouchableOpacity style={styles.goToCartBtn} onPress={goToCart}>
+              <Text style={styles.goToCartText}>{content.cart.goToCartPrefix}{cartTotal + content.platformFeeValue}</Text>
             </TouchableOpacity>
           </View>
         )}

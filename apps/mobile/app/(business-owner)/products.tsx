@@ -1,4 +1,3 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,476 +7,56 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
   Modal,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   Image,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import * as ImageManipulator from "expo-image-manipulator";
 import { LinearGradient } from "expo-linear-gradient";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
-import { Product } from "../../src/types";
-import { type ProductUnit } from "../../src/utils/helpers";
-
-interface ProductForm {
-  name: string;
-  category: string;
-  menuSection: string;
-  isVeg: boolean;
-  price: string;
-  originalPrice: string;
-  stock: number;       // used for piece-unit integer stock
-  stockText: string;   // text input for weight-unit stock (decimal)
-  unit: ProductUnit;
-  unitStep: string;    // text representation, e.g. "100", "0.25"
-  description: string;
-  imageUri: string | null;
-  additionalImageUris: string[];
-}
-
-function toDataUrl(base64?: string | null, mimeType?: string | null) {
-  if (!base64) return null;
-  return `data:${mimeType || "image/jpeg"};base64,${base64}`;
-}
-
-function extractRequestError(err: unknown, fallback: string) {
-  if (err && typeof err === "object") {
-    const axiosErr = err as any;
-    return (
-      axiosErr?.response?.data?.error ||
-      axiosErr?.response?.data?.message ||
-      axiosErr?.message ||
-      fallback
-    );
-  }
-  return err instanceof Error ? err.message : fallback;
-}
-
-const CATEGORIES = [
-  { label: "General", value: "general" },
-  { label: "Grocery", value: "grocery" },
-  { label: "Fruits & Veg", value: "fruits_veg" },
-  { label: "Dairy", value: "dairy" },
-  { label: "Bakery", value: "bakery" },
-  { label: "Beverages", value: "beverages" },
-  { label: "Snacks", value: "snacks" },
-  { label: "Personal Care", value: "personal_care" },
-  { label: "Household", value: "household" },
-  { label: "Medicines", value: "medicines" },
-  { label: "Electronics", value: "electronics" },
-  { label: "Other", value: "other" },
-];
-
-const UNIT_OPTIONS: Array<{ label: string; value: ProductUnit }> = [
-  { label: "Piece", value: "piece" },
-  { label: "g (grams)", value: "g" },
-  { label: "kg", value: "kg" },
-  { label: "ml", value: "ml" },
-  { label: "L (litres)", value: "L" },
-];
-
-const UNIT_STEP_PRESETS: Record<Exclude<ProductUnit, "piece">, Array<{ label: string; value: string }>> = {
-  g: [
-    { label: "100g", value: "100" },
-    { label: "250g", value: "250" },
-    { label: "500g", value: "500" },
-    { label: "1kg", value: "1000" },
-  ],
-  kg: [
-    { label: "250g", value: "0.25" },
-    { label: "500g", value: "0.5" },
-    { label: "1kg", value: "1" },
-    { label: "2kg", value: "2" },
-  ],
-  ml: [
-    { label: "100ml", value: "100" },
-    { label: "250ml", value: "250" },
-    { label: "500ml", value: "500" },
-    { label: "1L", value: "1000" },
-  ],
-  L: [
-    { label: "250ml", value: "0.25" },
-    { label: "500ml", value: "0.5" },
-    { label: "1L", value: "1" },
-    { label: "2L", value: "2" },
-  ],
-};
-
-const DEFAULT_UNIT_STEP: Record<ProductUnit, string> = {
-  piece: "1",
-  g: "100",
-  kg: "0.25",
-  ml: "100",
-  L: "0.5",
-};
-
-const EMPTY_FORM: ProductForm = {
-  name: "",
-  category: "general",
-  menuSection: "",
-  isVeg: true,
-  price: "",
-  originalPrice: "",
-  stock: 1,
-  stockText: "0",
-  unit: "piece",
-  unitStep: "1",
-  description: "",
-  imageUri: null,
-  additionalImageUris: [],
-};
-
-const MAX_TOTAL_IMAGE_CHARS = 850_000;
-
-async function compressAssetToDataUrl(
-  asset: ImagePicker.ImagePickerAsset,
-  kind: "primary" | "additional"
-): Promise<string | null> {
-  const targetWidth = kind === "primary" ? 720 : 600;
-  const compress = kind === "primary" ? 0.32 : 0.26;
-
-  const manipResult = await ImageManipulator.manipulateAsync(
-    asset.uri,
-    [{ resize: { width: targetWidth } }],
-    {
-      compress,
-      format: ImageManipulator.SaveFormat.JPEG,
-      base64: true,
-    }
-  );
-
-  return toDataUrl(manipResult.base64, "image/jpeg");
-}
-
-function getTotalImageChars(values: string[]) {
-  return values.reduce((sum, value) => sum + value.length, 0);
-}
+import { Product } from "@/types";
+import { type ProductUnit } from "@utils/helpers";
+import { useBusinessOwnerProducts } from "@hooks/useBusinessOwnerProducts";
+import content from "@/content/boProducts.json";
 
 export default function BusinessOwnerProducts() {
   const {
-    products,
     isLoading,
-    loadProducts,
-    createProduct,
-    editProduct,
-    removeProductById,
-  } = useBusinessOwner();
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [form, setForm] = useState<ProductForm>(EMPTY_FORM);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const insets = useSafeAreaInsets();
-
-  useEffect(() => {
-    loadProducts().catch(() => null);
-  }, [loadProducts]);
-
-  const filteredProducts = useMemo(() => {
-    const q = searchQuery.toLowerCase();
-    return products.filter(
-      (item) =>
-        (item.name ?? "").toLowerCase().includes(q) ||
-        (item.category ?? "").toLowerCase().includes(q)
-    );
-  }, [products, searchQuery]);
-
-  const resetForm = useCallback(() => {
-    setForm(EMPTY_FORM);
-  }, []);
-
-  const pickImage = useCallback(async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission Required", "Please allow access to your photo library to add a product image.");
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.9,
-      });
-      if (!result.canceled && result.assets.length > 0) {
-        const asset = result.assets[0];
-        const compressedDataUrl = await compressAssetToDataUrl(asset, "primary");
-        if (!compressedDataUrl) {
-          Alert.alert("Image Error", "Could not process this image. Please try another photo.");
-          return;
-        }
-        setForm((prev) => ({
-          ...prev,
-          imageUri: compressedDataUrl,
-        }));
-      }
-    } catch {
-      Alert.alert("Error", "Failed to pick image.");
-    }
-  }, []);
-
-  const takePhoto = useCallback(async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission Required", "Please allow camera access to take a photo.");
-        return;
-      }
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.9,
-      });
-      if (!result.canceled && result.assets.length > 0) {
-        const asset = result.assets[0];
-        const compressedDataUrl = await compressAssetToDataUrl(asset, "primary");
-        if (!compressedDataUrl) {
-          Alert.alert("Image Error", "Could not process this image. Please try another photo.");
-          return;
-        }
-        setForm((prev) => ({
-          ...prev,
-          imageUri: compressedDataUrl,
-        }));
-      }
-    } catch {
-      Alert.alert("Error", "Failed to take photo.");
-    }
-  }, []);
-
-  const showImageOptions = useCallback(() => {
-    Alert.alert("Add Product Image", "Choose an option", [
-      { text: "Camera", onPress: takePhoto },
-      { text: "Photo Library", onPress: pickImage },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  }, [pickImage, takePhoto]);
-
-  const pickAdditionalImage = useCallback(async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission Required", "Please allow access to your photo library.");
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.9,
-      });
-      if (!result.canceled && result.assets.length > 0) {
-        const asset = result.assets[0];
-        const compressedDataUrl = await compressAssetToDataUrl(asset, "additional");
-        if (!compressedDataUrl) {
-          Alert.alert("Image Error", "Could not process this image. Please try another photo.");
-          return;
-        }
-        setForm((prev) => {
-          const nextImages = [
-            ...prev.additionalImageUris,
-            compressedDataUrl,
-          ].slice(0, 3);
-          return {
-            ...prev,
-            additionalImageUris: nextImages,
-          };
-        });
-      }
-    } catch {
-      Alert.alert("Error", "Failed to pick image.");
-    }
-  }, []);
-
-  const takeAdditionalPhoto = useCallback(async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert("Permission Required", "Please allow camera access.");
-        return;
-      }
-      const result = await ImagePicker.launchCameraAsync({
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.9,
-      });
-      if (!result.canceled && result.assets.length > 0) {
-        const asset = result.assets[0];
-        const compressedDataUrl = await compressAssetToDataUrl(asset, "additional");
-        if (!compressedDataUrl) {
-          Alert.alert("Image Error", "Could not process this image. Please try another photo.");
-          return;
-        }
-        setForm((prev) => {
-          const nextImages = [
-            ...prev.additionalImageUris,
-            compressedDataUrl,
-          ].slice(0, 3);
-          return {
-            ...prev,
-            additionalImageUris: nextImages,
-          };
-        });
-      }
-    } catch {
-      Alert.alert("Error", "Failed to take photo.");
-    }
-  }, []);
-
-  const showAdditionalImageOptions = useCallback(() => {
-    Alert.alert("Add Additional Photo", "Choose an option", [
-      { text: "Camera", onPress: takeAdditionalPhoto },
-      { text: "Photo Library", onPress: pickAdditionalImage },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  }, [pickAdditionalImage, takeAdditionalPhoto]);
-
-  const removeAdditionalImage = useCallback((index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      additionalImageUris: prev.additionalImageUris.filter((_, i) => i !== index),
-    }));
-  }, []);
-
-  const handleCreate = useCallback(async () => {
-    if (!form.imageUri) {
-      Alert.alert("Missing Image", "Please add a product photo.");
-      return;
-    }
-    if (!form.name.trim()) {
-      Alert.alert("Missing Field", "Product name is required.");
-      return;
-    }
-    if (!form.price.trim()) {
-      Alert.alert("Missing Field", "Price is required.");
-      return;
-    }
-
-    // Validate unit step for weight units
-    if (form.unit !== "piece") {
-      const step = parseFloat(form.unitStep);
-      if (!step || step <= 0) {
-        Alert.alert("Missing Field", "Please select a unit step size (e.g. 100g, 500g).");
-        return;
-      }
-    }
-
-    const price = parseFloat(form.price);
-    const originalPrice = form.originalPrice.trim() ? parseFloat(form.originalPrice) : undefined;
-
-    if (Number.isNaN(price) || price <= 0) {
-      Alert.alert("Invalid Input", "Please enter a valid price.");
-      return;
-    }
-    if (originalPrice !== undefined && (Number.isNaN(originalPrice) || originalPrice <= 0)) {
-      Alert.alert("Invalid Input", "Please enter a valid original price.");
-      return;
-    }
-
-    const stockNum = form.unit === "piece" ? form.stock : parseFloat(form.stockText) || 0;
-    if (stockNum < 0) {
-      Alert.alert("Invalid Input", "Stock cannot be negative.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const imageUrls = form.imageUri ? [form.imageUri, ...form.additionalImageUris] : [];
-      const totalImageChars = getTotalImageChars(imageUrls);
-      if (totalImageChars > MAX_TOTAL_IMAGE_CHARS) {
-        Alert.alert(
-          "Image Too Large",
-          "Selected photos are too heavy. Please keep one image or choose lower-resolution photos."
-        );
-        setIsSubmitting(false);
-        return;
-      }
-
-      await createProduct({
-        name: form.name.trim(),
-        category: form.category || "general",
-        menuSection: form.menuSection.trim() || undefined,
-        isVeg: form.isVeg,
-        description: form.description.trim() || undefined,
-        price,
-        originalPrice,
-        stock: stockNum,
-        unit: form.unit !== "piece" ? form.unit : undefined,
-        unitStep: form.unit !== "piece" ? parseFloat(form.unitStep) || undefined : undefined,
-        status: "active",
-        imageUrls,
-      });
-      setShowCreateModal(false);
-      resetForm();
-    } catch (err) {
-      const msg = extractRequestError(err, "Failed to create product. Please try again.");
-      Alert.alert("Create Failed", msg);
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [form, createProduct, resetForm]);
-
-  const handleDelete = useCallback((productId: string | undefined, productName: string) => {
-    if (!productId) {
-      Alert.alert("Error", "Cannot delete this product — it has no valid ID. Please refresh the page and try again.");
-      return;
-    }
-    Alert.alert("Delete Product", `Are you sure you want to delete "${productName}"?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await removeProductById(productId);
-          } catch (err) {
-            const msg =
-              err instanceof Error ? err.message : "Failed to delete product.";
-            Alert.alert("Delete Failed", msg);
-          }
-        },
-      },
-    ]);
-  }, [removeProductById]);
-
-  const toggleStatus = useCallback(async (item: Product) => {
-    const nextStatus = item.status === "active" ? "inactive" : "active";
-    try {
-      await editProduct(item.id, { status: nextStatus });
-    } catch {
-      Alert.alert("Error", "Failed to update product status.");
-    }
-  }, [editProduct]);
-
-  const toggleAvailableToday = useCallback(async (item: Product) => {
-    try {
-      await editProduct(item.id, { availableToday: !item.availableToday });
-    } catch {
-      Alert.alert("Error", "Failed to update availability.");
-    }
-  }, [editProduct]);
+    filteredProducts,
+    searchQuery,
+    setSearchQuery,
+    showCreateModal,
+    setShowCreateModal,
+    form,
+    isSubmitting,
+    showCategoryDropdown,
+    setShowCategoryDropdown,
+    insets,
+    closeModal,
+    showImageOptions,
+    showAdditionalImageOptions,
+    removeAdditionalImage,
+    handleCreate,
+    handleDelete,
+    toggleStatus,
+    toggleAvailableToday,
+    setCategory,
+    setUnit,
+    setUnitStep,
+    decrementStock,
+    incrementStock,
+    setStockFromText,
+    setStockText,
+    quickAddStock,
+    setFormField,
+    getCategoryLabel,
+    getApprovalMeta,
+  } = useBusinessOwnerProducts();
 
   const renderItem = ({ item }: { item: Product }) => {
     const approval = item.approvalStatus ?? "pending";
     const isApproved = approval === "approved";
-
-    const approvalBg =
-      approval === "approved" ? "#DCFCE7" :
-      approval === "rejected" ? "#FEE2E2" : "#FEF9C3";
-    const approvalColor =
-      approval === "approved" ? "#16A34A" :
-      approval === "rejected" ? "#DC2626" : "#B45309";
-    const approvalIcon =
-      approval === "approved" ? "✓" :
-      approval === "rejected" ? "✗" : "⏳";
-    const approvalLabel =
-      approval === "approved" ? "Admin Approved" :
-      approval === "rejected" ? "Rejected by Admin" : "Pending Approval";
+    const approvalMeta = getApprovalMeta(approval);
 
     const firstImage = item.imageUrls?.[0];
     const price = item.price ?? 0;
@@ -495,26 +74,26 @@ export default function BusinessOwnerProducts() {
               <Image source={{ uri: firstImage }} style={styles.thumb} />
             ) : (
               <View style={styles.thumbPlaceholder}>
-                <Text style={styles.thumbPlaceholderText}>📦</Text>
+                <Text style={styles.thumbPlaceholderText}>{content.empty.emoji}</Text>
               </View>
             )}
             {discount !== null && (
               <View style={styles.discountBadge}>
-                <Text style={styles.discountBadgeText}>{discount}% off</Text>
+                <Text style={styles.discountBadgeText}>{discount}{content.card.discountSuffix}</Text>
               </View>
             )}
           </View>
 
           <View style={styles.cardInfo}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-              <Text style={styles.productName} numberOfLines={2}>{item.name ?? "—"}</Text>
+              <Text style={styles.productName} numberOfLines={2}>{item.name ?? content.card.noName}</Text>
               {item.isVeg !== undefined && (
                 <View style={item.isVeg ? styles.vegDot : styles.nonVegDot} />
               )}
             </View>
             <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
               <View style={styles.categoryChip}>
-                <Text style={styles.categoryChipText}>{item.category ?? "general"}</Text>
+                <Text style={styles.categoryChipText}>{item.category ?? content.card.fallbackCategory}</Text>
               </View>
               {item.menuSection ? (
                 <View style={[styles.categoryChip, { backgroundColor: "#EFF6FF" }]}>
@@ -523,27 +102,27 @@ export default function BusinessOwnerProducts() {
               ) : null}
             </View>
             <View style={styles.priceRow}>
-              <Text style={styles.productPrice}>₹{price}</Text>
+              <Text style={styles.productPrice}>{content.currency}{price}</Text>
               {originalPrice && originalPrice > price ? (
-                <Text style={styles.originalPrice}>₹{originalPrice}</Text>
+                <Text style={styles.originalPrice}>{content.currency}{originalPrice}</Text>
               ) : null}
             </View>
             <Text style={styles.stockText}>
-              Stock: <Text style={(item.stock ?? 0) > 0 ? styles.stockGood : styles.stockOut}>{item.stock ?? 0}</Text>
+              {content.card.stockPrefix}<Text style={(item.stock ?? 0) > 0 ? styles.stockGood : styles.stockOut}>{item.stock ?? 0}</Text>
             </Text>
           </View>
         </View>
 
         {/* Admin approval status */}
-        <View style={[styles.approvalBanner, { backgroundColor: approvalBg }]}>
-          <Text style={[styles.approvalIcon, { color: approvalColor }]}>{approvalIcon}</Text>
+        <View style={[styles.approvalBanner, { backgroundColor: approvalMeta.bg }]}>
+          <Text style={[styles.approvalIcon, { color: approvalMeta.color }]}>{approvalMeta.icon}</Text>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.approvalLabel, { color: approvalColor }]}>{approvalLabel}</Text>
+            <Text style={[styles.approvalLabel, { color: approvalMeta.color }]}>{approvalMeta.label}</Text>
             {approval === "rejected" && item.approvalNote ? (
-              <Text style={styles.approvalNote}>Reason: {item.approvalNote}</Text>
+              <Text style={styles.approvalNote}>{content.card.approvalNotes.reasonPrefix}{item.approvalNote}</Text>
             ) : null}
             {approval === "pending" ? (
-              <Text style={styles.approvalNote}>Waiting for admin review</Text>
+              <Text style={styles.approvalNote}>{content.card.approvalNotes.pending}</Text>
             ) : null}
           </View>
         </View>
@@ -558,12 +137,12 @@ export default function BusinessOwnerProducts() {
             <Text style={styles.availIcon}>{item.availableToday ? "✅" : "⏸️"}</Text>
             <View style={styles.availInfo}>
               <Text style={[styles.availLabel, { color: item.availableToday ? "#16A34A" : "#64748B" }]}>
-                {item.availableToday ? "Available Today" : "Unavailable Today"}
+                {item.availableToday ? content.card.availableToday : content.card.unavailableToday}
               </Text>
-              <Text style={styles.availHint}>Tap to toggle for today</Text>
+              <Text style={styles.availHint}>{content.card.toggleHint}</Text>
             </View>
             <View style={[styles.availPill, { backgroundColor: item.availableToday ? "#22C55E" : "#CBD5E1" }]}>
-              <Text style={styles.availPillText}>{item.availableToday ? "ON" : "OFF"}</Text>
+              <Text style={styles.availPillText}>{item.availableToday ? content.card.on : content.card.off}</Text>
             </View>
           </TouchableOpacity>
         ) : null}
@@ -575,7 +154,7 @@ export default function BusinessOwnerProducts() {
               onPress={() => toggleStatus(item)}
             >
               <Text style={styles.statusBtnText}>
-                {item.status === "active" ? "Set Inactive" : "Set Active"}
+                {item.status === "active" ? content.card.setInactive : content.card.setActive}
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -583,7 +162,7 @@ export default function BusinessOwnerProducts() {
             style={[styles.actionBtn, styles.deleteBtn]}
             onPress={() => handleDelete(item.id, item.name)}
           >
-            <Text style={styles.deleteBtnText}>Delete</Text>
+            <Text style={styles.deleteBtnText}>{content.card.delete}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -596,15 +175,15 @@ export default function BusinessOwnerProducts() {
         colors={["#16A34A", "#0A7D55"]}
         style={[styles.header, { paddingTop: insets.top + 16 }]}
       >
-        <Text style={styles.headerTitle}>Products</Text>
-        <Text style={styles.headerSub}>Manage your product catalog</Text>
+        <Text style={styles.headerTitle}>{content.header.title}</Text>
+        <Text style={styles.headerSub}>{content.header.subtitle}</Text>
       </LinearGradient>
 
       <View style={styles.searchRow}>
         <TextInput
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholder="Search products…"
+          placeholder={content.searchPlaceholder}
           placeholderTextColor="#94A3B8"
           style={styles.searchInput}
         />
@@ -612,11 +191,11 @@ export default function BusinessOwnerProducts() {
           style={styles.addBtn}
           onPress={() => setShowCreateModal(true)}
         >
-          <Text style={styles.addBtnText}>+ Add</Text>
+          <Text style={styles.addBtnText}>{content.add}</Text>
         </TouchableOpacity>
       </View>
 
-      {isLoading && products.length === 0 ? (
+      {isLoading && filteredProducts.length === 0 ? (
         <View style={styles.loaderWrap}>
           <ActivityIndicator size="large" color="#16A34A" />
         </View>
@@ -628,16 +207,16 @@ export default function BusinessOwnerProducts() {
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Text style={styles.emptyEmoji}>📦</Text>
-              <Text style={styles.emptyTitle}>No products yet</Text>
+              <Text style={styles.emptyEmoji}>{content.empty.emoji}</Text>
+              <Text style={styles.emptyTitle}>{content.empty.title}</Text>
               <Text style={styles.emptySubtitle}>
-                Tap "+ Add" to add your first product.
+                {content.empty.subtitle}
               </Text>
               <TouchableOpacity
                 style={styles.emptyAddBtn}
                 onPress={() => setShowCreateModal(true)}
               >
-                <Text style={styles.emptyAddBtnText}>+ Add Product</Text>
+                <Text style={styles.emptyAddBtnText}>{content.empty.addBtn}</Text>
               </TouchableOpacity>
             </View>
           }
@@ -649,12 +228,7 @@ export default function BusinessOwnerProducts() {
         visible={showCreateModal}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => {
-          if (!isSubmitting) {
-            setShowCreateModal(false);
-            resetForm();
-          }
-        }}
+        onRequestClose={closeModal}
       >
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -665,18 +239,13 @@ export default function BusinessOwnerProducts() {
             {/* Modal Header */}
             <View style={styles.modalHeader}>
               <TouchableOpacity
-                onPress={() => {
-                  if (!isSubmitting) {
-                    setShowCreateModal(false);
-                    resetForm();
-                  }
-                }}
+                onPress={closeModal}
                 style={styles.modalCloseBtn}
                 disabled={isSubmitting}
               >
                 <Text style={styles.modalCloseBtnText}>✕</Text>
               </TouchableOpacity>
-              <Text style={styles.modalTitle}>Add Product</Text>
+              <Text style={styles.modalTitle}>{content.modal.title}</Text>
               <TouchableOpacity
                 style={[styles.modalSaveBtn, isSubmitting && styles.modalSaveBtnDisabled]}
                 onPress={handleCreate}
@@ -685,7 +254,7 @@ export default function BusinessOwnerProducts() {
                 {isSubmitting ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.modalSaveBtnText}>Save</Text>
+                  <Text style={styles.modalSaveBtnText}>{content.modal.save}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -699,7 +268,7 @@ export default function BusinessOwnerProducts() {
               {/* Primary Image (required) */}
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>
-                  Product Photo <Text style={styles.required}>*</Text>
+                  {content.modal.photoLabel} <Text style={styles.required}>{content.modal.required}</Text>
                 </Text>
                 <TouchableOpacity
                   style={styles.imagePicker}
@@ -710,14 +279,14 @@ export default function BusinessOwnerProducts() {
                     <>
                       <Image source={{ uri: form.imageUri }} style={styles.imagePreview} />
                       <View style={styles.imageOverlay}>
-                        <Text style={styles.imageOverlayText}>Change Photo</Text>
+                        <Text style={styles.imageOverlayText}>{content.modal.changePhoto}</Text>
                       </View>
                     </>
                   ) : (
                     <View style={styles.imagePlaceholder}>
                       <Text style={styles.imagePlaceholderIcon}>📷</Text>
-                      <Text style={styles.imagePlaceholderText}>Add Product Photo</Text>
-                      <Text style={styles.imagePlaceholderSub}>Required · tap to choose from library or camera</Text>
+                      <Text style={styles.imagePlaceholderText}>{content.modal.addPhoto}</Text>
+                      <Text style={styles.imagePlaceholderSub}>{content.modal.addPhotoSub}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -726,8 +295,8 @@ export default function BusinessOwnerProducts() {
               {/* Additional Images (optional, max 3) */}
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>
-                  Additional Photos{" "}
-                  <Text style={styles.optional}>(optional, max 3)</Text>
+                  {content.modal.additionalPhotosLabel}{" "}
+                  <Text style={styles.optional}>{content.modal.additionalPhotosOptional}</Text>
                 </Text>
                 <View style={styles.additionalImagesRow}>
                   {form.additionalImageUris.map((uri, idx) => (
@@ -737,7 +306,7 @@ export default function BusinessOwnerProducts() {
                         style={styles.additionalRemoveBtn}
                         onPress={() => removeAdditionalImage(idx)}
                       >
-                        <Text style={styles.additionalRemoveBtnText}>✕</Text>
+                        <Text style={styles.additionalRemoveBtnText}>{content.modal.additionalRemove}</Text>
                       </TouchableOpacity>
                     </View>
                   ))}
@@ -748,7 +317,7 @@ export default function BusinessOwnerProducts() {
                       activeOpacity={0.7}
                     >
                       <Text style={styles.additionalAddIcon}>+</Text>
-                      <Text style={styles.additionalAddText}>Add</Text>
+                      <Text style={styles.additionalAddText}>{content.modal.additionalAdd}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -756,12 +325,12 @@ export default function BusinessOwnerProducts() {
 
               {/* Product Name */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Product Name <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{content.modal.productName} <Text style={styles.required}>{content.modal.required}</Text></Text>
                 <TextInput
                   style={styles.input}
                   value={form.name}
-                  onChangeText={(v) => setForm((p) => ({ ...p, name: v }))}
-                  placeholder="e.g. Amul Butter 500g"
+                  onChangeText={(v) => setFormField("name", v)}
+                  placeholder={content.modal.productNamePlaceholder}
                   placeholderTextColor="#94A3B8"
                   returnKeyType="next"
                   maxLength={100}
@@ -770,31 +339,28 @@ export default function BusinessOwnerProducts() {
 
               {/* Category dropdown */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Category</Text>
+                <Text style={styles.fieldLabel}>{content.modal.category}</Text>
                 <TouchableOpacity
                   style={styles.dropdownTrigger}
                   onPress={() => setShowCategoryDropdown((v) => !v)}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.dropdownTriggerText}>
-                    {CATEGORIES.find((c) => c.value === form.category)?.label ?? "Select category"}
+                    {getCategoryLabel(form.category)}
                   </Text>
                   <Text style={styles.dropdownArrow}>{showCategoryDropdown ? "▲" : "▼"}</Text>
                 </TouchableOpacity>
                 {showCategoryDropdown && (
                   <View style={styles.dropdownList}>
-                    {CATEGORIES.map((cat, idx) => (
+                    {content.categories.map((cat, idx) => (
                       <TouchableOpacity
                         key={cat.value}
                         style={[
                           styles.dropdownItem,
                           form.category === cat.value && styles.dropdownItemSelected,
-                          idx === CATEGORIES.length - 1 && { borderBottomWidth: 0 },
+                          idx === content.categories.length - 1 && { borderBottomWidth: 0 },
                         ]}
-                        onPress={() => {
-                          setForm((p) => ({ ...p, category: cat.value }));
-                          setShowCategoryDropdown(false);
-                        }}
+                        onPress={() => setCategory(cat.value)}
                       >
                         <Text
                           style={[
@@ -815,24 +381,16 @@ export default function BusinessOwnerProducts() {
 
               {/* Unit / Sold In */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Sold In (Unit)</Text>
+                <Text style={styles.fieldLabel}>{content.modal.unit}</Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                  {UNIT_OPTIONS.map((opt) => (
+                  {content.units.map((opt) => (
                     <TouchableOpacity
                       key={opt.value}
                       style={[
                         styles.dietChip,
                         form.unit === opt.value && styles.dietChipVegActive,
                       ]}
-                      onPress={() => {
-                        const newStep = DEFAULT_UNIT_STEP[opt.value];
-                        setForm((p) => ({
-                          ...p,
-                          unit: opt.value,
-                          unitStep: newStep,
-                          stockText: "0",
-                        }));
-                      }}
+                      onPress={() => setUnit(opt.value as ProductUnit)}
                       activeOpacity={0.8}
                     >
                       <Text
@@ -852,11 +410,11 @@ export default function BusinessOwnerProducts() {
               {form.unit !== "piece" && (
                 <View style={styles.fieldGroup}>
                   <Text style={styles.fieldLabel}>
-                    Sell in steps of{" "}
-                    <Text style={styles.optional}>(per add tap)</Text>
+                    {content.modal.unitStep}{" "}
+                    <Text style={styles.optional}>{content.modal.unitStepOptional}</Text>
                   </Text>
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                    {UNIT_STEP_PRESETS[form.unit as Exclude<ProductUnit, "piece">].map((preset) => (
+                    {content.unitStepPresets[form.unit as Exclude<ProductUnit, "piece">].map((preset) => (
                       <TouchableOpacity
                         key={preset.value}
                         style={[
@@ -866,7 +424,7 @@ export default function BusinessOwnerProducts() {
                             borderColor: "#16A34A",
                           },
                         ]}
-                        onPress={() => setForm((p) => ({ ...p, unitStep: preset.value }))}
+                        onPress={() => setUnitStep(preset.value)}
                         activeOpacity={0.7}
                       >
                         <Text
@@ -882,7 +440,7 @@ export default function BusinessOwnerProducts() {
                   </View>
                   <Text style={styles.charCount}>
                     Price you enter = price per {
-                      UNIT_STEP_PRESETS[form.unit as Exclude<ProductUnit, "piece">].find(
+                      content.unitStepPresets[form.unit as Exclude<ProductUnit, "piece">].find(
                         (p) => p.value === form.unitStep
                       )?.label ?? form.unitStep + form.unit
                     }
@@ -893,14 +451,14 @@ export default function BusinessOwnerProducts() {
               {/* Price row */}
               <View style={styles.priceFieldRow}>
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>Price (₹) <Text style={styles.required}>*</Text></Text>
+                  <Text style={styles.fieldLabel}>{content.modal.priceLabel} <Text style={styles.required}>{content.modal.required}</Text></Text>
                   <View style={styles.priceInputWrap}>
-                    <Text style={styles.pricePrefix}>₹</Text>
+                    <Text style={styles.pricePrefix}>{content.currency}</Text>
                     <TextInput
                       style={styles.priceInput}
                       value={form.price}
-                      onChangeText={(v) => setForm((p) => ({ ...p, price: v }))}
-                      placeholder="0.00"
+                      onChangeText={(v) => setFormField("price", v)}
+                      placeholder={content.modal.pricePlaceholder}
                       placeholderTextColor="#94A3B8"
                       keyboardType="decimal-pad"
                       returnKeyType="next"
@@ -909,14 +467,14 @@ export default function BusinessOwnerProducts() {
                 </View>
                 <View style={{ width: 12 }} />
                 <View style={[styles.fieldGroup, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>MRP (₹)</Text>
+                  <Text style={styles.fieldLabel}>{content.modal.mrpLabel}</Text>
                   <View style={styles.priceInputWrap}>
-                    <Text style={styles.pricePrefix}>₹</Text>
+                    <Text style={styles.pricePrefix}>{content.currency}</Text>
                     <TextInput
                       style={styles.priceInput}
                       value={form.originalPrice}
-                      onChangeText={(v) => setForm((p) => ({ ...p, originalPrice: v }))}
-                      placeholder="0.00"
+                      onChangeText={(v) => setFormField("originalPrice", v)}
+                      placeholder={content.modal.pricePlaceholder}
                       placeholderTextColor="#94A3B8"
                       keyboardType="decimal-pad"
                       returnKeyType="next"
@@ -930,7 +488,7 @@ export default function BusinessOwnerProducts() {
                 parseFloat(form.originalPrice) > parseFloat(form.price) ? (
                 <View style={styles.discountPreview}>
                   <Text style={styles.discountPreviewText}>
-                    🏷️ {Math.round(((parseFloat(form.originalPrice) - parseFloat(form.price)) / parseFloat(form.originalPrice)) * 100)}% off — customers see a deal badge!
+                    {content.modal.discountPreview.replace("{discount}", String(Math.round(((parseFloat(form.originalPrice) - parseFloat(form.price)) / parseFloat(form.originalPrice)) * 100)))}
                   </Text>
                 </View>
               ) : null}
@@ -938,7 +496,7 @@ export default function BusinessOwnerProducts() {
               {/* Stock counter */}
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>
-                  {form.unit === "piece" ? "Stock Quantity" : `Stock Available (${form.unit})`}
+                  {form.unit === "piece" ? content.modal.stockPiece : `${content.modal.stockUnitPrefix}${form.unit}${content.modal.stockUnitSuffix}`}
                 </Text>
 
                 {form.unit === "piece" ? (
@@ -947,7 +505,7 @@ export default function BusinessOwnerProducts() {
                     <View style={styles.counterRow}>
                       <TouchableOpacity
                         style={[styles.counterBtn, form.stock <= 0 && styles.counterBtnDisabled]}
-                        onPress={() => setForm((p) => ({ ...p, stock: Math.max(0, p.stock - 1) }))}
+                        onPress={decrementStock}
                         disabled={form.stock <= 0}
                         activeOpacity={0.7}
                       >
@@ -956,28 +514,25 @@ export default function BusinessOwnerProducts() {
                       <TextInput
                         style={styles.counterInput}
                         value={String(form.stock)}
-                        onChangeText={(v) => {
-                          const n = parseInt(v, 10);
-                          setForm((p) => ({ ...p, stock: Number.isNaN(n) ? 0 : Math.max(0, n) }));
-                        }}
+                        onChangeText={(v) => setStockFromText(v)}
                         keyboardType="number-pad"
                         selectTextOnFocus
                       />
                       <TouchableOpacity
                         style={styles.counterBtn}
-                        onPress={() => setForm((p) => ({ ...p, stock: p.stock + 1 }))}
+                        onPress={incrementStock}
                         activeOpacity={0.7}
                       >
                         <Text style={styles.counterBtnText}>+</Text>
                       </TouchableOpacity>
                     </View>
                     <View style={styles.quickAddRow}>
-                      <Text style={styles.quickAddLabel}>Quick add:</Text>
-                      {[5, 10, 25, 50].map((n) => (
+                      <Text style={styles.quickAddLabel}>{content.modal.quickAdd}</Text>
+                      {content.quickAddValues.map((n) => (
                         <TouchableOpacity
                           key={n}
                           style={styles.quickAddBtn}
-                          onPress={() => setForm((p) => ({ ...p, stock: p.stock + n }))}
+                          onPress={() => quickAddStock(n)}
                           activeOpacity={0.7}
                         >
                           <Text style={styles.quickAddBtnText}>+{n}</Text>
@@ -991,16 +546,14 @@ export default function BusinessOwnerProducts() {
                     <TextInput
                       style={styles.input}
                       value={form.stockText}
-                      onChangeText={(v) =>
-                        setForm((p) => ({ ...p, stockText: v, stock: parseFloat(v) || 0 }))
-                      }
-                      placeholder={`e.g. 5 (means 5 ${form.unit})`}
+                      onChangeText={setStockText}
+                      placeholder={content.modal.stockDecimalPlaceholder.replace("{unit}", form.unit)}
                       placeholderTextColor="#94A3B8"
                       keyboardType="decimal-pad"
                       selectTextOnFocus
                     />
                     <Text style={styles.charCount}>
-                      Enter total {form.unit} you have in stock today
+                      {content.modal.stockTotalHint.replace("{unit}", form.unit)}
                     </Text>
                   </>
                 )}
@@ -1008,12 +561,12 @@ export default function BusinessOwnerProducts() {
 
               {/* Description */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Description</Text>
+                <Text style={styles.fieldLabel}>{content.modal.description}</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={form.description}
-                  onChangeText={(v) => setForm((p) => ({ ...p, description: v }))}
-                  placeholder="Describe your product (optional)"
+                  onChangeText={(v) => setFormField("description", v)}
+                  placeholder={content.modal.descriptionPlaceholder}
                   placeholderTextColor="#94A3B8"
                   multiline
                   numberOfLines={4}
@@ -1025,12 +578,12 @@ export default function BusinessOwnerProducts() {
 
               {/* Menu Section */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Menu Section (optional)</Text>
+                <Text style={styles.fieldLabel}>{content.modal.menuSection}</Text>
                 <TextInput
                   style={styles.input}
                   value={form.menuSection}
-                  onChangeText={(v) => setForm((p) => ({ ...p, menuSection: v }))}
-                  placeholder="e.g. Starters, Main Course, Beverages"
+                  onChangeText={(v) => setFormField("menuSection", v)}
+                  placeholder={content.modal.menuSectionPlaceholder}
                   placeholderTextColor="#94A3B8"
                   maxLength={40}
                 />
@@ -1038,23 +591,23 @@ export default function BusinessOwnerProducts() {
 
               {/* Veg / Non-Veg */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Dietary Type</Text>
+                <Text style={styles.fieldLabel}>{content.modal.dietary}</Text>
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <TouchableOpacity
                     style={[styles.dietChip, form.isVeg && styles.dietChipVegActive]}
-                    onPress={() => setForm((p) => ({ ...p, isVeg: true }))}
+                    onPress={() => setFormField("isVeg", true)}
                     activeOpacity={0.8}
                   >
                     <View style={styles.vegDot} />
-                    <Text style={[styles.dietChipText, form.isVeg && { color: "#166534", fontWeight: "700" }]}>Veg</Text>
+                    <Text style={[styles.dietChipText, form.isVeg && { color: "#166534", fontWeight: "700" }]}>{content.modal.veg}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.dietChip, !form.isVeg && styles.dietChipNonVegActive]}
-                    onPress={() => setForm((p) => ({ ...p, isVeg: false }))}
+                    onPress={() => setFormField("isVeg", false)}
                     activeOpacity={0.8}
                   >
                     <View style={styles.nonVegDot} />
-                    <Text style={[styles.dietChipText, !form.isVeg && { color: "#991B1B", fontWeight: "700" }]}>Non-Veg</Text>
+                    <Text style={[styles.dietChipText, !form.isVeg && { color: "#991B1B", fontWeight: "700" }]}>{content.modal.nonVeg}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1069,7 +622,7 @@ export default function BusinessOwnerProducts() {
                 {isSubmitting ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.saveBtnText}>Save Product</Text>
+                  <Text style={styles.saveBtnText}>{content.modal.saveBtn}</Text>
                 )}
               </TouchableOpacity>
             </ScrollView>

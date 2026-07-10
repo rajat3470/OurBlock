@@ -1,4 +1,3 @@
-import { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -8,175 +7,40 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Switch,
-  Alert,
-  AppState,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect, useRouter } from "expo-router";
-import { useAppSelector } from "../../src/hooks/useRedux";
-import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
-import { OrderStatus } from "../../src/types";
-import { gradients } from "../../src/constants/theme";
-import { socketService } from "../../src/services/socketService";
-
-const ORDER_STATUS_META: Record<string, { label: string; color: string; bg: string; emoji: string }> = {
-  [OrderStatus.PENDING]:          { label: "Pending",          color: "#D97706", bg: "#FFFBEB", emoji: "⏳" },
-  [OrderStatus.CONFIRMED]:        { label: "Confirmed",        color: "#2563EB", bg: "#EFF6FF", emoji: "✅" },
-  [OrderStatus.PREPARING]:        { label: "Preparing",        color: "#7C3AED", bg: "#F5F3FF", emoji: "🍳" },
-  [OrderStatus.READY]:            { label: "Ready",            color: "#059669", bg: "#ECFDF5", emoji: "📦" },
-  [OrderStatus.OUT_FOR_DELIVERY]: { label: "Out for Delivery", color: "#0284C7", bg: "#F0F9FF", emoji: "🚚" },
-  [OrderStatus.DELIVERED]:        { label: "Delivered",        color: "#16A34A", bg: "#DCFCE7", emoji: "🎉" },
-  [OrderStatus.CANCELLED]:        { label: "Cancelled",        color: "#DC2626", bg: "#FEF2F2", emoji: "✗"  },
-};
-
-function timeAgo(date: Date | string): string {
-  const d = new Date(date);
-  const diffMs = Date.now() - d.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  return `${Math.floor(diffHr / 24)}d ago`;
-}
+import { gradients } from "@/constants/theme";
+import { useBusinessOwnerDashboard } from "@hooks/useBusinessOwnerDashboard";
+import content from "@/content/boDashboard.json";
 
 export default function BusinessOwnerDashboard() {
-  const router = useRouter();
-  const { user } = useAppSelector((state) => state.auth);
-  const {
-    businessProfile,
-    orders,
-    products,
-    stats,
-    analytics,
-    isLoading,
-    loadBusinessProfile,
-    loadStats,
-    loadOrders,
-    loadProducts,
-    loadAnalytics,
-    toggleTakingOrders,
-  } = useBusinessOwner();
-  const [refreshing, setRefreshing] = useState(false);
-  const [toggleLoading, setToggleLoading] = useState(false);
-  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastActivityAtRef = useRef<number>(Date.now());
-
-  const getFallbackDelayMs = useCallback(() => {
-    const elapsed = Date.now() - lastActivityAtRef.current;
-    if (elapsed < 30_000) return 5_000;
-    if (elapsed < 180_000) return 20_000;
-    return 60_000;
-  }, []);
-
-  const refreshOrdersNow = useCallback(() => {
-    lastActivityAtRef.current = Date.now();
-    if (!socketService.isConnected()) {
-      loadOrders({ silent: true }).catch(() => null);
-    }
-  }, [loadOrders]);
-
-  const stopFallbackLoop = useCallback(() => {
-    if (fallbackTimerRef.current) {
-      clearTimeout(fallbackTimerRef.current);
-      fallbackTimerRef.current = null;
-    }
-  }, []);
-
-  const startFallbackLoop = useCallback(() => {
-    stopFallbackLoop();
-
-    const tick = () => {
-      if (!socketService.isConnected()) {
-        loadOrders({ silent: true }).catch(() => null);
-      }
-      fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
-    };
-
-    fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
-  }, [getFallbackDelayMs, loadOrders, stopFallbackLoop]);
-
-  const isTakingOrders = businessProfile?.isTakingOrders !== false;
-
-  const loadAll = useCallback(async () => {
-    try {
-      await Promise.all([
-        loadBusinessProfile(),
-        loadStats(),
-        loadOrders(),
-        loadProducts(),
-        loadAnalytics(),
-      ]);
-    } catch { /* handled in Redux slice */ }
-  }, [loadBusinessProfile, loadStats, loadOrders, loadProducts, loadAnalytics]);
-
-  useEffect(() => { loadAll(); }, [loadAll]);
-
-  // Keep dashboard order counts/recent list fresh while focused.
-  useFocusEffect(
-    useCallback(() => {
-      refreshOrdersNow();
-      startFallbackLoop();
-
-      const sub = AppState.addEventListener("change", (state) => {
-        if (state === "active") {
-          refreshOrdersNow();
-        }
-      });
-
-      return () => {
-        sub.remove();
-        stopFallbackLoop();
-      };
-    }, [refreshOrdersNow, startFallbackLoop, stopFallbackLoop])
-  );
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadAll().finally(() => setRefreshing(false));
-  };
-
-  async function handleToggleTakingOrders(val: boolean) {
-    if (toggleLoading) return;
-    setToggleLoading(true);
-    try {
-      await toggleTakingOrders(val);
-    } catch (err: unknown) {
-      const apiMsg =
-        (err as any)?.response?.data?.error ||
-        (err instanceof Error ? err.message : null);
-      const fallback = businessProfile?.isVerified
-        ? "Failed to update order availability. Please try again."
-        : "Your business is pending approval. Order availability can be changed once verified.";
-      Alert.alert("Cannot Update", apiMsg || fallback);
-    } finally {
-      setToggleLoading(false);
-    }
-  }
-
-  const approvedProducts  = products.filter((p) => (p.approvalStatus ?? "pending") === "approved").length;
-  const pendingProducts   = products.filter((p) => (p.approvalStatus ?? "pending") === "pending").length;
-  const rejectedProducts  = products.filter((p) => (p.approvalStatus ?? "pending") === "rejected").length;
-  const totalProducts     = stats?.totalProducts ?? products.length;
-
-  const activeOrders    = orders.filter((o) => o.status !== OrderStatus.DELIVERED && o.status !== OrderStatus.CANCELLED).length;
-  const deliveredOrders = orders.filter((o) => o.status === OrderStatus.DELIVERED).length;
-  const totalOrders     = orders.length;
-
-  // Revenue chart helpers
-  const maxRevenue = analytics?.daily?.reduce((m, d) => Math.max(m, d.revenue), 0) ?? 1;
-
-  const recentOrders = [...orders].slice(0, 6);
-  const loading = isLoading && !stats && orders.length === 0 && products.length === 0;
   const insets = useSafeAreaInsets();
-
-  const greeting = (() => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 17) return "Good afternoon";
-    return "Good evening";
-  })();
+  const {
+    user,
+    businessProfile,
+    analytics,
+    refreshing,
+    toggleLoading,
+    isTakingOrders,
+    approvedProducts,
+    pendingProducts,
+    rejectedProducts,
+    totalProducts,
+    activeOrders,
+    deliveredOrders,
+    totalOrders,
+    maxRevenue,
+    recentOrders,
+    loading,
+    greeting,
+    onRefresh,
+    handleToggleTakingOrders,
+    goToProducts,
+    goToOrders,
+    getOrderStatusMeta,
+    timeAgo,
+  } = useBusinessOwnerDashboard();
 
   return (
     <View style={styles.container}>
@@ -195,10 +59,10 @@ export default function BusinessOwnerDashboard() {
           <View style={styles.heroTop}>
             <View style={styles.heroLeft}>
               <Text style={styles.heroGreeting}>
-                {greeting}, {user?.firstName || "Owner"} 👋
+                {greeting}, {user?.firstName || content.ownerFallback} 👋
               </Text>
               <Text style={styles.heroBusinessName} numberOfLines={1}>
-                {businessProfile?.name || "Your Business"}
+                {businessProfile?.name || content.businessFallback}
               </Text>
             </View>
             <View style={{ alignItems: "flex-end", gap: 8 }}>
@@ -219,15 +83,15 @@ export default function BusinessOwnerDashboard() {
                   ]}
                 >
                   {!businessProfile?.isVerified
-                    ? "⏳ Pending"
+                    ? content.pills.pending
                     : isTakingOrders
-                    ? "✓ Live"
-                    : "⏸ Paused"}
+                    ? content.pills.live
+                    : content.pills.paused}
                 </Text>
               </View>
               {/* Pause / Resume toggle */}
               <View style={[styles.pauseRow, { backgroundColor: isTakingOrders ? "rgba(255,255,255,0.12)" : "rgba(252,165,165,0.15)" }]}>
-                <Text style={[styles.pauseLabel, { color: isTakingOrders ? "#FFFFFF" : "#FCA5A5" }]}>{isTakingOrders ? "Taking Orders" : "Paused"}</Text>
+                <Text style={[styles.pauseLabel, { color: isTakingOrders ? "#FFFFFF" : "#FCA5A5" }]}>{isTakingOrders ? content.pills.takingOrders : content.pills.pausedLabel}</Text>
                 <Switch
                   value={isTakingOrders}
                   onValueChange={handleToggleTakingOrders}
@@ -244,22 +108,22 @@ export default function BusinessOwnerDashboard() {
           <View style={styles.heroStats}>
             <View style={styles.heroStat}>
               <Text style={styles.heroStatValue}>{totalProducts}</Text>
-              <Text style={styles.heroStatLabel}>Products</Text>
+              <Text style={styles.heroStatLabel}>{content.heroStats.products}</Text>
             </View>
             <View style={styles.heroStatDivider} />
             <View style={styles.heroStat}>
               <Text style={styles.heroStatValue}>{activeOrders}</Text>
-              <Text style={styles.heroStatLabel}>Active</Text>
+              <Text style={styles.heroStatLabel}>{content.heroStats.active}</Text>
             </View>
             <View style={styles.heroStatDivider} />
             <View style={styles.heroStat}>
               <Text style={styles.heroStatValue}>{deliveredOrders}</Text>
-              <Text style={styles.heroStatLabel}>Delivered</Text>
+              <Text style={styles.heroStatLabel}>{content.heroStats.delivered}</Text>
             </View>
             <View style={styles.heroStatDivider} />
             <View style={styles.heroStat}>
               <Text style={styles.heroStatValue}>{totalOrders}</Text>
-              <Text style={styles.heroStatLabel}>All Orders</Text>
+              <Text style={styles.heroStatLabel}>{content.heroStats.allOrders}</Text>
             </View>
           </View>
         </LinearGradient>
@@ -274,8 +138,8 @@ export default function BusinessOwnerDashboard() {
             {analytics && analytics.daily.length > 0 ? (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Revenue — Last 7 Days</Text>
-                  <Text style={styles.sectionSubtitle}>₹{analytics.totalRevenue7d.toFixed(0)}</Text>
+                  <Text style={styles.sectionTitle}>{content.sections.revenueTitle}</Text>
+                  <Text style={styles.sectionSubtitle}>{content.currency}{analytics.totalRevenue7d.toFixed(0)}</Text>
                 </View>
                 <View style={styles.chartWrap}>
                   {analytics.daily.map((d) => {
@@ -284,7 +148,7 @@ export default function BusinessOwnerDashboard() {
                     const label = d.date.slice(5); // "MM-DD"
                     return (
                       <View key={d.date} style={styles.chartBar}>
-                        <Text style={styles.chartBarValue}>{d.revenue > 0 ? `₹${d.revenue}` : ""}</Text>
+                        <Text style={styles.chartBarValue}>{d.revenue > 0 ? `${content.currency}${d.revenue}` : ""}</Text>
                         <View style={styles.chartBarTrack}>
                           <View style={[styles.chartBarFill, { height: barH, backgroundColor: d.revenue > 0 ? "#16A34A" : "#E2E8F0" }]} />
                         </View>
@@ -301,7 +165,7 @@ export default function BusinessOwnerDashboard() {
             {analytics && analytics.popularItems.length > 0 ? (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Popular Items</Text>
+                  <Text style={styles.sectionTitle}>{content.sections.popularTitle}</Text>
                 </View>
                 {analytics.popularItems.map((item, idx) => (
                   <View key={item.productId} style={styles.popularRow}>
@@ -312,8 +176,8 @@ export default function BusinessOwnerDashboard() {
                     </View>
                     <Text style={styles.popularName} numberOfLines={1}>{item.name}</Text>
                     <View style={styles.popularRight}>
-                      <Text style={styles.popularCount}>{item.count} sold</Text>
-                      <Text style={styles.popularRevenue}>₹{item.revenue}</Text>
+                      <Text style={styles.popularCount}>{item.count}{content.sections.soldSuffix}</Text>
+                      <Text style={styles.popularRevenue}>{content.currency}{item.revenue}</Text>
                     </View>
                   </View>
                 ))}
@@ -323,29 +187,26 @@ export default function BusinessOwnerDashboard() {
             {/* ── Product Pipeline ─────────────────────────────────────── */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Product Pipeline</Text>
-                <TouchableOpacity
-                  onPress={() => router.push("/(business-owner)/products")}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.sectionLink}>Manage →</Text>
+                <Text style={styles.sectionTitle}>{content.sections.pipelineTitle}</Text>
+                <TouchableOpacity onPress={goToProducts} activeOpacity={0.7}>
+                  <Text style={styles.sectionLink}>{content.sections.manage}</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.pipelineRow}>
                 <View style={[styles.pipelineCard, { backgroundColor: "#DCFCE7" }]}>
                   <Text style={styles.pipelineEmoji}>✅</Text>
                   <Text style={[styles.pipelineValue, { color: "#166534" }]}>{approvedProducts}</Text>
-                  <Text style={[styles.pipelineLabel, { color: "#166534" }]}>Approved</Text>
+                  <Text style={[styles.pipelineLabel, { color: "#166534" }]}>{content.pipeline.approved}</Text>
                 </View>
                 <View style={[styles.pipelineCard, { backgroundColor: "#FFFBEB" }]}>
                   <Text style={styles.pipelineEmoji}>⏳</Text>
                   <Text style={[styles.pipelineValue, { color: "#92400E" }]}>{pendingProducts}</Text>
-                  <Text style={[styles.pipelineLabel, { color: "#92400E" }]}>Pending</Text>
+                  <Text style={[styles.pipelineLabel, { color: "#92400E" }]}>{content.pipeline.pending}</Text>
                 </View>
                 <View style={[styles.pipelineCard, { backgroundColor: "#FEF2F2" }]}>
                   <Text style={styles.pipelineEmoji}>✗</Text>
                   <Text style={[styles.pipelineValue, { color: "#991B1B" }]}>{rejectedProducts}</Text>
-                  <Text style={[styles.pipelineLabel, { color: "#991B1B" }]}>Rejected</Text>
+                  <Text style={[styles.pipelineLabel, { color: "#991B1B" }]}>{content.pipeline.rejected}</Text>
                 </View>
               </View>
             </View>
@@ -353,26 +214,21 @@ export default function BusinessOwnerDashboard() {
             {/* ── Recent Orders ─────────────────────────────────────────── */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Recent Orders</Text>
-                <TouchableOpacity
-                  onPress={() => router.push("/(business-owner)/orders")}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.sectionLink}>View all →</Text>
+                <Text style={styles.sectionTitle}>{content.sections.recentTitle}</Text>
+                <TouchableOpacity onPress={goToOrders} activeOpacity={0.7}>
+                  <Text style={styles.sectionLink}>{content.sections.viewAll}</Text>
                 </TouchableOpacity>
               </View>
 
               {recentOrders.length === 0 ? (
                 <View style={styles.emptyCard}>
-                  <Text style={styles.emptyEmoji}>🛍️</Text>
-                  <Text style={styles.emptyTitle}>No orders yet</Text>
-                  <Text style={styles.emptySubtitle}>
-                    New customer orders will appear here.
-                  </Text>
+                  <Text style={styles.emptyEmoji}>{content.empty.emoji}</Text>
+                  <Text style={styles.emptyTitle}>{content.empty.title}</Text>
+                  <Text style={styles.emptySubtitle}>{content.empty.subtitle}</Text>
                 </View>
               ) : (
                 recentOrders.map((order) => {
-                  const meta = ORDER_STATUS_META[order.status];
+                  const meta = getOrderStatusMeta(order.status);
                   const addr = order.deliveryAddress;
                   const addressLine = addr
                     ? [addr.street, addr.landmark].filter(Boolean).join(", ")
@@ -388,7 +244,7 @@ export default function BusinessOwnerDashboard() {
                             {timeAgo(order.createdAt)}
                           </Text>
                         </View>
-                        <Text style={styles.orderCardAmount}>₹{order.finalAmount}</Text>
+                        <Text style={styles.orderCardAmount}>{content.currency}{order.finalAmount}</Text>
                       </View>
 
                       {addressLine ? (
@@ -398,7 +254,7 @@ export default function BusinessOwnerDashboard() {
                       ) : null}
 
                       <Text style={styles.orderCardItems} numberOfLines={1}>
-                        🛍 {order.items.slice(0, 3).map((i) => `×${i.quantity}`).join("  ")} · {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+                        🛍 {order.items.slice(0, 3).map((i) => `×${i.quantity}`).join("  ")} · {order.items.length} {order.items.length !== 1 ? content.order.itemPlural : content.order.itemSingular}
                       </Text>
 
                       <View style={styles.orderCardFooter}>
@@ -421,7 +277,7 @@ export default function BusinessOwnerDashboard() {
                               { color: order.paymentStatus === "completed" ? "#166534" : "#92400E" },
                             ]}
                           >
-                            {order.paymentMethod.toUpperCase()} · {order.paymentStatus === "completed" ? "Paid" : "Pending"}
+                            {order.paymentMethod.toUpperCase()} · {order.paymentStatus === "completed" ? content.order.paid : content.order.pending}
                           </Text>
                         </View>
                       </View>

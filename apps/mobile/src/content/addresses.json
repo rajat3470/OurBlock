@@ -1,0 +1,86 @@
+{
+  "list": {
+    "title": "My Addresses",
+    "defaultBadge": "Default",
+    "setDefault": "Set as Default",
+    "types": {
+      "home": "Home",
+      "work": "Work",
+      "other": "Other"
+    },
+    "empty": {
+      "title": "No addresses added yet",
+      "subtitle": "Add an address to get started"
+    },
+    "errors": {
+      "load": "Failed to load addresses",
+      "setDefault": "Failed to set default address",
+      "delete": "Failed to delete address"
+    },
+    "deleteConfirm": {
+      "title": "Delete Address",
+      "message": "Are you sure you want to delete this address?",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    }
+  },
+  "form": {
+    "addTitle": "Add Address",
+    "editTitle": "Edit Address",
+    "typeLabel": "Address Type *",
+    "types": {
+      "home": "Home",
+      "work": "Work",
+      "other": "Other"
+    },
+    "fields": {
+      "name": {
+        "label": "Label (Optional)",
+        "placeholder": "e.g., My Home, Office, Parents House"
+      },
+      "street": {
+        "label": "Street Address *",
+        "placeholder": "House no., Building name, Street"
+      },
+      "landmark": {
+        "label": "Landmark (Optional)",
+        "placeholder": "e.g., Near City Hospital"
+      },
+      "city": {
+        "label": "City *",
+        "placeholder": "City"
+      },
+      "state": {
+        "label": "State *",
+        "placeholder": "State"
+      },
+      "pincode": {
+        "label": "Pincode *",
+        "placeholder": "6-digit pincode"
+      },
+      "phone": {
+        "label": "Phone Number *",
+        "placeholder": "10-digit mobile number"
+      }
+    },
+    "setDefaultLabel": "Set as default address",
+    "saveAdd": "Save Address",
+    "saveEdit": "Update Address",
+    "validation": {
+      "street": "Street address is required",
+      "city": "City is required",
+      "state": "State is required",
+      "pincodeRequired": "Pincode is required",
+      "pincodeInvalid": "Enter a valid 6-digit pincode",
+      "phoneRequired": "Phone number is required",
+      "phoneInvalid": "Enter a valid 10-digit mobile number"
+    },
+    "alerts": {
+      "errorTitle": "Error",
+      "successTitle": "Success",
+      "loadError": "Failed to load address",
+      "addSuccess": "Address added successfully",
+      "editSuccess": "Address updated successfully"
+    }
+  }
+}

@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,175 +5,42 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { useToast } from "react-native-toast-notifications";
-import { useAppSelector } from "../../src/hooks/useRedux";
-import { useUserApp } from "../../src/hooks/useUserApp";
-import { userAppService } from "../../src/services/userAppService";
-import { Address } from "../../src/types";
-import { ORDER_FEES } from "../../src/constants";
-import { displayQuantity } from "../../src/utils/helpers";
+import { displayQuantity } from "@utils/helpers";
+import { useCheckout, PAYMENT_METHODS } from "@hooks/useCheckout";
+import { ORDER_FEES } from "@/constants";
+import content from "@/content/checkout.json";
 
-const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
-
-const PAYMENT_METHODS = [
-  { key: "cash", label: "Cash on Delivery", icon: "💵" },
-  { key: "upi", label: "UPI", icon: "📱" },
-];
+const { PLATFORM_FEE } = ORDER_FEES;
 
 export default function CheckoutScreen() {
-  const toast = useToast();
-  const cartItems = useAppSelector((state) => state.cart.items);
-  const cartBusinessId = useAppSelector((state) => state.cart.businessId);
-  const { placeOrder, isLoading, businesses } = useUserApp();
-
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "upi">("cash");
-  const [loadingAddresses, setLoadingAddresses] = useState(true);
-  const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number } | null>(null);
-  const [couponLoading, setCouponLoading] = useState(false);
   const insets = useSafeAreaInsets();
-  // Tracks when an order has just been placed so the empty-cart
-  // useEffect does not race against the explicit router.replace call.
-  const orderPlacedRef = useRef(false);
-
-  const subTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const discountAmount = appliedCoupon?.discountAmount ?? 0;
-  const finalAmount = subTotal + PLATFORM_FEE - discountAmount;
-
-  const loadAddresses = useCallback(async () => {
-    try {
-      setLoadingAddresses(true);
-      const data = await userAppService.getAddresses();
-      setAddresses(data);
-      const def = data.find((a) => a.isDefault) ?? data[0];
-      if (def) setSelectedAddressId(def.id);
-    } catch {
-      toast.show("Failed to load addresses", { type: "danger" });
-    } finally {
-      setLoadingAddresses(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    loadAddresses();
-  }, [loadAddresses]);
-
-  // Redirect back if cart is empty (but not right after placing an order)
-  useEffect(() => {
-    if (cartItems.length === 0 && !orderPlacedRef.current) {
-      router.replace("/(user)/home");
-    }
-  }, [cartItems]);
-
-  async function handleApplyCoupon() {
-    if (!couponCode.trim()) {
-      toast.show("Enter a coupon code", { type: "warning" });
-      return;
-    }
-    if (!cartBusinessId) return;
-    setCouponLoading(true);
-    try {
-      const result = await userAppService.validateCoupon({
-        code: couponCode.trim(),
-        businessId: cartBusinessId,
-        subTotal,
-      });
-      setAppliedCoupon({ code: result.code, discountAmount: result.discountAmount });
-      toast.show(`Coupon applied! You save Rs ${result.discountAmount}`, { type: "success" });
-    } catch (e: any) {
-      setAppliedCoupon(null);
-      toast.show(e?.message ?? "Invalid coupon", { type: "danger" });
-    } finally {
-      setCouponLoading(false);
-    }
-  }
-
-  function handleRemoveCoupon() {
-    setAppliedCoupon(null);
-    setCouponCode("");
-  }
-
-  async function handlePlaceOrder() {
-    if (!selectedAddressId) {
-      toast.show("Please select a delivery address", { type: "warning" });
-      return;
-    }
-    if (!cartBusinessId) {
-      toast.show("Cart is empty", { type: "warning" });
-      return;
-    }
-    const storeMin = businesses.find((b) => b.id === cartBusinessId)?.minimumOrderAmount;
-    const minOrder = storeMin && storeMin > 0 ? storeMin : MINIMUM_ORDER;
-    if (subTotal < minOrder) {
-      toast.show(`Minimum order is Rs ${minOrder}`, { type: "warning" });
-      return;
-    }
-
-    const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
-    if (!selectedAddress) {
-      toast.show("Selected address not found", { type: "danger" });
-      return;
-    }
-
-    Alert.alert(
-      "Place Order",
-      `Total: Rs ${finalAmount}\nPayment: ${paymentMethod === "cash" ? "Cash on Delivery" : "UPI"}\n\nConfirm order?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Confirm",
-          onPress: async () => {
-            try {
-              const payload = {
-                businessId: cartBusinessId,
-                items: cartItems.map((item) => ({
-                  productId: item.productId,
-                  quantity: item.quantity,
-                  price: item.price,
-                })),
-                deliveryAddress: {
-                  type: selectedAddress.type,
-                  name: selectedAddress.name,
-                  street: selectedAddress.street,
-                  landmark: selectedAddress.landmark,
-                  city: selectedAddress.city,
-                  state: selectedAddress.state,
-                  pincode: selectedAddress.pincode,
-                  phone: selectedAddress.phone,
-                  isDefault: selectedAddress.isDefault,
-                },
-                paymentMethod,
-                couponCode: appliedCoupon?.code,
-              };
-
-              // Set flag BEFORE placeOrder so the empty-cart useEffect
-              // does not fire router.replace("/(user)/home") while we
-              // are already navigating to orders — double navigation crashes iOS.
-              orderPlacedRef.current = true;
-              await placeOrder(payload);
-              toast.show("🎉 Order placed successfully!", { type: "success", duration: 3000 });
-              router.replace("/(user)/orders");
-            } catch (err: any) {
-              const message =
-                err?.response?.data?.error ??
-                err?.message ??
-                "Failed to place order";
-              toast.show(message, { type: "danger" });
-            }
-          },
-        },
-      ]
-    );
-  }
+  const {
+    cartItems,
+    addresses,
+    selectedAddressId,
+    setSelectedAddressId,
+    paymentMethod,
+    setPaymentMethod,
+    loadingAddresses,
+    couponCode,
+    setCouponCode,
+    appliedCoupon,
+    couponLoading,
+    isLoading,
+    subTotal,
+    discountAmount,
+    finalAmount,
+    handleApplyCoupon,
+    handleRemoveCoupon,
+    handlePlaceOrder,
+    goBack,
+    addAddress,
+  } = useCheckout();
 
   return (
     <View style={styles.container}>
@@ -182,19 +48,10 @@ export default function CheckoutScreen() {
         colors={["#0E9F6E", "#0891B2"]}
         style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
       >
-        <TouchableOpacity
-          onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace("/(user)/cart");
-            }
-          }}
-          style={styles.backBtn}
-        >
+        <TouchableOpacity onPress={goBack} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Checkout</Text>
+        <Text style={styles.headerTitle}>{content.headerTitle}</Text>
         <View style={styles.headerRight} />
       </LinearGradient>
 
@@ -204,8 +61,8 @@ export default function CheckoutScreen() {
       >
         {/* Order Items Summary */}
         <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-            {cartItems[0]?.businessName ?? "Your Order"}
+          <Text style={styles.sectionTitle}>
+            {cartItems[0]?.businessName ?? content.defaultOrderTitle}
           </Text>
           {cartItems.map((item) => (
             <View key={item.productId} style={styles.orderItemRow}>
@@ -216,7 +73,7 @@ export default function CheckoutScreen() {
                 {item.productName}
               </Text>
               <Text style={styles.orderItemPrice}>
-                Rs {item.price * item.quantity}
+                {content.currency} {item.price * item.quantity}
               </Text>
             </View>
           ))}
@@ -225,9 +82,9 @@ export default function CheckoutScreen() {
         {/* Delivery address */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Delivery Address</Text>
-            <TouchableOpacity onPress={() => router.push("/(user)/add-address")}>
-              <Text style={styles.addLink}>+ Add New</Text>
+            <Text style={styles.sectionTitle}>{content.sections.deliveryAddress}</Text>
+            <TouchableOpacity onPress={addAddress}>
+              <Text style={styles.addLink}>{content.sections.addNew}</Text>
             </TouchableOpacity>
           </View>
 
@@ -235,12 +92,9 @@ export default function CheckoutScreen() {
             <ActivityIndicator size="small" color="#D97706" style={{ marginTop: 12 }} />
           ) : addresses.length === 0 ? (
             <View style={styles.noAddressWrap}>
-              <Text style={styles.noAddressText}>No saved addresses found.</Text>
-              <TouchableOpacity
-                style={styles.addAddressBtn}
-                onPress={() => router.push("/(user)/add-address")}
-              >
-                <Text style={styles.addAddressBtnText}>Add Address</Text>
+              <Text style={styles.noAddressText}>{content.noAddress.text}</Text>
+              <TouchableOpacity style={styles.addAddressBtn} onPress={addAddress}>
+                <Text style={styles.addAddressBtnText}>{content.noAddress.add}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -272,7 +126,7 @@ export default function CheckoutScreen() {
                       </Text>
                       {address.isDefault ? (
                         <View style={styles.defaultBadge}>
-                          <Text style={styles.defaultBadgeText}>Default</Text>
+                          <Text style={styles.defaultBadgeText}>{content.defaultBadge}</Text>
                         </View>
                       ) : null}
                     </View>
@@ -293,14 +147,14 @@ export default function CheckoutScreen() {
 
         {/* Payment method */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💳 Payment Method</Text>
+          <Text style={styles.sectionTitle}>{content.sections.paymentMethod}</Text>
           {PAYMENT_METHODS.map((method) => {
             const selected = paymentMethod === method.key;
             return (
               <TouchableOpacity
                 key={method.key}
                 style={[styles.paymentCard, selected ? styles.paymentCardActive : null]}
-                onPress={() => setPaymentMethod(method.key as "cash" | "upi")}
+                onPress={() => setPaymentMethod(method.key)}
               >
                 <View style={styles.addressRadio}>
                   <View
@@ -311,10 +165,12 @@ export default function CheckoutScreen() {
                   />
                 </View>
                 <Text style={styles.paymentIcon}>{method.icon}</Text>
-                <Text style={styles.paymentLabel}>{method.label}</Text>
+                <Text style={styles.paymentLabel}>
+                  {content.payment[method.key]}
+                </Text>
                 {method.key === "upi" ? (
                   <View style={styles.comingSoonBadge}>
-                    <Text style={styles.comingSoonText}>Coming Soon</Text>
+                    <Text style={styles.comingSoonText}>{content.payment.comingSoon}</Text>
                   </View>
                 ) : null}
               </TouchableOpacity>
@@ -324,26 +180,26 @@ export default function CheckoutScreen() {
 
         {/* Coupon / Promo Code */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🎟️ Promo Code</Text>
+          <Text style={styles.sectionTitle}>{content.sections.promoCode}</Text>
           {appliedCoupon ? (
             <View style={styles.couponApplied}>
               <Ionicons name="checkmark-circle" size={18} color="#059669" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.couponAppliedCode}>{appliedCoupon.code}</Text>
                 <Text style={styles.couponAppliedSavings}>
-                  You save Rs {appliedCoupon.discountAmount}!
+                  {content.coupon.savePrefix} {appliedCoupon.discountAmount}{content.coupon.saveSuffix}
                 </Text>
               </View>
               <TouchableOpacity onPress={handleRemoveCoupon} style={styles.couponRemoveBtn}>
                 <Ionicons name="close-circle-outline" size={18} color="#6B7280" />
-                <Text style={styles.couponRemoveText}>Remove</Text>
+                <Text style={styles.couponRemoveText}>{content.coupon.remove}</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.couponRow}>
               <TextInput
                 style={styles.couponInput}
-                placeholder="Enter promo code"
+                placeholder={content.coupon.placeholder}
                 placeholderTextColor="#9CA3AF"
                 value={couponCode}
                 onChangeText={setCouponCode}
@@ -359,7 +215,7 @@ export default function CheckoutScreen() {
                 {couponLoading ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.couponApplyBtnText}>Apply</Text>
+                  <Text style={styles.couponApplyBtnText}>{content.coupon.apply}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -368,33 +224,33 @@ export default function CheckoutScreen() {
 
         {/* Bill details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Bill Details</Text>
+          <Text style={styles.sectionTitle}>{content.sections.billDetails}</Text>
           <View style={styles.billRow}>
-            <Text style={styles.billLabel}>Subtotal ({cartItems.length} items)</Text>
-            <Text style={styles.billValue}>Rs {subTotal}</Text>
+            <Text style={styles.billLabel}>{content.bill.subtotalPrefix}{cartItems.length}{content.bill.subtotalSuffix}</Text>
+            <Text style={styles.billValue}>{content.currency} {subTotal}</Text>
           </View>
           <View style={styles.billRow}>
-            <Text style={styles.billLabel}>Platform Fee</Text>
-            <Text style={styles.billValue}>Rs {PLATFORM_FEE}</Text>
+            <Text style={styles.billLabel}>{content.bill.platformFee}</Text>
+            <Text style={styles.billValue}>{content.currency} {PLATFORM_FEE}</Text>
           </View>
           <View style={styles.billRow}>
-            <Text style={styles.billLabel}>Delivery Fee</Text>
-            <Text style={styles.billValueGreen}>FREE</Text>
+            <Text style={styles.billLabel}>{content.bill.deliveryFee}</Text>
+            <Text style={styles.billValueGreen}>{content.bill.free}</Text>
           </View>
           <View style={styles.billRow}>
-            <Text style={styles.billLabel}>GST / Tax</Text>
-            <Text style={styles.billValueGreen}>None</Text>
+            <Text style={styles.billLabel}>{content.bill.tax}</Text>
+            <Text style={styles.billValueGreen}>{content.bill.none}</Text>
           </View>
           {discountAmount > 0 ? (
             <View style={styles.billRow}>
-              <Text style={styles.billLabel}>Promo ({appliedCoupon?.code})</Text>
-              <Text style={styles.billValueGreen}>- Rs {discountAmount}</Text>
+              <Text style={styles.billLabel}>{content.bill.promoPrefix}{appliedCoupon?.code}{content.bill.promoSuffix}</Text>
+              <Text style={styles.billValueGreen}>- {content.currency} {discountAmount}</Text>
             </View>
           ) : null}
           <View style={styles.billDivider} />
           <View style={styles.billRow}>
-            <Text style={styles.billLabelBold}>Total Amount</Text>
-            <Text style={styles.billValueBold}>Rs {finalAmount}</Text>
+            <Text style={styles.billLabelBold}>{content.bill.total}</Text>
+            <Text style={styles.billValueBold}>{content.currency} {finalAmount}</Text>
           </View>
         </View>
 
@@ -405,8 +261,8 @@ export default function CheckoutScreen() {
       <View style={styles.bottomCta}>
         <View style={styles.bottomRow}>
           <View>
-            <Text style={styles.ctaTotalLabel}>Total{discountAmount > 0 ? ` (Saved Rs ${discountAmount})` : ""}</Text>
-            <Text style={styles.ctaTotalAmount}>Rs {finalAmount}</Text>
+            <Text style={styles.ctaTotalLabel}>{content.cta.total}{discountAmount > 0 ? `${content.cta.savedPrefix}${discountAmount}${content.cta.savedSuffix}` : ""}</Text>
+            <Text style={styles.ctaTotalAmount}>{content.currency} {finalAmount}</Text>
           </View>
           <TouchableOpacity
             style={[
@@ -419,7 +275,7 @@ export default function CheckoutScreen() {
             {isLoading ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.placeOrderText}>Place Order</Text>
+              <Text style={styles.placeOrderText}>{content.cta.placeOrder}</Text>
             )}
           </TouchableOpacity>
         </View>

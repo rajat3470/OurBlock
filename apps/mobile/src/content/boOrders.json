@@ -1,0 +1,70 @@
+{
+  "currency": "₹",
+  "header": {
+    "title": "Orders",
+    "subtitle": "Track and fulfill customer orders"
+  },
+  "filters": {
+    "all": "All",
+    "pending": "Pending",
+    "active": "Active",
+    "done": "Done"
+  },
+  "statusLabels": {
+    "pending": "New Order",
+    "confirmed": "Accepted",
+    "preparing": "Processing",
+    "ready": "Ready to Collect",
+    "outForDelivery": "On the Way",
+    "delivered": "Completed",
+    "cancelled": "Cancelled",
+    "rejected": "Rejected"
+  },
+  "nextStatusLabels": {
+    "confirmed": "⚙️ Start Processing",
+    "preparing": "📦 Mark Ready",
+    "ready": "🚚 Out for Delivery",
+    "outForDelivery": "✅ Mark Completed"
+  },
+  "payment": {
+    "paid": "Paid",
+    "cod": "COD",
+    "pending": "Pending"
+  },
+  "card": {
+    "itemSingular": "item",
+    "itemPlural": "items",
+    "moreSuffix": " more",
+    "itemFallbackPrefix": "Item ",
+    "autoRejected": "🚫 Auto-rejected — no response in time",
+    "reject": "✕ Reject",
+    "accept": "✓ Accept",
+    "completed": "✅ Order completed",
+    "rejected": "🚫 Order rejected",
+    "cancelled": "✗ Order cancelled",
+    "reasonPrefix": "Reason: "
+  },
+  "empty": {
+    "emoji": "📋",
+    "title": "No orders here",
+    "subtitleAll": "Customer orders will appear once they start placing them.",
+    "subtitleFiltered": "No orders match this filter right now."
+  },
+  "rejectModal": {
+    "titlePrefix": "Reject Order #",
+    "subtitle": "Please provide a reason. The customer will be notified.",
+    "placeholder": "e.g. Out of stock, Shop is closed, Item unavailable...",
+    "cancel": "Cancel",
+    "reject": "Reject Order",
+    "reasonRequiredTitle": "Reason Required",
+    "reasonRequiredMsg": "Please provide a reason for rejecting this order."
+  },
+  "alerts": {
+    "errorTitle": "Error",
+    "advanceFail": "Failed to update order status. Please try again.",
+    "acceptFail": "Failed to accept order. Please try again.",
+    "rejectFail": "Failed to reject order. Please try again.",
+    "expiredTitle": "Order expired",
+    "expiredMsg": "This order was auto-rejected because it wasn't accepted within 60 seconds."
+  }
+}

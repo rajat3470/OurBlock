@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useRef, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,352 +5,54 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   TextInput,
   Modal,
   KeyboardAvoidingView,
   Platform,
-  Vibration,
-  AppState,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
-import { Order, OrderStatus } from "../../src/types";
-import AcceptanceCountdown from "../../src/components/AcceptanceCountdown";
-import {
-  getAcceptanceDeadlineMs,
-  effectiveOrderStatus,
-  toMillis,
-} from "../../src/utils/orderAcceptance";
-import { useAppDispatch } from "../../src/hooks/useRedux";
-import { prependOrder } from "../../src/store/slices/businessOwnerSlice";
-import { useSocketEvent } from "../../src/hooks/useSocket";
-import { socketService } from "../../src/services/socketService";
 import { LinearGradient } from "expo-linear-gradient";
-
-type FilterKey = "all" | "pending" | "active" | "done";
-
-const ACTIVE_STATUSES: OrderStatus[] = [
-  OrderStatus.CONFIRMED,
-  OrderStatus.PREPARING,
-  OrderStatus.READY,
-  OrderStatus.OUT_FOR_DELIVERY,
-];
-
-const DONE_STATUSES: OrderStatus[] = [OrderStatus.DELIVERED, OrderStatus.CANCELLED, OrderStatus.REJECTED];
-
-const STATUS_META: Record<string, { label: string; color: string; bg: string; emoji: string; border: string }> = {
-  [OrderStatus.PENDING]:          { label: "New Order",         color: "#D97706", bg: "#FFFBEB", emoji: "🔔", border: "#FDE68A" },
-  [OrderStatus.CONFIRMED]:        { label: "Accepted",          color: "#2563EB", bg: "#EFF6FF", emoji: "✅", border: "#BFDBFE" },
-  [OrderStatus.PREPARING]:        { label: "Processing",        color: "#7C3AED", bg: "#F5F3FF", emoji: "⚙️", border: "#DDD6FE" },
-  [OrderStatus.READY]:            { label: "Ready to Collect",  color: "#059669", bg: "#ECFDF5", emoji: "📦", border: "#A7F3D0" },
-  [OrderStatus.OUT_FOR_DELIVERY]: { label: "On the Way",        color: "#0284C7", bg: "#F0F9FF", emoji: "🚚", border: "#BAE6FD" },
-  [OrderStatus.DELIVERED]:        { label: "Completed",         color: "#16A34A", bg: "#DCFCE7", emoji: "🎉", border: "#86EFAC" },
-  [OrderStatus.CANCELLED]:        { label: "Cancelled",         color: "#DC2626", bg: "#FEF2F2", emoji: "✗",  border: "#FECACA" },
-  [OrderStatus.REJECTED]:         { label: "Rejected",          color: "#991B1B", bg: "#FEF2F2", emoji: "🚫", border: "#FECACA" },
-};
-
-const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
-  [OrderStatus.PENDING]:          OrderStatus.CONFIRMED,
-  [OrderStatus.CONFIRMED]:        OrderStatus.PREPARING,
-  [OrderStatus.PREPARING]:        OrderStatus.READY,
-  [OrderStatus.READY]:            OrderStatus.OUT_FOR_DELIVERY,
-  [OrderStatus.OUT_FOR_DELIVERY]: OrderStatus.DELIVERED,
-};
-
-const NEXT_STATUS_LABEL: Partial<Record<OrderStatus, string>> = {
-  [OrderStatus.CONFIRMED]:        "⚙️ Start Processing",
-  [OrderStatus.PREPARING]:        "📦 Mark Ready",
-  [OrderStatus.READY]:            "🚚 Out for Delivery",
-  [OrderStatus.OUT_FOR_DELIVERY]: "✅ Mark Completed",
-};
-
-function normalizeOrderPayload(payload: any): Order | null {
-  const raw = payload?.order ?? payload?.data ?? payload;
-  if (!raw || typeof raw !== "object") return null;
-  if (!raw.id && raw._id) {
-    return { ...raw, id: raw._id } as Order;
-  }
-  return raw as Order;
-}
-
-function timeAgo(date: unknown): string {
-  const ms = toMillis(date);
-  if (ms == null) return "";
-  const diffMs = Date.now() - ms;
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  return `${Math.floor(diffHr / 24)}d ago`;
-}
+import { Order, OrderStatus } from "@/types";
+import AcceptanceCountdown from "@components/AcceptanceCountdown";
+import { useBusinessOwnerOrders } from "@hooks/useBusinessOwnerOrders";
+import content from "@/content/boOrders.json";
 
 export default function BusinessOwnerOrders() {
-  const { orders, isLoading, loadOrders, changeOrderStatus, rejectOrder } = useBusinessOwner();
-  const { rejectOrderId } = useLocalSearchParams<{ rejectOrderId?: string }>();
-  const dispatch = useAppDispatch();
-  const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
-  const [advancing, setAdvancing] = useState<string | null>(null);
-  const [rejectModal, setRejectModal] = useState<{ orderId: string; orderRef: string } | null>(null);
-  const [rejectReason, setRejectReason] = useState("");
-  const [rejecting, setRejecting] = useState(false);
-  // Pending orders whose 60s window elapsed on the client before the server
-  // sweeper flipped them to rejected — used to swap the action buttons out.
-  const [expiredIds, setExpiredIds] = useState<Set<string>>(new Set());
   const insets = useSafeAreaInsets();
-  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastActivityAtRef = useRef<number>(Date.now());
-
-  const getFallbackDelayMs = useCallback(() => {
-    const elapsed = Date.now() - lastActivityAtRef.current;
-    if (elapsed < 30_000) return 3_000;
-    if (elapsed < 180_000) return 10_000;
-    return 30_000;
-  }, []);
-
-  const refreshFallbackNow = useCallback(() => {
-    lastActivityAtRef.current = Date.now();
-    if (!socketService.isConnected()) {
-      loadOrders({ silent: true }).catch(() => null);
-    }
-  }, [loadOrders]);
-
-  const stopFallbackLoop = useCallback(() => {
-    if (fallbackTimerRef.current) {
-      clearTimeout(fallbackTimerRef.current);
-      fallbackTimerRef.current = null;
-    }
-  }, []);
-
-  const startFallbackLoop = useCallback(() => {
-    stopFallbackLoop();
-
-    const tick = () => {
-      if (!socketService.isConnected()) {
-        loadOrders({ silent: true }).catch(() => null);
-      }
-      fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
-    };
-
-    fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
-  }, [getFallbackDelayMs, loadOrders, stopFallbackLoop]);
-
-  // Track previous pending count to detect new orders
-  const prevPendingCount = useRef<number>(0);
-
-  useEffect(() => {
-    loadOrders().catch(() => null);
-  }, [loadOrders]);
-
-  // Auto-rejection is time-based and server-driven with no socket push, so the
-  // socket-gated fallback loop above never learns about it while the socket is
-  // connected. Poll unconditionally while any order is still pending so the
-  // list, tab badge and banner reflect the flip to rejected within seconds.
-  const hasPending = useMemo(
-    () => orders.some((o) => o.status === OrderStatus.PENDING),
-    [orders]
-  );
-  useEffect(() => {
-    if (!hasPending) return;
-    const timer = setInterval(() => {
-      loadOrders({ silent: true }).catch(() => null);
-    }, 3000);
-    return () => clearInterval(timer);
-  }, [hasPending, loadOrders]);
-
-  // Local ticker so counts, filters and cards recompute as each 60s window
-  // lapses — the order is treated as rejected the moment its client-side
-  // deadline passes, regardless of whether the backend write has landed yet.
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!hasPending) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [hasPending]);
-
-  // Fallback path while backend socket events are unavailable: sync only when
-  // this screen is focused and socket is disconnected.
-  useFocusEffect(
-    useCallback(() => {
-      // Immediate refresh on focus (covers notification tap navigation too).
-      refreshFallbackNow();
-      startFallbackLoop();
-
-      const sub = AppState.addEventListener("change", (state) => {
-        if (state === "active") {
-          // Meaningful event: app foreground resume.
-          refreshFallbackNow();
-        }
-      });
-
-      return () => {
-        sub.remove();
-        stopFallbackLoop();
-      };
-    }, [refreshFallbackNow, startFallbackLoop, stopFallbackLoop])
-  );
-
-  // Real-time: a new order has arrived via socket.
-  // prependOrder guards against duplicates if FCM also triggers a refresh.
-  // The existing useEffect watching `orders` will detect the new pending order
-  // and fire playNewOrderAlert() automatically.
-  useSocketEvent<any>("order:new", (payload) => {
-    const order = normalizeOrderPayload(payload);
-    if (!order?.id) return;
-    dispatch(prependOrder(order));
-  });
-
-  // Ring/buzz when a new pending order arrives
-  useEffect(() => {
-    const pendingCount = orders.filter((o) => o.status === OrderStatus.PENDING).length;
-    if (pendingCount > prevPendingCount.current) {
-      playNewOrderAlert();
-    }
-    prevPendingCount.current = pendingCount;
-  }, [orders]);
-
-  // Cleanup sound on unmount
-  useEffect(() => {
-    return () => {};
-  }, []);
-
-  const playNewOrderAlert = async () => {
-    try {
-      // Zomato-style short-long-short-long vibration pattern
-      Vibration.vibrate([0, 400, 200, 400, 200, 600]);
-    } catch {
-      Vibration.vibrate([0, 300, 200, 300]);
-    }
-  };
-
-  const counts = useMemo(
-    () => ({
-      all: orders.length,
-      pending: orders.filter((o) => effectiveOrderStatus(o, now) === OrderStatus.PENDING).length,
-      active: orders.filter((o) => ACTIVE_STATUSES.includes(effectiveOrderStatus(o, now))).length,
-      done: orders.filter((o) => DONE_STATUSES.includes(effectiveOrderStatus(o, now))).length,
-    }),
-    [orders, now]
-  );
-
-  const filteredOrders = useMemo(() => {
-    if (activeFilter === "pending")
-      return orders.filter((o) => effectiveOrderStatus(o, now) === OrderStatus.PENDING);
-    if (activeFilter === "active")
-      return orders.filter((o) => ACTIVE_STATUSES.includes(effectiveOrderStatus(o, now)));
-    if (activeFilter === "done")
-      return orders.filter((o) => DONE_STATUSES.includes(effectiveOrderStatus(o, now)));
-    return orders;
-  }, [activeFilter, orders, now]);
-
-  const FILTERS: { key: FilterKey; label: string; count: number }[] = [
-    { key: "all",     label: "All",     count: counts.all     },
-    { key: "pending", label: "Pending", count: counts.pending },
-    { key: "active",  label: "Active",  count: counts.active  },
-    { key: "done",    label: "Done",    count: counts.done    },
-  ];
-
-  const handleAdvance = async (order: Order) => {
-    const next = NEXT_STATUS[order.status];
-    if (!next) return;
-    setAdvancing(order.id);
-    try {
-      await changeOrderStatus(order.id, next);
-      refreshFallbackNow();
-    } catch {
-      Alert.alert("Error", "Failed to update order status. Please try again.");
-    } finally {
-      setAdvancing(null);
-    }
-  };
-
-  const markExpired = useCallback((orderId: string) => {
-    setExpiredIds((prev) => {
-      if (prev.has(orderId)) return prev;
-      const next = new Set(prev);
-      next.add(orderId);
-      return next;
-    });
-  }, []);
-
-  const handleCountdownExpire = useCallback(
-    (orderId: string) => {
-      markExpired(orderId);
-      // Refetch (regardless of socket state) so the card reflects the real
-      // rejected state — the read applies lazy expiration server-side — instead
-      // of our optimistic "expired" placeholder.
-      loadOrders({ silent: true }).catch(() => null);
-    },
-    [markExpired, loadOrders]
-  );
-
-  const handleAccept = async (order: Order) => {
-    setAdvancing(order.id);
-    try {
-      await changeOrderStatus(order.id, OrderStatus.CONFIRMED);
-      refreshFallbackNow();
-    } catch (err) {
-      const code = (err as any)?.response?.data?.code;
-      const httpStatus = (err as any)?.response?.status;
-      if (code === "ACCEPTANCE_WINDOW_EXPIRED" || code === "ORDER_NOT_PENDING" || httpStatus === 409) {
-        markExpired(order.id);
-        refreshFallbackNow();
-        Alert.alert(
-          "Order expired",
-          "This order was auto-rejected because it wasn't accepted within 60 seconds."
-        );
-      } else {
-        Alert.alert("Error", "Failed to accept order. Please try again.");
-      }
-    } finally {
-      setAdvancing(null);
-    }
-  };
-
-  const openRejectModal = (order: Order) => {
-    setRejectReason("");
-    setRejectModal({ orderId: order.id, orderRef: order.id.slice(0, 8).toUpperCase() });
-  };
-
-  // Open reject modal when arriving from a notification "Reject" action
-  useEffect(() => {
-    if (!rejectOrderId || typeof rejectOrderId !== "string") return;
-    const order = orders.find((o) => o.id === rejectOrderId);
-    if (!order || order.status !== OrderStatus.PENDING) return;
-    openRejectModal(order);
-    router.setParams({ rejectOrderId: undefined });
-  }, [rejectOrderId, orders]);
-
-  const handleReject = async () => {
-    if (!rejectModal) return;
-    if (!rejectReason.trim()) {
-      Alert.alert("Reason Required", "Please provide a reason for rejecting this order.");
-      return;
-    }
-
-    setRejecting(true);
-    try {
-      await rejectOrder(rejectModal.orderId, rejectReason.trim());
-      setRejectModal(null);
-      setRejectReason("");
-      refreshFallbackNow();
-    } catch {
-      Alert.alert("Error", "Failed to reject order. Please try again.");
-    } finally {
-      setRejecting(false);
-    }
-  };
+  const {
+    orders,
+    isLoading,
+    activeFilter,
+    setActiveFilter,
+    advancing,
+    rejectModal,
+    setRejectModal,
+    rejectReason,
+    setRejectReason,
+    rejecting,
+    expiredIds,
+    now,
+    filteredOrders,
+    filters,
+    handleAdvance,
+    handleAccept,
+    handleReject,
+    handleCountdownExpire,
+    openRejectModal,
+    goToOrderDetail,
+    effectiveOrderStatus,
+    getAcceptanceDeadlineMs,
+    getOrderStatusMeta,
+    getNextStatus,
+    getNextStatusLabel,
+    timeAgo,
+  } = useBusinessOwnerOrders();
 
   const renderItem = ({ item }: { item: Order }) => {
-    // Show the effective status: a pending order past its 60s window reads as
-    // rejected even before the backend write lands, so the status bar and
-    // actions never lie ("New Order" while the countdown says auto-rejected).
     const displayStatus = effectiveOrderStatus(item, now);
-    const meta = STATUS_META[displayStatus];
-    const next = NEXT_STATUS[displayStatus];
-    const nextLabel = NEXT_STATUS_LABEL[displayStatus];
+    const meta = getOrderStatusMeta(displayStatus);
+    const next = getNextStatus(displayStatus);
+    const nextLabel = getNextStatusLabel(displayStatus);
     const addr = item.deliveryAddress;
     const addressLine = addr
       ? [addr.street, addr.landmark].filter(Boolean).join(", ")
@@ -367,7 +68,7 @@ export default function BusinessOwnerOrders() {
     return (
       <TouchableOpacity
         style={styles.card}
-        onPress={() => router.push(`/(business-owner)/order-detail?orderId=${item.id}`)}
+        onPress={() => goToOrderDetail(item.id)}
       >
         {/* Top row: ID + time + amount */}
         <View style={styles.cardTop}>
@@ -376,7 +77,7 @@ export default function BusinessOwnerOrders() {
             <Text style={styles.orderTime}>{timeAgo(item.createdAt)}</Text>
           </View>
           <View style={{ alignItems: "flex-end", gap: 4 }}>
-            <Text style={styles.orderAmount}>₹{item.finalAmount}</Text>
+            <Text style={styles.orderAmount}>{content.currency}{item.finalAmount}</Text>
             {isPending && deadlineMs != null && !windowExpired ? (
               <AcceptanceCountdown
                 compact
@@ -417,10 +118,10 @@ export default function BusinessOwnerOrders() {
             >
               {paymentMethod.toUpperCase()} ·{" "}
               {item.paymentStatus === "completed"
-                ? "Paid"
+                ? content.payment.paid
                 : item.paymentStatus === "cod"
-                ? "COD"
-                : "Pending"}
+                ? content.payment.cod
+                : content.payment.pending}
             </Text>
           </View>
         </View>
@@ -430,7 +131,7 @@ export default function BusinessOwnerOrders() {
           <View style={styles.infoRow}>
             <Text style={styles.infoIcon}>🛍</Text>
             <Text style={styles.infoText}>
-              {orderItems.length} item{orderItems.length !== 1 ? "s" : ""}
+              {orderItems.length} {orderItems.length !== 1 ? content.card.itemPlural : content.card.itemSingular}
             </Text>
           </View>
           {/* Item names */}
@@ -438,14 +139,14 @@ export default function BusinessOwnerOrders() {
             <View key={idx} style={styles.infoRow}>
               <Text style={styles.infoIcon}>  ·</Text>
               <Text style={styles.infoText} numberOfLines={1}>
-                {orderItem.quantity}× {orderItem.productName ?? `Item ${idx + 1}`} — Rs {orderItem.lineTotal ?? orderItem.price * orderItem.quantity}
+                {orderItem.quantity}× {orderItem.productName ?? `${content.card.itemFallbackPrefix}${idx + 1}`} — {content.currency}{orderItem.lineTotal ?? orderItem.price * orderItem.quantity}
               </Text>
             </View>
           ))}
           {orderItems.length > 3 ? (
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>  ·</Text>
-              <Text style={styles.infoText}>+{orderItems.length - 3} more</Text>
+              <Text style={styles.infoText}>+{orderItems.length - 3}{content.card.moreSuffix}</Text>
             </View>
           ) : null}
           {/* Customer info */}
@@ -472,7 +173,7 @@ export default function BusinessOwnerOrders() {
         {/* Action */}
         {isPending && windowExpired ? (
           <View style={styles.terminalBanner}>
-            <Text style={styles.terminalBannerText}>🚫 Auto-rejected — no response in time</Text>
+            <Text style={styles.terminalBannerText}>{content.card.autoRejected}</Text>
           </View>
         ) : item.status === OrderStatus.PENDING ? (
           <View style={styles.pendingActions}>
@@ -482,7 +183,7 @@ export default function BusinessOwnerOrders() {
               disabled={isAdvancing}
               activeOpacity={0.85}
             >
-              <Text style={styles.rejectBtnText}>✕ Reject</Text>
+              <Text style={styles.rejectBtnText}>{content.card.reject}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.acceptBtn, isAdvancing && styles.advanceBtnDisabled]}
@@ -493,7 +194,7 @@ export default function BusinessOwnerOrders() {
               {isAdvancing ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.acceptBtnText}>✓ Accept</Text>
+                <Text style={styles.acceptBtnText}>{content.card.accept}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -514,14 +215,14 @@ export default function BusinessOwnerOrders() {
           <View style={styles.terminalBanner}>
             <Text style={styles.terminalBannerText}>
               {item.status === OrderStatus.DELIVERED
-                ? "✅ Order completed"
+                ? content.card.completed
                 : item.status === OrderStatus.REJECTED
-                ? "🚫 Order rejected"
-                : "✗ Order cancelled"}
+                ? content.card.rejected
+                : content.card.cancelled}
             </Text>
             {item.status === OrderStatus.REJECTED && (item as any).rejectionReason ? (
               <Text style={styles.rejectionReasonText}>
-                Reason: {(item as any).rejectionReason}
+                {content.card.reasonPrefix}{(item as any).rejectionReason}
               </Text>
             ) : null}
           </View>
@@ -536,13 +237,13 @@ export default function BusinessOwnerOrders() {
         colors={["#16A34A", "#0A7D55"]}
         style={[styles.header, { paddingTop: insets.top + 16 }]}
       >
-        <Text style={styles.headerTitle}>Orders</Text>
-        <Text style={styles.headerSub}>Track and fulfill customer orders</Text>
+        <Text style={styles.headerTitle}>{content.header.title}</Text>
+        <Text style={styles.headerSub}>{content.header.subtitle}</Text>
       </LinearGradient>
 
       {/* Filter bar — plain View row so chips stay compact */}
       <View style={styles.filterBar}>
-        {FILTERS.map((f) => {
+        {filters.map((f) => {
           const active = activeFilter === f.key;
           return (
             <TouchableOpacity
@@ -577,12 +278,12 @@ export default function BusinessOwnerOrders() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Text style={styles.emptyEmoji}>📋</Text>
-              <Text style={styles.emptyTitle}>No orders here</Text>
+              <Text style={styles.emptyEmoji}>{content.empty.emoji}</Text>
+              <Text style={styles.emptyTitle}>{content.empty.title}</Text>
               <Text style={styles.emptySubtitle}>
                 {activeFilter === "all"
-                  ? "Customer orders will appear once they start placing them."
-                  : "No orders match this filter right now."}
+                  ? content.empty.subtitleAll
+                  : content.empty.subtitleFiltered}
               </Text>
             </View>
           }
@@ -602,13 +303,13 @@ export default function BusinessOwnerOrders() {
         >
           <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 24 }]}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Reject Order #{rejectModal?.orderRef}</Text>
+            <Text style={styles.modalTitle}>{content.rejectModal.titlePrefix}{rejectModal?.orderRef}</Text>
             <Text style={styles.modalSubtitle}>
-              Please provide a reason. The customer will be notified.
+              {content.rejectModal.subtitle}
             </Text>
             <TextInput
               style={styles.reasonInput}
-              placeholder="e.g. Out of stock, Shop is closed, Item unavailable..."
+              placeholder={content.rejectModal.placeholder}
               placeholderTextColor="#94A3B8"
               value={rejectReason}
               onChangeText={setRejectReason}
@@ -625,7 +326,7 @@ export default function BusinessOwnerOrders() {
                 onPress={() => setRejectModal(null)}
                 disabled={rejecting}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{content.rejectModal.cancel}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalRejectBtn, rejecting && styles.advanceBtnDisabled]}
@@ -635,7 +336,7 @@ export default function BusinessOwnerOrders() {
                 {rejecting ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.modalRejectText}>Reject Order</Text>
+                  <Text style={styles.modalRejectText}>{content.rejectModal.reject}</Text>
                 )}
               </TouchableOpacity>
             </View>

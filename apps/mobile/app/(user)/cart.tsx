@@ -1,71 +1,33 @@
-import { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import { Image } from "expo-image";
-import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
-import { updateQuantity, removeItem, clearCart } from "../../src/store/slices/cartSlice";
-import { ORDER_FEES } from "../../src/constants";
-import { displayQuantity } from "../../src/utils/helpers";
-import { useFeatureFlags } from "../../src/hooks/useFeatureFlags";
-import { useRewardedAd } from "../../src/hooks/useRewardedAd";
-import { userAppService } from "../../src/services/userAppService";
-
-const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
+import { displayQuantity } from "@utils/helpers";
+import { useCart } from "@hooks/useCart";
+import content from "@/content/cart.json";
 
 export default function CartScreen() {
-  const dispatch = useAppDispatch();
-  const cartItems = useAppSelector((state) => state.cart.items);
-  const cartBusinessId = useAppSelector((state) => state.cart.businessId);
-  const businesses = useAppSelector((state) => state.userApp.businesses);
   const insets = useSafeAreaInsets();
-
-  const { isRewardedEnabled, values: ffValues } = useFeatureFlags();
-  const { adState, showRewardedAd } = useRewardedAd();
-  const [adReward, setAdReward] = useState<{ couponCode: string; discountAmount: number } | null>(null);
-
-  const storeMin = businesses.find((b) => b.id === cartBusinessId)?.minimumOrderAmount;
-  const MIN_ORDER = storeMin && storeMin > 0 ? storeMin : MINIMUM_ORDER;
-
-  const subTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const finalAmount = subTotal + PLATFORM_FEE;
-  const canCheckout = cartItems.length > 0 && subTotal >= MIN_ORDER;
-
-  async function handleWatchAd() {
-    const earned = await showRewardedAd();
-    if (!earned) return;
-    try {
-      const reward = await userAppService.claimAdReward();
-      setAdReward({ couponCode: reward.couponCode, discountAmount: reward.discountAmount });
-    } catch (err: any) {
-      Alert.alert("Reward", err?.message ?? "Could not issue reward. Try again later.");
-    }
-  }
-
-  function handleIncrease(productId: string, current: number, max: number) {
-    if (current >= max) {
-      Alert.alert("Max stock reached", `Only ${max} units available`);
-      return;
-    }
-    dispatch(updateQuantity({ productId, quantity: current + 1 }));
-  }
-
-  function handleDecrease(productId: string, current: number) {
-    dispatch(updateQuantity({ productId, quantity: current - 1 }));
-  }
-
-  function handleRemove(productId: string) {
-    dispatch(removeItem(productId));
-  }
-
-  function handleClearCart() {
-    Alert.alert("Clear Cart", "Remove all items from cart?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Clear", style: "destructive", onPress: () => dispatch(clearCart()) },
-    ]);
-  }
+  const {
+    cartItems,
+    subTotal,
+    finalAmount,
+    canCheckout,
+    minOrder,
+    isRewardedEnabled,
+    ffValues,
+    adState,
+    adReward,
+    handleWatchAd,
+    handleIncrease,
+    handleDecrease,
+    handleRemove,
+    handleClearCart,
+    goBack,
+    goToHome,
+    goToCheckout,
+  } = useCart();
 
   return (
     <View style={styles.container}>
@@ -73,21 +35,12 @@ export default function CartScreen() {
         colors={["#0E9F6E", "#0891B2"]}
         style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
       >
-        <TouchableOpacity
-          onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace("/(user)/(tabs)/home");
-            }
-          }}
-          style={styles.backBtn}
-        >
+        <TouchableOpacity onPress={goBack} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cart</Text>
+        <Text style={styles.headerTitle}>{content.headerTitle}</Text>
         <TouchableOpacity onPress={handleClearCart}>
-          <Text style={styles.clearText}>Clear</Text>
+          <Text style={styles.clearText}>{content.clear}</Text>
         </TouchableOpacity>
       </LinearGradient>
 
@@ -96,10 +49,10 @@ export default function CartScreen() {
           <View style={styles.emptyIconWrap}>
             <Ionicons name="cart-outline" size={42} color="#FFFFFF" />
           </View>
-          <Text style={styles.emptyTitle}>Your cart is empty</Text>
-          <Text style={styles.emptySubtitle}>Browse products on the home screen and add items to your cart.</Text>
-          <TouchableOpacity style={styles.browseBtn} onPress={() => router.push("/(user)/home") }>
-            <Text style={styles.browseBtnText}>Browse Products</Text>
+          <Text style={styles.emptyTitle}>{content.empty.title}</Text>
+          <Text style={styles.emptySubtitle}>{content.empty.subtitle}</Text>
+          <TouchableOpacity style={styles.browseBtn} onPress={goToHome}>
+            <Text style={styles.browseBtnText}>{content.empty.browse}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -108,7 +61,7 @@ export default function CartScreen() {
             <View style={styles.shopRow}>
               <View style={styles.shopLabelWrap}>
                 <Ionicons name="storefront-outline" size={18} color="#0E9F6E" />
-                <Text style={styles.shopLabel}>{cartItems[0]?.businessName ?? "Shop"}</Text>
+                <Text style={styles.shopLabel}>{cartItems[0]?.businessName ?? content.defaultShop}</Text>
               </View>
             </View>
 
@@ -130,8 +83,8 @@ export default function CartScreen() {
                       {item.selectedAttributes.map((a) => a.value).join(", ")}
                     </Text>
                   ) : null}
-                  <Text style={styles.itemPrice}>Rs {item.price} × {displayQuantity(item.quantity, item.unit, item.unitStep)}</Text>
-                  <Text style={styles.itemLineTotal}>Rs {item.price * item.quantity}</Text>
+                  <Text style={styles.itemPrice}>{content.currency} {item.price} × {displayQuantity(item.quantity, item.unit, item.unitStep)}</Text>
+                  <Text style={styles.itemLineTotal}>{content.currency} {item.price * item.quantity}</Text>
                 </View>
                 <View style={styles.itemActions}>
                   <View style={styles.qtyControl}>
@@ -144,16 +97,16 @@ export default function CartScreen() {
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity onPress={() => handleRemove(item.productId)} style={styles.removeBtn}>
-                    <Text style={styles.removeText}>Remove</Text>
+                    <Text style={styles.removeText}>{content.remove}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             ))}
 
-            {subTotal < MIN_ORDER ? (
+            {subTotal < minOrder ? (
               <View style={styles.minOrderWarn}>
                 <Ionicons name="information-circle-outline" size={14} color="#B45309" />
-                <Text style={styles.minOrderWarnText}>Add Rs {MIN_ORDER - subTotal} more to reach the Rs {MIN_ORDER} minimum.</Text>
+                <Text style={styles.minOrderWarnText}>{content.minOrder.prefix} {minOrder - subTotal} {content.minOrder.middle} {minOrder} {content.minOrder.suffix}</Text>
               </View>
             ) : null}
 
@@ -174,8 +127,8 @@ export default function CartScreen() {
                     <Ionicons name="play-circle-outline" size={26} color="#92400E" />
                   </View>
                   <View style={styles.adRewardTextWrap}>
-                    <Text style={styles.adRewardTitle}>Watch an ad, save Rs {ffValues.adsRewardedMinRs}–{ffValues.adsRewardedMaxRs}</Text>
-                    <Text style={styles.adRewardSub}>Earn a coupon for your next order</Text>
+                    <Text style={styles.adRewardTitle}>{content.adReward.titlePrefix} {ffValues.adsRewardedMinRs}–{ffValues.adsRewardedMaxRs}</Text>
+                    <Text style={styles.adRewardSub}>{content.adReward.sub}</Text>
                   </View>
                   {adState === "loading" ? (
                     <ActivityIndicator size="small" color="#92400E" />
@@ -190,8 +143,8 @@ export default function CartScreen() {
               <View style={styles.adRewardEarned}>
                 <Ionicons name="checkmark-circle" size={22} color="#15803D" />
                 <View style={styles.adRewardEarnedText}>
-                  <Text style={styles.adRewardEarnedTitle}>Coupon earned! Save Rs {adReward.discountAmount}</Text>
-                  <Text style={styles.adRewardEarnedCode}>Use code <Text style={styles.adRewardCode}>{adReward.couponCode}</Text> at checkout</Text>
+                  <Text style={styles.adRewardEarnedTitle}>{content.adReward.earnedTitlePrefix} {adReward.discountAmount}</Text>
+                  <Text style={styles.adRewardEarnedCode}>{content.adReward.usePrefix} <Text style={styles.adRewardCode}>{adReward.couponCode}</Text> {content.adReward.useSuffix}</Text>
                 </View>
               </View>
             )}
@@ -202,15 +155,15 @@ export default function CartScreen() {
           <View style={styles.bottomCta}>
             <View style={styles.bottomRow}>
               <View>
-                <Text style={styles.totalLabel}>Total</Text>
-                <Text style={styles.totalAmount}>Rs {finalAmount}</Text>
+                <Text style={styles.totalLabel}>{content.total}</Text>
+                <Text style={styles.totalAmount}>{content.currency} {finalAmount}</Text>
               </View>
               <TouchableOpacity
                 style={[styles.checkoutBtn, !canCheckout ? styles.checkoutBtnDisabled : null]}
                 disabled={!canCheckout}
-                onPress={() => router.push("/(user)/checkout")}
+                onPress={goToCheckout}
               >
-                <Text style={styles.checkoutText}>Proceed to Checkout →</Text>
+                <Text style={styles.checkoutText}>{content.checkout}</Text>
               </TouchableOpacity>
             </View>
           </View>

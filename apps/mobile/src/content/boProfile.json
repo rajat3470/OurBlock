@@ -1,0 +1,74 @@
+{
+  "hero": {
+    "emoji": "🏪"
+  },
+  "business": {
+    "sectionIcon": "🏬",
+    "sectionTitle": "My Business",
+    "verified": "✓ Verified Business",
+    "pending": "⏳ Pending Verification",
+    "rows": {
+      "name": "Business Name",
+      "category": "Category",
+      "description": "Description",
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email",
+      "rating": "Rating",
+      "status": "Status"
+    },
+    "ratingValue": "{rating} / 5 ({reviews} reviews)",
+    "noProfileEmoji": "🏗️",
+    "noProfileTitle": "No business profile found.",
+    "noProfileSub": "Contact an admin to set up your business."
+  },
+  "settings": {
+    "icon": "⚙️",
+    "label": "Business Settings",
+    "minOrder": "Minimum Order Amount (Rs)",
+    "deliveryTime": "Estimated Delivery Time",
+    "prepTime": "Preparation Time",
+    "deliveryFee": "Delivery Fee (Rs, 0 = free)",
+    "tags": "Cuisine Tags (comma-separated)",
+    "placeholders": {
+      "minOrder": "e.g. 100",
+      "deliveryTime": "e.g. 30-40 mins",
+      "prepTime": "e.g. 15-20 mins",
+      "deliveryFee": "e.g. 30",
+      "tags": "e.g. Chinese, Veg, Fast Food"
+    },
+    "save": "Save Settings"
+  },
+  "password": {
+    "icon": "🔑",
+    "label": "Change Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "placeholders": {
+      "newPassword": "Minimum 8 characters",
+      "confirmPassword": "Re-enter new password"
+    },
+    "errors": {
+      "minLength": "Password must be at least 8 characters.",
+      "mismatch": "Passwords do not match."
+    },
+    "update": "Update Password",
+    "successTitle": "Success",
+    "successMsg": "Password changed successfully."
+  },
+  "logout": {
+    "title": "Sign Out",
+    "confirm": "Are you sure you want to sign out?",
+    "cancel": "Cancel",
+    "action": "Sign Out",
+    "buttonText": "Sign Out"
+  },
+  "alerts": {
+    "savedTitle": "Saved",
+    "savedMsg": "Business settings updated.",
+    "errorTitle": "Error",
+    "settingsErrorFallback": "Failed to save settings.",
+    "passwordErrorFallback": "Failed to change password.",
+    "ok": "OK"
+  }
+}

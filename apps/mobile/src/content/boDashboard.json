@@ -1,0 +1,62 @@
+{
+  "currency": "₹",
+  "greetings": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening"
+  },
+  "ownerFallback": "Owner",
+  "businessFallback": "Your Business",
+  "pills": {
+    "pending": "⏳ Pending",
+    "live": "✓ Live",
+    "paused": "⏸ Paused",
+    "takingOrders": "Taking Orders",
+    "pausedLabel": "Paused"
+  },
+  "heroStats": {
+    "products": "Products",
+    "active": "Active",
+    "delivered": "Delivered",
+    "allOrders": "All Orders"
+  },
+  "sections": {
+    "revenueTitle": "Revenue — Last 7 Days",
+    "popularTitle": "Popular Items",
+    "soldSuffix": " sold",
+    "pipelineTitle": "Product Pipeline",
+    "manage": "Manage →",
+    "recentTitle": "Recent Orders",
+    "viewAll": "View all →"
+  },
+  "pipeline": {
+    "approved": "Approved",
+    "pending": "Pending",
+    "rejected": "Rejected"
+  },
+  "empty": {
+    "emoji": "🛍️",
+    "title": "No orders yet",
+    "subtitle": "New customer orders will appear here."
+  },
+  "order": {
+    "itemSingular": "item",
+    "itemPlural": "items",
+    "paid": "Paid",
+    "pending": "Pending"
+  },
+  "statusLabels": {
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "preparing": "Preparing",
+    "ready": "Ready",
+    "outForDelivery": "Out for Delivery",
+    "delivered": "Delivered",
+    "cancelled": "Cancelled"
+  },
+  "toggleAlert": {
+    "title": "Cannot Update",
+    "failVerified": "Failed to update order availability. Please try again.",
+    "failPending": "Your business is pending approval. Order availability can be changed once verified."
+  }
+}
