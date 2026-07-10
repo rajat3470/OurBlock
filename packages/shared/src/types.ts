@@ -93,6 +93,13 @@ export interface Business {
   operatingHours?: OperatingHours;
   status: "active" | "inactive" | "suspended";
   isVerified: boolean;
+  // Real-time availability / business overrides
+  isTakingOrders?: boolean;
+  minimumOrderAmount?: number;
+  estimatedDeliveryTime?: string;
+  preparationTime?: string;
+  deliveryFee?: number;
+  tags?: string[];
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -123,6 +130,9 @@ export interface Product {
   name: string;
   description?: string;
   category: string;
+  menuSection?: string; // e.g. "Starters", "Main Course", "Beverages"
+  isVeg?: boolean;      // true = veg (green dot), false = non-veg (red dot)
+  tags?: string[];      // e.g. ["bestseller", "recommended", "new", "spicy"]
   price: number;
   originalPrice?: number;
   discount?: number; // percentage
@@ -133,6 +143,10 @@ export interface Product {
   rating?: number;
   totalReviews?: number;
   status: "active" | "inactive";
+  isVerified?: boolean;
+  approvalStatus?: "pending" | "approved" | "rejected";
+  approvalNote?: string;
+  availableToday?: boolean;
   attributes?: ProductAttribute[];
   createdAt: Date;
   updatedAt: Date;
@@ -152,13 +166,17 @@ export enum OrderStatus {
   OUT_FOR_DELIVERY = "outForDelivery",
   DELIVERED = "delivered",
   CANCELLED = "cancelled",
+  REJECTED = "rejected",
 }
 
 export interface Order {
   id: string;
   userId: string;
   businessId: string;
+  businessName?: string;
   items: OrderItem[];
+  subTotal?: number;
+  platformFee?: number;
   totalAmount: number;
   discountAmount?: number;
   taxAmount?: number;
@@ -170,6 +188,11 @@ export interface Order {
   notes?: string;
   estimatedDeliveryTime?: Date;
   deliveredAt?: Date;
+  rejectionReason?: string;          // If order was rejected by business owner / system
+  rejectedAt?: Date;                  // Timestamp of rejection
+  rejectedBy?: "business_owner" | "system";
+  acceptanceWindowSeconds?: number;   // Owner accept/reject window (seconds)
+  autoRejectAt?: any;                 // Deadline after which a pending order is auto-rejected
   trackingUpdates?: TrackingUpdate[];
   createdAt: Date;
   updatedAt: Date;
@@ -187,6 +210,8 @@ export interface TrackingUpdate {
   timestamp: Date;
   location?: string;
   notes?: string;
+  rejectionReason?: string;
+  rejectedBy?: "business_owner" | "system";
 }
 
 // Address Types
@@ -265,6 +290,39 @@ export interface ChatSession {
   lastMessageAt?: Date;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Home Banner Types
+export interface HomeBanner {
+  id: string;
+  title: string;
+  subtitle?: string;
+  imageUrl: string;
+  tagText?: string;
+  ctaText?: string;
+  ctaRoute?: string;
+  societyId: string;
+  isActive: boolean;
+  sortOrder?: number;
+  startAt?: Date | null;
+  endAt?: Date | null;
+  theme?: {
+    accentStart?: string;
+    accentEnd?: string;
+    textColor?: string;
+  } | null;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Order Payload Types
+export interface CreateOrderPayload {
+  businessId: string;
+  items: Array<{ productId: string; quantity: number; price: number }>;
+  deliveryAddress: Omit<Address, "id" | "userId" | "createdAt" | "updatedAt">;
+  notes?: string;
+  paymentMethod: "cash" | "upi";
+  couponCode?: string;
 }
 
 // Authentication Types

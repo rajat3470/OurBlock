@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +7,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -26,8 +32,12 @@ interface MenuItem {
 
 export default function SuperAdminProfileScreen() {
   const { user } = useAppSelector((state) => state.auth);
-  const { logoutUser } = useAuth();
+  const { logoutUser, changePassword } = useAuth();
   const insets = useSafeAreaInsets();
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   const handleLogout = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
@@ -56,10 +66,45 @@ export default function SuperAdminProfileScreen() {
     },
   ];
 
+  const handleChangePassword = async () => {
+    if (newPassword.length < 8) {
+      Alert.alert("Validation", "Password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert("Validation", "Passwords do not match.");
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      await changePassword(newPassword);
+      Alert.alert("Success", "Your password has been updated.");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordModalVisible(false);
+    } catch (error: any) {
+      Alert.alert("Error", error?.message || "Failed to change password.");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   const menuItems: MenuItem[] = [
-    { icon: "🔒", label: "Change Password", onPress: () => {} },
-    { icon: "🔔", label: "Notification Settings", onPress: () => {} },
-    { icon: "ℹ️", label: "About mohallaMitr", onPress: () => {} },
+    {
+      icon: "🔒",
+      label: "Change Password",
+      onPress: () => setPasswordModalVisible(true),
+    },
+    {
+      icon: "🔔",
+      label: "Notification Settings",
+      onPress: () => Alert.alert("Coming soon", "Notification settings will be available in a future update."),
+    },
+    {
+      icon: "ℹ️",
+      label: "About mohallaMitr",
+      onPress: () => Alert.alert("About", "mohallaMitr Admin v1.0.0"),
+    },
   ];
 
   return (
@@ -129,6 +174,66 @@ export default function SuperAdminProfileScreen() {
 
         <Text style={styles.version}>mohallaMitr Admin v1.0.0</Text>
       </ScrollView>
+
+      <Modal
+        visible={passwordModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => !passwordLoading && setPasswordModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 24 }]}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Change Password</Text>
+            <Text style={styles.modalSubtitle}>
+              Choose a new password with at least 8 characters.
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="New password"
+              placeholderTextColor="#94A3B8"
+              secureTextEntry
+              value={newPassword}
+              onChangeText={setNewPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Confirm new password"
+              placeholderTextColor="#94A3B8"
+              secureTextEntry
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setPasswordModalVisible(false)}
+                disabled={passwordLoading}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSaveBtn, passwordLoading && styles.modalSaveBtnDisabled]}
+                onPress={handleChangePassword}
+                disabled={passwordLoading}
+              >
+                {passwordLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.modalSaveBtnText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -271,5 +376,80 @@ const styles = StyleSheet.create({
     color: "#CBD5E1",
     textAlign: "center",
     paddingBottom: 130,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  modalSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#E2E8F0",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: 6,
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: "#64748B",
+    marginBottom: 16,
+    lineHeight: 19,
+  },
+  modalInput: {
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderRadius: 14,
+    padding: 14,
+    fontSize: 14,
+    color: "#0F172A",
+    backgroundColor: "#F8FAFC",
+    marginBottom: 12,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+  },
+  modalCancelText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  modalSaveBtn: {
+    flex: 2,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: "#2563EB",
+  },
+  modalSaveBtnDisabled: {
+    opacity: 0.6,
+  },
+  modalSaveBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

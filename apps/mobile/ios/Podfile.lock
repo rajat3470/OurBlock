@@ -220,7 +220,7 @@ PODS:
     - ExpoModulesCore
   - ExpoLinking (55.0.14):
     - ExpoModulesCore
-  - ExpoLogBox (55.0.12):
+  - ExpoLogBox (55.0.11):
     - React-Core
   - ExpoModulesCore (55.0.25):
     - ExpoModulesJSI
@@ -3084,7 +3084,7 @@ SPEC CHECKSUMS:
   ExpoKeepAwake: d0eb7a0719500d2a43fbf29b6f79e84d70c75ebf
   ExpoLinearGradient: dcbc1ca46ebfeb9d7646f49595057d161dae208e
   ExpoLinking: f9e01f5182f2653ea9d90f18fb47f1913e2f99ef
-  ExpoLogBox: a678d36477ab9544fe63e0b5328a0716539b6774
+  ExpoLogBox: 617da77cbc083627692b2ea050a3666808aef2cd
   ExpoModulesCore: 576864155b799ba51228d2db41591206dd6f0bc9
   ExpoModulesJSI: 1685389cde9f19c40f98ca0ad46d4804471486cc
   ExpoNotifications: 61c46aa5df088ff0ad41de0504a86a92333aec55
@@ -3111,7 +3111,7 @@ SPEC CHECKSUMS:
   GoogleUserMessagingPlatform: f131fa7978d2ba88d7426702b057c2cc318e6595
   GoogleUtilities: 4f2618a4a1e762a1ee134a1e2323bba9843e06da
   GTMSessionFetcher: fc75fc972958dceedee61cb662ae1da7a83a91cf
-  hermes-engine: f7909371d7d6b08b814e03ed198c8c37169b5a95
+  hermes-engine: 1aa8e7a7ed86ef46ae71f859c0b1449c8ca818c8
   libavif: 5f8e715bea24debec477006f21ef9e95432e254d
   libdav1d: 23581a4d8ec811ff171ed5e2e05cd27bad64c39f
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
@@ -3126,7 +3126,7 @@ SPEC CHECKSUMS:
   React: 9b033c7a99e1c8eec40960b6b2e6844e011e8bd1
   React-callinvoker: f64c8d57f45173835b6b9891cda27f1625551972
   React-Core: 341863a2597c4a2320f916b4232d280cb8a28e4b
-  React-Core-prebuilt: 30d3dd3731b64aec2df23111c46b7c937429b8e7
+  React-Core-prebuilt: 162ae7d18af60d0066e1644f4e75fce15ff09721
   React-CoreModules: 9370769c9b2b1732c58960687f4d50d9d3510efc
   React-cxxreact: 41ae74bd9eab80af9c5da6a9b4934eb97e2c7569
   React-debug: 5c23edcf01e5a23af51055912de7e435539b8c63
@@ -3190,7 +3190,7 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: 3ec8fc5d32ad422f5b805523a5a5ea5556d8b3a2
   ReactCodegen: 8b37bbd31a066c4815636d823a73b3b4c7c255a0
   ReactCommon: ba28cd4e7d9e24014d2772a80e32da020c732b00
-  ReactNativeDependencies: a1907d5b622e88038e513a64eb38c66f26de99cf
+  ReactNativeDependencies: ad5caebe75c3f0ca23a3c002779defe5f7bb0f5a
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
   RNCAsyncStorage: c8407cc394627a3a4cf56b457d594bfa822b6ab8
   RNFBApp: 4105e54d9ca4a1c10893a032268470f670181110

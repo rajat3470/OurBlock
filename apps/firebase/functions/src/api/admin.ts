@@ -78,10 +78,11 @@ router.use(requireSuperAdmin);
 
 router.get('/stats', async (req, res) => {
   try {
-    const [societiesSnap, businessesSnap, usersSnap] = await Promise.all([
+    const [societiesSnap, businessesSnap, usersSnap, ordersSnap] = await Promise.all([
       db.collection('societies').where('status', '==', 'active').get(),
       db.collection('businesses').get(),
       db.collection('users').get(),
+      db.collection('orders').get(),
     ]);
 
     const pendingVerifications = businessesSnap.docs.filter(
@@ -95,10 +96,41 @@ router.get('/stats', async (req, res) => {
         totalBusinesses: businessesSnap.size,
         pendingVerifications,
         totalUsers: usersSnap.size,
+        totalOrders: ordersSnap.size,
       },
     });
   } catch (error: any) {
     console.error('Admin stats error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ─── Orders proxy (paginated, status filter) ─────────────────────────────────
+
+router.get('/orders', async (req, res) => {
+  try {
+    const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+
+    let query: admin.firestore.Query = db.collection('orders').orderBy('createdAt', 'desc');
+    if (status) {
+      query = db
+        .collection('orders')
+        .where('status', '==', status)
+        .orderBy('createdAt', 'desc');
+    }
+
+    const snapshot = await query.limit(limit).offset((page - 1) * limit).get();
+    const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    res.json({
+      success: true,
+      data,
+      pagination: { page, limit, total: snapshot.size },
+    });
+  } catch (error: any) {
+    console.error('Admin orders error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

@@ -19,10 +19,11 @@
     "test:smoke": "node scripts/smoke-app-targets.cjs",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf node_modules .expo"
+    "clean": "rm -rf node_modules .expo android/app/build ios/build"
   },
   "dependencies": {
     "@expo-google-fonts/poppins": "^0.4.1",
+    "@mohallamitr/shared": "1.0.0",
     "@hookform/resolvers": "^3.3.4",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-firebase/app": "^21.14.0",

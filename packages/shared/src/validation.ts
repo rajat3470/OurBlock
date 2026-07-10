@@ -106,7 +106,7 @@ export const searchQuerySchema = z.object({
 
 // Update Order Status Validation
 export const updateOrderStatusSchema = z.object({
-  status: z.enum(['pending', 'confirmed', 'preparing', 'ready', 'outForDelivery', 'delivered', 'cancelled']),
+  status: z.enum(['pending', 'confirmed', 'preparing', 'ready', 'outForDelivery', 'delivered', 'cancelled', 'rejected']),
   notes: z.string().max(500).optional(),
 });
 

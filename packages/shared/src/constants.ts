@@ -30,13 +30,27 @@ export const FIREBASE_CONFIG = {
 
 // Order Status Flow
 export const ORDER_STATUS_FLOW = {
-  pending: ['confirmed', 'cancelled'],
+  pending: ['confirmed', 'cancelled', 'rejected'],
   confirmed: ['preparing', 'cancelled'],
   preparing: ['ready', 'cancelled'],
   ready: ['outForDelivery'],
   outForDelivery: ['delivered'],
   delivered: [],
   cancelled: [],
+  rejected: [],
+} as const;
+
+// Seconds a business owner has to accept/reject a new order before it is
+// auto-rejected by the system. Keep the mobile countdown in sync with this.
+export const ORDER_ACCEPTANCE_WINDOW_SECONDS = 60;
+
+// Reason recorded on orders auto-rejected because the owner did not respond.
+export const ORDER_AUTO_REJECT_REASON = "Store didn't respond within the 60-second window";
+
+// Order Fees
+export const ORDER_FEES = {
+  PLATFORM_FEE: 2,
+  MINIMUM_ORDER: 50,
 } as const;
 
 // User Roles

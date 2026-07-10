@@ -27,9 +27,11 @@ import reviewRoutes from './api/reviews';
 import couponRoutes from './api/coupons';
 import refundRoutes from './api/refunds';
 import adsRoutes from './api/ads';
+import chatRoutes from './api/chat';
 
 // Use routes
 app.use('/auth', authRoutes);
+app.use('/chat', chatRoutes);
 app.use('/admin', adminRoutes);
 app.use('/societies', societyRoutes);
 app.use('/businesses', businessRoutes);

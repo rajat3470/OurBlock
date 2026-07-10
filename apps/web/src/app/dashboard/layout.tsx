@@ -7,10 +7,13 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 const navigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: '📊' },
   { name: 'Societies', href: '/dashboard/societies', icon: '🏘️' },
   { name: 'Businesses', href: '/dashboard/businesses', icon: '🏪' },
   { name: 'Users', href: '/dashboard/users', icon: '👥' },
+  { name: 'Orders', href: '/dashboard/orders', icon: '📦' },
   { name: 'Banners', href: '/dashboard/banners', icon: '🖼️' },
+  { name: 'Analytics', href: '/dashboard/analytics', icon: '📈' },
   { name: 'Settings', href: '/dashboard/settings', icon: '⚙️' },
 ];
 

@@ -11,7 +11,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { NativeAdCard } from "@components/NativeAdCard";
+import { chatService } from "@/services/chatService";
 import { MenuSkeleton } from "@components/Skeleton";
 import { PressableScale } from "@components/PressableScale";
 import { Product } from "@/types";
@@ -20,6 +22,7 @@ import content from "@/content/business.json";
 
 export default function BusinessDetailScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const {
     listRef,
     cartItems,
@@ -62,6 +65,19 @@ export default function BusinessDetailScreen() {
     groupAttributes,
     getFirstImageUrl,
   } = useBusinessDetail();
+
+  const startChat = async () => {
+    if (!business?.id) return;
+    try {
+      const session = await chatService.createSession(business.id);
+      router.push({
+        pathname: "/chat/[sessionId]",
+        params: { sessionId: session.id, title: business?.name || "Chat" },
+      });
+    } catch {
+      // Fail silently; a production app would show a toast here.
+    }
+  };
 
   const renderMenuItem = ({ item: product }: { item: Product }) => {
     const imageUrl = getFirstImageUrl(product.imageUrls);
@@ -211,13 +227,18 @@ export default function BusinessDetailScreen() {
           <Text style={styles.headerTitle} numberOfLines={1}>
             {business?.name ?? content.defaultBusinessName}
           </Text>
-          {bizCartCount > 0 ? (
-            <TouchableOpacity style={styles.cartBadgeBtn} onPress={goToCart}>
-              <Text style={styles.cartBadgeText}>{bizCartCount}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <TouchableOpacity onPress={startChat} style={styles.chatBtn} accessibilityLabel="Chat with business">
+              <Ionicons name="chatbubble-ellipses-outline" size={20} color="#FFFFFF" />
             </TouchableOpacity>
-          ) : (
-            <View style={{ width: 64 }} />
-          )}
+            {bizCartCount > 0 ? (
+              <TouchableOpacity style={styles.cartBadgeBtn} onPress={goToCart}>
+                <Text style={styles.cartBadgeText}>{bizCartCount}</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 64 }} />
+            )}
+          </View>
         </View>
 
         {/* Business info strip */}
@@ -517,6 +538,16 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.35)",
   },
   cartBadgeText: { fontSize: 13, fontWeight: "700", color: "#FFFFFF" },
+  chatBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
+  },
   bizInfoRow: {
     flexDirection: "row",
     alignItems: "center",
