@@ -16,6 +16,7 @@ import {
   setSelectedProductId,
 } from "@store/slices/businessOwnerSlice";
 import { businessOwnerService } from "@services/businessOwnerService";
+import { markPendingWrite, clearPendingWrite } from "@services/pendingWrites";
 import { Business, Product, Order } from "@/types";
 
 /** Extract a human-readable message from any thrown value (including AxiosError). */
@@ -139,6 +140,7 @@ export const useBusinessOwner = () => {
 
   const changeOrderStatus = useCallback(
     async (orderId: string, status: Order["status"]) => {
+      markPendingWrite(orderId);
       dispatch(setLoading(true));
       try {
         const order = await businessOwnerService.updateOrderStatus(orderId, status);
@@ -149,6 +151,7 @@ export const useBusinessOwner = () => {
         dispatch(setError(message));
         throw err;
       } finally {
+        clearPendingWrite(orderId);
         dispatch(setLoading(false));
       }
     },
@@ -157,6 +160,7 @@ export const useBusinessOwner = () => {
 
   const rejectOrder = useCallback(
     async (orderId: string, reason: string) => {
+      markPendingWrite(orderId);
       dispatch(setLoading(true));
       try {
         const order = await businessOwnerService.rejectOrder(orderId, reason);
@@ -167,6 +171,7 @@ export const useBusinessOwner = () => {
         dispatch(setError(message));
         throw err;
       } finally {
+        clearPendingWrite(orderId);
         dispatch(setLoading(false));
       }
     },
@@ -195,25 +200,25 @@ export const useBusinessOwner = () => {
   }, [dispatch]);
 
   const toggleTakingOrders = useCallback(async (taking: boolean) => {
-    // Optimistic update immediately so the UI reflects the new state right away
     const profile = state.businessProfile;
     if (profile) {
+      markPendingWrite(profile.id);
       dispatch(setBusinessProfile({ ...profile, isTakingOrders: taking } as Business));
     }
     try {
       const result = await businessOwnerService.toggleTakingOrders(taking);
-      // Confirm with the actual server value
       if (profile) {
         dispatch(setBusinessProfile({ ...profile, isTakingOrders: result?.isTakingOrders ?? taking } as Business));
       }
     } catch (err: unknown) {
-      // Revert on failure
       if (profile) {
         dispatch(setBusinessProfile({ ...profile, isTakingOrders: !taking } as Business));
       }
       const message = extractErrorMessage(err, "Failed to update order availability");
       dispatch(setError(message));
       throw err;
+    } finally {
+      if (profile) clearPendingWrite(profile.id);
     }
   }, [dispatch, state.businessProfile]);
 

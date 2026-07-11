@@ -1,9 +1,11 @@
 import { Stack } from "expo-router";
 import RoleGate from "../../src/components/RoleGate";
 import { useOrderNotifications } from "../../src/hooks/useOrderNotifications";
+import { useUserRealtimeSync } from "../../src/hooks/useUserRealtimeSync";
 
 export default function UserLayout() {
   useOrderNotifications();
+  useUserRealtimeSync();
   return (
     <RoleGate allowedRole="user">
       <Stack screenOptions={{ headerShown: false }}>

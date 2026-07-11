@@ -71,22 +71,6 @@ const userAppSlice = createSlice({
       }, {} as Record<string, Order>);
       state.error = null;
     },
-    /**
-     * Targeted update from a socket `order:updated` event.
-     * Some backends emit partial payloads (e.g. only id + status), so merge
-     * with the existing order instead of replacing it.
-     */
-    updateOrderInStore(state, action: PayloadAction<Partial<Order> & { id: string }>) {
-      const existingOrder = state.ordersMap[action.payload.id];
-      if (existingOrder) {
-        const updatedOrder = { ...existingOrder, ...action.payload };
-        state.ordersMap[action.payload.id] = updatedOrder;
-        const idx = state.orders.findIndex((o) => o.id === action.payload.id);
-        if (idx !== -1) {
-          state.orders[idx] = updatedOrder;
-        }
-      }
-    },
     /** Patch a single business field from a socket `business:status` event. */
     patchBusiness(state, action: PayloadAction<{ id: string } & Partial<Business>>) {
       const idx = state.businesses.findIndex((b) => b.id === action.payload.id);
@@ -128,7 +112,6 @@ export const {
   setBanners,
   setFeaturedProducts,
   setOrders,
-  updateOrderInStore,
   patchBusiness,
   setStats,
   toggleFavoriteBusiness,

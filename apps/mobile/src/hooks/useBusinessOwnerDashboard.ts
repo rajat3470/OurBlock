@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, AppState } from "react-native";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert } from "react-native";
+import { useRouter } from "expo-router";
 import { useAppSelector } from "@hooks/useRedux";
 import { useBusinessOwner } from "@hooks/useBusinessOwner";
+import { getBusinessStatus } from "@utils/businessStatus";
 import { OrderStatus } from "@/types";
-import { socketService } from "@services/socketService";
 import content from "@/content/boDashboard.json";
 
 type StatusStyle = { color: string; bg: string; emoji: string; labelKey: keyof typeof content.statusLabels };
@@ -41,10 +41,6 @@ export function timeAgo(date: Date | string): string {
   return `${Math.floor(diffHr / 24)}d ago`;
 }
 
-/**
- * Encapsulates all logic for the business owner dashboard: data loading,
- * socket-aware fallback polling, pause/resume toggle, and derived metrics.
- */
 export const useBusinessOwnerDashboard = () => {
   const router = useRouter();
   const { user } = useAppSelector((state) => state.auth);
@@ -57,87 +53,38 @@ export const useBusinessOwnerDashboard = () => {
     isLoading,
     loadBusinessProfile,
     loadStats,
-    loadOrders,
     loadProducts,
     loadAnalytics,
     toggleTakingOrders,
   } = useBusinessOwner();
   const [refreshing, setRefreshing] = useState(false);
   const [toggleLoading, setToggleLoading] = useState(false);
-  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastActivityAtRef = useRef<number>(Date.now());
 
-  const getFallbackDelayMs = useCallback(() => {
-    const elapsed = Date.now() - lastActivityAtRef.current;
-    if (elapsed < 30_000) return 5_000;
-    if (elapsed < 180_000) return 20_000;
-    return 60_000;
-  }, []);
+  const businessStatus = useMemo(
+    () => (businessProfile ? getBusinessStatus(businessProfile) : null),
+    [businessProfile]
+  );
+  const canToggleOrders = businessProfile?.status === "active";
+  const isTakingOrders = canToggleOrders && businessProfile?.isTakingOrders !== false;
 
-  const refreshOrdersNow = useCallback(() => {
-    lastActivityAtRef.current = Date.now();
-    if (!socketService.isConnected()) {
-      loadOrders({ silent: true }).catch(() => null);
-    }
-  }, [loadOrders]);
-
-  const stopFallbackLoop = useCallback(() => {
-    if (fallbackTimerRef.current) {
-      clearTimeout(fallbackTimerRef.current);
-      fallbackTimerRef.current = null;
-    }
-  }, []);
-
-  const startFallbackLoop = useCallback(() => {
-    stopFallbackLoop();
-
-    const tick = () => {
-      if (!socketService.isConnected()) {
-        loadOrders({ silent: true }).catch(() => null);
-      }
-      fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
-    };
-
-    fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
-  }, [getFallbackDelayMs, loadOrders, stopFallbackLoop]);
-
-  const isTakingOrders = businessProfile?.isTakingOrders !== false;
-
+  // Orders are kept fresh by the Firestore listener in useBusinessOwnerRealtimeSync.
+  // loadAll only fetches profile/stats/products/analytics on mount and manual refresh.
   const loadAll = useCallback(async () => {
     try {
       await Promise.all([
         loadBusinessProfile(),
         loadStats(),
-        loadOrders(),
         loadProducts(),
         loadAnalytics(),
       ]);
     } catch {
       /* handled in Redux slice */
     }
-  }, [loadBusinessProfile, loadStats, loadOrders, loadProducts, loadAnalytics]);
+  }, [loadBusinessProfile, loadStats, loadProducts, loadAnalytics]);
 
   useEffect(() => {
     loadAll();
   }, [loadAll]);
-
-  useFocusEffect(
-    useCallback(() => {
-      refreshOrdersNow();
-      startFallbackLoop();
-
-      const sub = AppState.addEventListener("change", (state) => {
-        if (state === "active") {
-          refreshOrdersNow();
-        }
-      });
-
-      return () => {
-        sub.remove();
-        stopFallbackLoop();
-      };
-    }, [refreshOrdersNow, startFallbackLoop, stopFallbackLoop])
-  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -194,6 +141,8 @@ export const useBusinessOwnerDashboard = () => {
   return {
     user,
     businessProfile,
+    businessStatus,
+    canToggleOrders,
     analytics,
     refreshing,
     toggleLoading,

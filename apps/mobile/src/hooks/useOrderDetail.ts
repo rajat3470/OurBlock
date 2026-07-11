@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Share } from "react-native";
-import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useUserApp } from "@hooks/useUserApp";
 import { userAppService } from "@services/userAppService";
-import { useSocketEvent } from "@hooks/useSocket";
-import { socketService } from "@services/socketService";
 import { Order, OrderStatus } from "@/types";
 import {
   effectiveOrderStatus,
@@ -96,7 +94,7 @@ function buildInvoiceText(order: Order): string {
 
 /**
  * Encapsulates all logic for the customer order detail screen: order lookup,
- * real-time + fallback polling, status tickers, invoice sharing, and computed
+ * Firestore real-time order sync, status tickers, invoice sharing, and computed
  * display state.
  */
 export const useOrderDetail = () => {
@@ -122,42 +120,11 @@ export const useOrderDetail = () => {
     }
   }, [orderId]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!orderId) return;
-
-      const syncOrder = () => {
-        if (socketService.isConnected()) return;
-        userAppService
-          .getOrder(orderId)
-          .then((data) => {
-            const normalized = normalizeOrderPayload(data);
-            if (normalized?.id) setOrder(normalized);
-          })
-          .catch(() => null);
-      };
-
-      syncOrder();
-      const timer = setInterval(syncOrder, 3000);
-      return () => clearInterval(timer);
-    }, [orderId])
-  );
-
   useEffect(() => {
     if (!orderId) return;
     const latest = orders.find((o) => o.id === orderId);
-    if (latest) {
-      setOrder(latest);
-    }
+    if (latest) setOrder(latest);
   }, [orders, orderId]);
-
-  useSocketEvent<any>("order:updated", (payload) => {
-    const updatedOrder = normalizeOrderPayload(payload);
-    if (!updatedOrder?.id) return;
-    if (updatedOrder.id === orderId) {
-      setOrder(updatedOrder);
-    }
-  });
 
   const refetchOrder = useCallback(() => {
     if (!orderId) return;
@@ -169,12 +136,6 @@ export const useOrderDetail = () => {
       })
       .catch(() => null);
   }, [orderId]);
-
-  useEffect(() => {
-    if (!orderId || order?.status !== OrderStatus.PENDING) return;
-    const timer = setInterval(refetchOrder, 3000);
-    return () => clearInterval(timer);
-  }, [orderId, order?.status, refetchOrder]);
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {

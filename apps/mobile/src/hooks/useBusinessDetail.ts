@@ -5,10 +5,10 @@ import { useToast } from "react-native-toast-notifications";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
 import { useUserApp } from "@hooks/useUserApp";
 import { useFeatureFlags } from "@hooks/useFeatureFlags";
-import { useSocketEvent } from "@hooks/useSocket";
+import { subscribeToBusiness } from "@services/businessSyncService";
+import { userAppService } from "@services/userAppService";
 import { addItem, clearCart, updateQuantity } from "@store/slices/cartSlice";
 import { patchBusiness } from "@store/slices/userAppSlice";
-import { userAppService } from "@services/userAppService";
 import { Business, Product, ProductAttribute } from "@/types";
 import { unitStepLabel, displayQuantity, maxCartSteps } from "@utils/helpers";
 import { getBusinessStatus } from "@utils/businessStatus";
@@ -70,14 +70,13 @@ export const useBusinessDetail = () => {
   const bizOrderStatus = business ? getBusinessStatus(business) : "open";
   const isOrderable = bizOrderStatus === "open";
 
-  useSocketEvent<{ businessId: string; isTakingOrders?: boolean; status?: string }>(
-    "business:status",
-    (data) => {
-      if (data.businessId !== businessId) return;
-      dispatch(patchBusiness({ id: data.businessId, ...data } as Partial<Business> & { id: string }));
-      setBusiness((prev) => (prev ? ({ ...prev, ...data } as Business) : prev));
-    }
-  );
+  useEffect(() => {
+    if (!businessId) return;
+    return subscribeToBusiness(businessId, (updated) => {
+      dispatch(patchBusiness({ ...updated } as Partial<Business> & { id: string }));
+      setBusiness(updated);
+    });
+  }, [businessId, dispatch]);
 
   const minOrder =
     business?.minimumOrderAmount && business.minimumOrderAmount > 0

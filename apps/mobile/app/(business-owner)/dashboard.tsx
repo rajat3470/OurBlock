@@ -19,6 +19,8 @@ export default function BusinessOwnerDashboard() {
   const {
     user,
     businessProfile,
+    businessStatus,
+    canToggleOrders,
     analytics,
     refreshing,
     toggleLoading,
@@ -71,9 +73,11 @@ export default function BusinessOwnerDashboard() {
                   styles.verifiedPill,
                   !businessProfile?.isVerified
                     ? styles.verifiedPillPending
-                    : isTakingOrders
+                    : businessStatus === "open"
                     ? styles.verifiedPillLive
-                    : styles.verifiedPillPaused,
+                    : businessStatus === "paused"
+                    ? styles.verifiedPillPaused
+                    : styles.verifiedPillClosed,
                 ]}
               >
                 <Text
@@ -84,22 +88,54 @@ export default function BusinessOwnerDashboard() {
                 >
                   {!businessProfile?.isVerified
                     ? content.pills.pending
-                    : isTakingOrders
+                    : businessStatus === "open"
                     ? content.pills.live
-                    : content.pills.paused}
+                    : businessStatus === "paused"
+                    ? content.pills.paused
+                    : content.pills.closed}
                 </Text>
               </View>
               {/* Pause / Resume toggle */}
-              <View style={[styles.pauseRow, { backgroundColor: isTakingOrders ? "rgba(255,255,255,0.12)" : "rgba(252,165,165,0.15)" }]}>
-                <Text style={[styles.pauseLabel, { color: isTakingOrders ? "#FFFFFF" : "#FCA5A5" }]}>{isTakingOrders ? content.pills.takingOrders : content.pills.pausedLabel}</Text>
+              <View
+                style={[
+                  styles.pauseRow,
+                  {
+                    backgroundColor: !canToggleOrders
+                      ? "rgba(239,68,68,0.22)"
+                      : isTakingOrders
+                      ? "rgba(255,255,255,0.12)"
+                      : "rgba(252,165,165,0.15)",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.pauseLabel,
+                    {
+                      color: !canToggleOrders
+                        ? "#FECACA"
+                        : isTakingOrders
+                        ? "#FFFFFF"
+                        : "#FCA5A5",
+                    },
+                  ]}
+                >
+                  {!canToggleOrders
+                    ? businessProfile?.status === "suspended"
+                      ? content.pills.suspended
+                      : content.pills.inactive
+                    : isTakingOrders
+                    ? content.pills.takingOrders
+                    : content.pills.pausedLabel}
+                </Text>
                 <Switch
                   value={isTakingOrders}
                   onValueChange={handleToggleTakingOrders}
-                  disabled={toggleLoading}
+                  disabled={!canToggleOrders || toggleLoading}
                   trackColor={{ false: "rgba(255,255,255,0.3)", true: "#4ADE80" }}
                   thumbColor={isTakingOrders ? "#FFFFFF" : "#FECACA"}
                   ios_backgroundColor="rgba(255,255,255,0.3)"
-                  style={{ opacity: toggleLoading ? 0.6 : 1 }}
+                  style={{ opacity: !canToggleOrders || toggleLoading ? 0.6 : 1 }}
                 />
               </View>
             </View>
@@ -345,6 +381,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(251,146,60,0.22)",
     borderWidth: 1,
     borderColor: "rgba(251,146,60,0.45)",
+  },
+  verifiedPillClosed: {
+    backgroundColor: "rgba(239,68,68,0.25)",
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.5)",
   },
   verifiedPillText: {
     fontSize: 12,

@@ -3,9 +3,9 @@ import { Animated, Easing } from "react-native";
 import { router } from "expo-router";
 import { useAppSelector } from "@hooks/useRedux";
 import { useUserApp } from "@hooks/useUserApp";
+import { getBusinessStatus } from "@utils/businessStatus";
 import { ORDER_FEES } from "@/constants";
 import { Business, Product } from "@/types";
-import { getBusinessStatus } from "@utils/businessStatus";
 import content from "@/content/home.json";
 
 export function categoryEmoji(category: string) {
@@ -24,8 +24,9 @@ export function getFirstImage(url?: string) {
 
 /**
  * Encapsulates all logic for the user home screen: data initialization,
- * search + category filtering, derived store/dish collections, the collapsing
- * header animation, and navigation helpers.
+ * Firestore real-time business sync, search + category filtering,
+ * derived store/dish collections, the collapsing header animation,
+ * and navigation helpers.
  */
 export const useHomeScreen = () => {
   const { user } = useAppSelector((state) => state.auth);
@@ -77,15 +78,18 @@ export const useHomeScreen = () => {
   });
 
   useEffect(() => {
-    initializeHome().catch(() => null);
-    loadMyOrders().catch(() => null);
     Animated.timing(entrance, {
       toValue: 1,
       duration: 380,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start();
-  }, [initializeHome, loadMyOrders, entrance]);
+  }, [entrance]);
+
+  useEffect(() => {
+    initializeHome().catch(() => null);
+    loadMyOrders().catch(() => null);
+  }, [initializeHome, loadMyOrders]);
 
   const selectedSocietyName =
     safeSocieties.find((society) => society.id === selectedSocietyId)?.name ?? content.defaultSociety;

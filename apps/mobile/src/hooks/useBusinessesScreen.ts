@@ -3,10 +3,16 @@ import { router } from "expo-router";
 import { useUserApp } from "@hooks/useUserApp";
 
 /**
- * Encapsulates search + filtering logic for the customer shops list screen.
+ * Encapsulates search + filtering logic for the customer shops list screen,
+ * plus Firestore real-time sync of the society's businesses.
  */
 export const useBusinessesScreen = () => {
-  const { businesses, featuredProducts, favoriteBusinessIds, toggleFavorite } = useUserApp();
+  const {
+    businesses,
+    featuredProducts,
+    favoriteBusinessIds,
+    toggleFavorite,
+  } = useUserApp();
   const [searchQuery, setSearchQuery] = useState("");
 
   const productMatchesByBusiness = useMemo(() => {

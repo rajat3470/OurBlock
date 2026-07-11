@@ -1,13 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, AppState } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert } from "react-native";
+import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { useUserApp } from "@hooks/useUserApp";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
-import { useSocketEvent } from "@hooks/useSocket";
 import { addItem, clearCart } from "@store/slices/cartSlice";
-import { updateOrderInStore } from "@store/slices/userAppSlice";
-import { socketService } from "@services/socketService";
 import { effectiveOrderStatus } from "@utils/orderAcceptance";
 import { Order, OrderStatus } from "@/types";
 import content from "@/content/orders.json";
@@ -28,64 +25,20 @@ const ACTIVE_STATUSES = [
   OrderStatus.OUT_FOR_DELIVERY,
 ];
 
-function normalizeOrderPayload(payload: any): Order | null {
-  const raw = payload?.order ?? payload?.data ?? payload;
-  if (!raw || typeof raw !== "object") return null;
-  if (!raw.id && raw._id) {
-    return { ...raw, id: raw._id } as Order;
-  }
-  return raw as Order;
-}
-
 /**
- * Encapsulates all logic for the customer orders screen: loading, socket +
- * polling fallback syncing, status filtering, cancel/reorder actions, and the
- * rating/refund modal state.
+ * Encapsulates all logic for the customer orders screen: loading,
+ * Firestore real-time order sync, status filtering, cancel/reorder actions,
+ * and the rating/refund modal state.
  */
 export const useUserOrders = () => {
   const { orders, isLoading, loadMyOrders, cancelOrder } = useUserApp();
   const [activeFilter, setActiveFilter] = useState<OrderFilterKey>("all");
   const dispatch = useAppDispatch();
+  const userId = useAppSelector((state) => state.auth.user?.id);
   const cartBusinessId = useAppSelector((state) => state.cart.businessId);
   const toast = useToast();
   const [ratingOrder, setRatingOrder] = useState<Order | null>(null);
   const [refundOrder, setRefundOrder] = useState<Order | null>(null);
-  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastActivityAtRef = useRef<number>(Date.now());
-
-  const getFallbackDelayMs = useCallback(() => {
-    const elapsed = Date.now() - lastActivityAtRef.current;
-    if (elapsed < 30_000) return 3_000;
-    if (elapsed < 180_000) return 10_000;
-    return 30_000;
-  }, []);
-
-  const refreshFallbackNow = useCallback(() => {
-    lastActivityAtRef.current = Date.now();
-    if (!socketService.isConnected()) {
-      loadMyOrders({ silent: true }).catch(() => null);
-    }
-  }, [loadMyOrders]);
-
-  const stopFallbackLoop = useCallback(() => {
-    if (fallbackTimerRef.current) {
-      clearTimeout(fallbackTimerRef.current);
-      fallbackTimerRef.current = null;
-    }
-  }, []);
-
-  const startFallbackLoop = useCallback(() => {
-    stopFallbackLoop();
-
-    const tick = () => {
-      if (!socketService.isConnected()) {
-        loadMyOrders({ silent: true }).catch(() => null);
-      }
-      fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
-    };
-
-    fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
-  }, [getFallbackDelayMs, loadMyOrders, stopFallbackLoop]);
 
   const handleReorder = useCallback(
     (order: Order) => {
@@ -127,55 +80,18 @@ export const useUserOrders = () => {
     loadMyOrders().catch(() => null);
   }, [loadMyOrders]);
 
-  // Fallback path while backend socket events are unavailable: sync only when
-  // this screen is focused and socket is disconnected.
-  useFocusEffect(
-    useCallback(() => {
-      refreshFallbackNow();
-      startFallbackLoop();
-
-      const sub = AppState.addEventListener("change", (state) => {
-        if (state === "active") {
-          refreshFallbackNow();
-        }
-      });
-
-      return () => {
-        sub.remove();
-        stopFallbackLoop();
-      };
-    }, [refreshFallbackNow, startFallbackLoop, stopFallbackLoop])
-  );
-
-  // Auto-rejection is a time-based, server-driven change with no realtime
-  // push, so while any order is still pending, poll regardless of socket state.
+  // Local ticker so a pending order flips to "Rejected" the moment its window
+  // lapses on the client clock.
   const hasPending = useMemo(
     () => orders.some((o) => o.status === OrderStatus.PENDING),
     [orders]
   );
-  useEffect(() => {
-    if (!hasPending) return;
-    const timer = setInterval(() => {
-      loadMyOrders({ silent: true }).catch(() => null);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [hasPending, loadMyOrders]);
-
-  // Local ticker so a pending order flips to "Rejected" the moment its window
-  // lapses on the client clock.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!hasPending) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [hasPending]);
-
-  // Real-time: update a single order in Redux when its status changes.
-  useSocketEvent<any>("order:updated", (payload) => {
-    const updatedOrder = normalizeOrderPayload(payload);
-    if (!updatedOrder?.id) return;
-    dispatch(updateOrderInStore(updatedOrder));
-  });
 
   const filteredOrders = useMemo(() => {
     if (activeFilter === "active") {
@@ -194,6 +110,10 @@ export const useUserOrders = () => {
     return orders;
   }, [activeFilter, orders, now]);
 
+  const refresh = useCallback(() => {
+    loadMyOrders().catch(() => null);
+  }, [loadMyOrders]);
+
   const handleCancel = useCallback(
     (orderId: string) => {
       Alert.alert(content.alerts.cancelTitle, content.alerts.cancelMessage, [
@@ -203,18 +123,14 @@ export const useUserOrders = () => {
           style: "destructive",
           onPress: () => {
             cancelOrder(orderId)
-              .then(() => refreshFallbackNow())
+              .then(() => refresh())
               .catch(() => null);
           },
         },
       ]);
     },
-    [cancelOrder, refreshFallbackNow]
+    [cancelOrder, refresh]
   );
-
-  const refresh = useCallback(() => {
-    loadMyOrders().catch(() => null);
-  }, [loadMyOrders]);
 
   const openOrderDetail = useCallback(
     (orderId: string) => router.push(`/(user)/order-detail?orderId=${orderId}`),
@@ -233,8 +149,8 @@ export const useUserOrders = () => {
   const handleRefundSubmitted = useCallback(() => {
     setRefundOrder(null);
     toast.show(content.toasts.refundSubmitted, { type: "success", duration: 4000 });
-    refreshFallbackNow();
-  }, [refreshFallbackNow, toast]);
+    refresh();
+  }, [refresh, toast]);
 
   return {
     orders,

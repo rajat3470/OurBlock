@@ -91,14 +91,6 @@ const businessOwnerSlice = createSlice({
       }, {} as Record<string, Order>);
       state.error = null;
     },
-    /** Prepend a new incoming order from a socket `order:new` event. */
-    prependOrder(state, action: PayloadAction<Order>) {
-      // Guard against duplicates if the FCM path already added this order.
-      if (!state.ordersMap[action.payload.id]) {
-        state.orders.unshift(action.payload);
-        state.ordersMap[action.payload.id] = action.payload;
-      }
-    },
     updateOrder(state, action: PayloadAction<Partial<Order> & { id: string }>) {
       const existingOrder = state.ordersMap[action.payload.id];
       if (existingOrder) {
@@ -145,7 +137,6 @@ export const {
   updateProduct,
   removeProduct,
   setOrders,
-  prependOrder,
   updateOrder,
   setStats,
   setAnalytics,

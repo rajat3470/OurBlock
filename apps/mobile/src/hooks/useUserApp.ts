@@ -129,9 +129,7 @@ export const useUserApp = () => {
       try {
         const order = await userAppService.createOrder(payload);
         dispatch(clearCart());
-        // Refresh orders list
-        const response = await userAppService.getMyOrders();
-        dispatch(setOrders(Array.isArray(response.data) ? response.data : []));
+        // Firestore listener will deliver the new order automatically
         return order;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Failed to place order";
@@ -148,8 +146,7 @@ export const useUserApp = () => {
     async (orderId: string) => {
       try {
         const order = await userAppService.cancelOrder(orderId);
-        const response = await userAppService.getMyOrders();
-        dispatch(setOrders(Array.isArray(response.data) ? response.data : []));
+        // Firestore listener will deliver the status update automatically
         return order;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Failed to cancel order";

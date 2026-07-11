@@ -4,37 +4,22 @@ import RoleGate from "../../src/components/RoleGate";
 import AppTabIcon from "../../src/components/AppTabIcon";
 import PendingOrderBanner from "../../src/components/PendingOrderBanner";
 import { useAppSelector } from "../../src/hooks/useRedux";
-import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
 import { OrderStatus } from "../../src/types";
 import { isAcceptanceExpired } from "../../src/utils/orderAcceptance";
 import { useOrderNotifications } from "../../src/hooks/useOrderNotifications";
+import { useBusinessOwnerRealtimeSync } from "../../src/hooks/useBusinessOwnerRealtimeSync";
 
 export default function BusinessOwnerLayout() {
-  const segments = useSegments();
-  const orders = useAppSelector((state) => state.businessOwner.orders);
-  const { loadOrders } = useBusinessOwner();
-
-  // Hide banner on orders screen
-  const isOrdersScreen = segments.includes("orders");
-
+  useBusinessOwnerRealtimeSync();
   useOrderNotifications();
 
-  // Auto-rejection is a time-based, server-driven change with no realtime push,
-  // and is only materialized when an order read applies lazy expiration. Poll
-  // from the layout (any tab) while a pending order exists so the tab badge and
-  // banner drop as soon as an order is auto-rejected, not just on the orders tab.
-  const hasPending = orders.some((o) => o.status === OrderStatus.PENDING);
-  useEffect(() => {
-    if (!hasPending || isOrdersScreen) return;
-    const timer = setInterval(() => {
-      loadOrders({ silent: true }).catch(() => null);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [hasPending, isOrdersScreen, loadOrders]);
+  const segments = useSegments();
+  const orders = useAppSelector((state) => state.businessOwner.orders);
+  const isOrdersScreen = segments.includes("orders");
 
   // Re-tick locally while any order is pending so the badge recomputes as each
-  // 60s window lapses — even if the backend write to `rejected` lags or hasn't
-  // been deployed. Without this the count would only change on a data refresh.
+  // 60s acceptance window lapses on the client clock.
+  const hasPending = orders.some((o) => o.status === OrderStatus.PENDING);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!hasPending) return;
@@ -42,8 +27,6 @@ export default function BusinessOwnerLayout() {
     return () => clearInterval(timer);
   }, [hasPending]);
 
-  // A pending order past its client-side deadline is effectively rejected, so
-  // exclude it from the badge immediately (mirrors effectiveOrderStatus).
   const activeOrderCount = orders.filter(
     (o) =>
       o.status !== OrderStatus.DELIVERED &&

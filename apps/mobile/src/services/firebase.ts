@@ -1,6 +1,6 @@
 import { getApps, initializeApp } from "firebase/app";
 import { getAuth, initializeAuth } from "@firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -12,10 +12,16 @@ const firebaseConfig = {
   appId: "1:1007523518094:ios:7d3b215317d0620fd49bdf",
 };
 
-// Initialize Firebase only once
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Export lazy getters instead of direct instances to avoid initialization issues
+// Must be called before any getFirestore() call.
+// experimentalForceLongPolling fixes WebChannelConnection transport errors on React Native.
+try {
+  initializeFirestore(app, { experimentalForceLongPolling: true });
+} catch {
+  // Already initialized — safe to ignore
+}
+
 export const getAuthInstance = () => {
   try {
     return getAuth(app);
@@ -26,5 +32,4 @@ export const getAuthInstance = () => {
 export const getFirestoreInstance = () => getFirestore(app);
 export const getStorageInstance = () => getStorage(app);
 
-// Export the app
 export default app;

@@ -11,6 +11,9 @@
     "pending": "⏳ Pending",
     "live": "✓ Live",
     "paused": "⏸ Paused",
+    "closed": "✗ Closed",
+    "inactive": "Inactive",
+    "suspended": "Suspended",
     "takingOrders": "Taking Orders",
     "pausedLabel": "Paused"
   },

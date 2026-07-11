@@ -31,6 +31,7 @@ export default function BusinessOwnerProfile() {
   const {
     user,
     businessProfile,
+    businessStatus,
     insets,
     verificationMeta,
     showChangePassword,
@@ -111,7 +112,7 @@ export default function BusinessOwnerProfile() {
                 <InfoRow icon="📞" label={content.business.rows.phone}          value={businessProfile.phone} />
                 <InfoRow icon="✉️"  label={content.business.rows.email}          value={businessProfile.email} />
                 <InfoRow icon="⭐" label={content.business.rows.rating}         value={businessProfile.rating ? content.business.ratingValue.replace("{rating}", String(businessProfile.rating)).replace("{reviews}", String(businessProfile.totalReviews ?? 0)) : null} />
-                <InfoRow icon="🔖" label={content.business.rows.status}         value={businessProfile.status} />
+                <InfoRow icon="🔖" label={content.business.rows.status}         value={businessStatus ? businessStatus.charAt(0).toUpperCase() + businessStatus.slice(1) : businessProfile.status} />
               </View>
             </View>
           ) : (
