@@ -46,6 +46,10 @@ export const useBusinessesScreen = () => {
     const query = searchQuery.trim().toLowerCase();
     return businesses
       .filter((item) => {
+        const isSuspended = !!(item as any).suspendedAt;
+        // Suspended vendors are excluded from search suggestions but remain
+        // visible at the bottom of the unfiltered list with the unavailable badge.
+        if (query && isSuspended) return false;
         if (!query) return true;
         const matchesStore =
           item.name.toLowerCase().includes(query) ||
@@ -55,6 +59,10 @@ export const useBusinessesScreen = () => {
         return matchesStore || productMatchesByBusiness.has(item.id);
       })
       .sort((a, b) => {
+        const aIsSuspended = !!(a as any).suspendedAt;
+        const bIsSuspended = !!(b as any).suspendedAt;
+        // Always push suspended vendors to the bottom
+        if (aIsSuspended !== bIsSuspended) return aIsSuspended ? 1 : -1;
         if (!query) return Number(b.rating || 0) - Number(a.rating || 0);
         const aItemHits = productMatchesByBusiness.get(a.id)?.length ?? 0;
         const bItemHits = productMatchesByBusiness.get(b.id)?.length ?? 0;

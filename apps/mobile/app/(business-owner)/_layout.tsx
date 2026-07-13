@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Tabs, useSegments } from "expo-router";
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import RoleGate from "../../src/components/RoleGate";
 import AppTabIcon from "../../src/components/AppTabIcon";
 import PendingOrderBanner from "../../src/components/PendingOrderBanner";
@@ -8,10 +10,105 @@ import { OrderStatus } from "../../src/types";
 import { isAcceptanceExpired } from "../../src/utils/orderAcceptance";
 import { useOrderNotifications } from "../../src/hooks/useOrderNotifications";
 import { useBusinessOwnerRealtimeSync } from "../../src/hooks/useBusinessOwnerRealtimeSync";
+import { useBusinessOwnerSuspension } from "../../src/hooks/useBusinessOwnerSuspension";
+
+function AccountSuspendedOverlay({ secondsRemaining }: { secondsRemaining: number }) {
+  return (
+    <View style={overlayStyles.container}>
+      <View style={overlayStyles.card}>
+        <View style={overlayStyles.iconWrap}>
+          <Ionicons name="ban-outline" size={48} color="#DC2626" />
+        </View>
+        <Text style={overlayStyles.title}>Account Blocked</Text>
+        <Text style={overlayStyles.body}>
+          Your account has been temporarily suspended because you rejected orders from
+          the same user 5 times within 1 hour.
+        </Text>
+        <Text style={overlayStyles.contact}>
+          Please contact the admin to unblock your account.
+        </Text>
+        <View style={overlayStyles.countdownWrap}>
+          <ActivityIndicator size="small" color="#DC2626" style={{ marginRight: 8 }} />
+          <Text style={overlayStyles.countdownText}>
+            Logging out in {secondsRemaining}s…
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const overlayStyles = StyleSheet.create({
+  container: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.82)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 999,
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 28,
+    marginHorizontal: 24,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  iconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#FEE2E2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#DC2626",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  body: {
+    fontSize: 14,
+    color: "#374151",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  contact: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111827",
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  countdownWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FEF2F2",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  countdownText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#DC2626",
+  },
+});
 
 export default function BusinessOwnerLayout() {
   useBusinessOwnerRealtimeSync();
   useOrderNotifications();
+  const { isSuspended, secondsRemaining } = useBusinessOwnerSuspension();
 
   const segments = useSegments();
   const orders = useAppSelector((state) => state.businessOwner.orders);
@@ -37,8 +134,10 @@ export default function BusinessOwnerLayout() {
 
   return (
     <RoleGate allowedRole="businessOwner">
-      {!isOrdersScreen && <PendingOrderBanner />}
-      <Tabs
+      <View style={{ flex: 1 }}>
+        {isSuspended && <AccountSuspendedOverlay secondsRemaining={secondsRemaining} />}
+        {!isOrdersScreen && <PendingOrderBanner />}
+        <Tabs
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: "#16A34A",
@@ -127,6 +226,7 @@ export default function BusinessOwnerLayout() {
           }}
         />
       </Tabs>
+      </View>
     </RoleGate>
   );
 }

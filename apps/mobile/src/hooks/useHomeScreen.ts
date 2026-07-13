@@ -130,6 +130,8 @@ export const useHomeScreen = () => {
     const query = searchQuery.trim().toLowerCase();
     return safeBusinesses
       .filter((business) => {
+        // Never surface suspended vendors in home screen suggestions
+        if ((business as any).suspendedAt) return false;
         if (selectedCategory !== "all" && business.category !== selectedCategory) {
           return false;
         }
@@ -188,14 +190,18 @@ export const useHomeScreen = () => {
       if (seen.has(order.businessId)) continue;
       seen.add(order.businessId);
       const biz = safeBusinesses.find((b) => b.id === order.businessId);
-      if (biz) result.push(biz);
+      // Exclude suspended vendors from the "Order Again" carousel
+      if (biz && !(biz as any).suspendedAt) result.push(biz);
       if (result.length >= 8) break;
     }
     return result;
   }, [safeOrders, safeBusinesses]);
 
   const favoriteStores = useMemo(
-    () => safeBusinesses.filter((b) => safeFavoriteBusinessIds.includes(b.id)),
+    () =>
+      safeBusinesses.filter(
+        (b) => safeFavoriteBusinessIds.includes(b.id) && !(b as any).suspendedAt
+      ),
     [safeBusinesses, safeFavoriteBusinessIds]
   );
 

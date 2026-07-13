@@ -997,6 +997,27 @@ async function loginWithRole(
   }
 
   if (userData.status === "suspended") {
+    // For business owners, check whether the suspension is from the blacklist module
+    // so we can surface a more actionable message.
+    if (expectedRole === "businessOwner") {
+      const ownedBusinessSnap = await db
+        .collection("businesses")
+        .where("ownerId", "==", authResult.localId)
+        .limit(1)
+        .get();
+
+      if (!ownedBusinessSnap.empty) {
+        const bizData = ownedBusinessSnap.docs[0].data();
+        if (bizData?.suspendedAt) {
+          return res.status(403).json({
+            success: false,
+            error: "Your account has been blocked due to repeated order rejections. Please contact the admin to unblock your account.",
+            code: "ACCOUNT_SUSPENDED",
+          });
+        }
+      }
+    }
+
     return res.status(403).json({success: false, error: "Your account has been suspended"});
   }
 

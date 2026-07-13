@@ -113,6 +113,16 @@ export interface Business {
   deliveryFee?: number;
   tags?: string[];
   metadata?: Record<string, any>;
+  /** ISO timestamp when owner was suspended due to excessive order rejections. Null = not suspended. */
+  suspendedAt?: string | null;
+  /** Human-readable reason for suspension (set by the system). */
+  suspensionReason?: string | null;
+  /**
+   * Rolling window of recent order rejections per user, keyed by userId.
+   * Each entry records timestamps (ISO strings) of rejections within the last 1 hr.
+   * Used by the blacklist module to detect 5 consecutive rejections from the same user.
+   */
+  recentRejections?: Record<string, string[]>;
   createdAt: Date;
   updatedAt: Date;
 }

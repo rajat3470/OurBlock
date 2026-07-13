@@ -35,6 +35,7 @@ interface OwnerResult {
 }
 
 const ROLES = ['user', 'businessOwner', 'superAdmin'];
+const STATUSES = ['active', 'suspended', 'inactive'];
 
 const roleMeta: Record<string, { label: string; cls: string }> = {
   superAdmin:    { label: 'Super Admin',    cls: 'bg-purple-100 text-purple-700' },
@@ -49,6 +50,8 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterRole, setFilterRole] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [actionUserId, setActionUserId] = useState<string | null>(null);
 
   // Create business owner
   const [societies, setSocieties] = useState<Society[]>([]);
@@ -59,7 +62,7 @@ export default function UsersPage() {
   const [ownerResult, setOwnerResult] = useState<OwnerResult | null>(null);
   const [copied, setCopied] = useState<'email' | 'password' | null>(null);
 
-  useEffect(() => { loadUsers(); }, [filterRole]);
+  useEffect(() => { loadUsers(); }, [filterRole, filterStatus]);
 
   useEffect(() => {
     api.get('/societies?limit=100').then((res) => {
@@ -69,11 +72,34 @@ export default function UsersPage() {
 
   const loadUsers = async () => {
     setLoading(true); setError('');
-    const endpoint = filterRole ? `/users?role=${filterRole}` : '/users';
+    const params = new URLSearchParams();
+    if (filterRole) params.set('role', filterRole);
+    const endpoint = params.toString() ? `/users?${params}` : '/users';
     const res = await api.get(endpoint);
-    if (res.success) setUsers(res.data || []);
-    else setError(res.error || 'Failed to load users');
+    if (res.success) {
+      let data = res.data || [];
+      if (filterStatus) data = data.filter((u: AppUser) => u.status === filterStatus);
+      setUsers(data);
+    } else setError(res.error || 'Failed to load users');
     setLoading(false);
+  };
+
+  const handleSuspendUser = async (user: AppUser) => {
+    if (!confirm(`Suspend ${user.firstName} ${user.lastName}? They will not be able to log in.`)) return;
+    setActionUserId(user.id);
+    const res = await api.post(`/admin/users/${user.id}/suspend`, {});
+    if (res.success) setUsers((p) => p.map((u) => u.id === user.id ? { ...u, status: 'suspended' } : u));
+    else alert(res.error || 'Failed to suspend user');
+    setActionUserId(null);
+  };
+
+  const handleActivateUser = async (user: AppUser) => {
+    if (!confirm(`Re-activate ${user.firstName} ${user.lastName}?`)) return;
+    setActionUserId(user.id);
+    const res = await api.post(`/admin/users/${user.id}/activate`, {});
+    if (res.success) setUsers((p) => p.map((u) => u.id === user.id ? { ...u, status: 'active' } : u));
+    else alert(res.error || 'Failed to activate user');
+    setActionUserId(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -128,10 +154,18 @@ export default function UsersPage() {
           <select
             value={filterRole}
             onChange={(e) => setFilterRole(e.target.value)}
-          className="field w-auto text-gray-900 bg-white"
+            className="field w-auto text-gray-900 bg-white"
           >
             <option value="">All Roles</option>
             {ROLES.map((r) => <option key={r} value={r}>{roleMeta[r]?.label ?? r}</option>)}
+          </select>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="field w-auto text-gray-900 bg-white"
+          >
+            <option value="">All Statuses</option>
+            {STATUSES.map((s) => <option key={s} value={s} className="capitalize">{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
           </select>
           <button onClick={openOwnerModal}
             className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition shadow-sm">
@@ -208,11 +242,30 @@ export default function UsersPage() {
                           {user.status}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <button onClick={() => handleDelete(user.id)}
-                          className="text-xs font-medium text-red-500 hover:text-red-700 transition">
-                          Delete
-                        </button>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center justify-end gap-3">
+                          {user.status === 'suspended' ? (
+                            <button
+                              onClick={() => handleActivateUser(user)}
+                              disabled={actionUserId === user.id}
+                              className="text-xs font-semibold text-green-600 hover:text-green-800 transition disabled:opacity-50"
+                            >
+                              {actionUserId === user.id ? '…' : 'Activate'}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleSuspendUser(user)}
+                              disabled={actionUserId === user.id}
+                              className="text-xs font-semibold text-orange-600 hover:text-orange-800 transition disabled:opacity-50"
+                            >
+                              {actionUserId === user.id ? '…' : 'Suspend'}
+                            </button>
+                          )}
+                          <button onClick={() => handleDelete(user.id)}
+                            className="text-xs font-medium text-red-500 hover:text-red-700 transition">
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

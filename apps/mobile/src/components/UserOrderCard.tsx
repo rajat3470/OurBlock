@@ -39,6 +39,7 @@ interface UserOrderCardProps {
   onReorder: (order: Order) => void;
   onRate: (order: Order) => void;
   onRefund: (order: Order) => void;
+  isVendorSuspended?: boolean;
 }
 
 export default function UserOrderCard({
@@ -49,6 +50,7 @@ export default function UserOrderCard({
   onReorder,
   onRate,
   onRefund,
+  isVendorSuspended = false,
 }: UserOrderCardProps) {
   const displayStatus = effectiveOrderStatus(order, now);
   const statusStyle = getStatusStyle(displayStatus);
@@ -64,11 +66,12 @@ export default function UserOrderCard({
     displayStatus === OrderStatus.DELIVERED ||
     displayStatus === OrderStatus.CANCELLED ||
     displayStatus === OrderStatus.REJECTED;
-  const showReorder = isClosed;
+  const showReorder = isClosed && !isVendorSuspended;
+  const showVendorUnavailable = isClosed && isVendorSuspended;
   const showRate = displayStatus === OrderStatus.DELIVERED;
   const showRefund =
     displayStatus === OrderStatus.DELIVERED && !(order as any).refundRequested;
-  const showActions = canCancel || showReorder || showRate || showRefund;
+  const showActions = canCancel || showReorder || showRate || showRefund || showVendorUnavailable;
 
   return (
     <TouchableOpacity
@@ -139,6 +142,12 @@ export default function UserOrderCard({
               <Ionicons name="refresh" size={12} color="#0E9F6E" />
               <Text style={styles.reorderBtnText}>{content.card.reorder}</Text>
             </TouchableOpacity>
+          ) : null}
+          {showVendorUnavailable ? (
+            <View style={styles.vendorUnavailableChip}>
+              <Ionicons name="ban-outline" size={12} color="#DC2626" />
+              <Text style={styles.vendorUnavailableText}>Vendor Unavailable</Text>
+            </View>
           ) : null}
           {showRate ? (
             <TouchableOpacity style={styles.rateBtn} onPress={() => onRate(order)}>
@@ -293,4 +302,16 @@ const styles = StyleSheet.create({
   },
   rejectionLabel: { fontSize: 11, fontWeight: "700", color: "#991B1B", marginBottom: 2 },
   rejectionText: { fontSize: 12, color: "#7F1D1D", lineHeight: 17 },
+  vendorUnavailableChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FEF2F2",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  vendorUnavailableText: { fontSize: 11, fontWeight: "700", color: "#DC2626" },
 });

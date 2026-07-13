@@ -9,6 +9,20 @@ import { effectiveOrderStatus } from "@utils/orderAcceptance";
 import { Order, OrderStatus } from "@/types";
 import content from "@/content/orders.json";
 
+/** Returns the set of businessIds that are currently suspended. */
+function useSuspendedBusinessIds(): Set<string> {
+  const businesses = useAppSelector((s) => s.userApp.businesses);
+  return useMemo(
+    () =>
+      new Set(
+        businesses
+          .filter((b) => !!(b as any).suspendedAt)
+          .map((b) => b.id)
+      ),
+    [businesses]
+  );
+}
+
 export type OrderFilterKey = "all" | "active" | "completed";
 
 export const ORDER_FILTERS: { key: OrderFilterKey; label: string }[] = [
@@ -34,8 +48,8 @@ export const useUserOrders = () => {
   const { orders, isLoading, loadMyOrders, cancelOrder } = useUserApp();
   const [activeFilter, setActiveFilter] = useState<OrderFilterKey>("all");
   const dispatch = useAppDispatch();
-  const userId = useAppSelector((state) => state.auth.user?.id);
   const cartBusinessId = useAppSelector((state) => state.cart.businessId);
+  const suspendedBusinessIds = useSuspendedBusinessIds();
   const toast = useToast();
   const [ratingOrder, setRatingOrder] = useState<Order | null>(null);
   const [refundOrder, setRefundOrder] = useState<Order | null>(null);
@@ -172,5 +186,6 @@ export const useUserOrders = () => {
     closeRefund,
     handleRatingSubmitted,
     handleRefundSubmitted,
+    suspendedBusinessIds,
   };
 };
