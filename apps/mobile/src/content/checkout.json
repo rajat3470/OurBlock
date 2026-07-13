@@ -10,8 +10,12 @@
     "billDetails": "Bill Details"
   },
   "payment": {
-    "cash": "Cash on Delivery",
+    "cash": "Cash",
     "upi": "UPI",
+    "card": "Card",
+    "atOrder": "Pay now",
+    "atDelivery": "Pay on delivery",
+    "timingTitle": "When to pay",
     "comingSoon": "Coming Soon"
   },
   "noAddress": {

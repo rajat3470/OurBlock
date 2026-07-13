@@ -75,13 +75,34 @@ const MOCK_USERS: Record<string, AuthResponse> = {
       expiresIn: 900,
     },
   },
+  "delivery@mohallamitr.com": {
+    user: {
+      id: "mock-delivery-partner-1",
+      firstName: "Delivery",
+      lastName: "Partner",
+      email: "delivery@mohallamitr.com",
+      phone: "9000000004",
+      role: "deliveryPartner",
+      societyId: "mock-society-1",
+      isEmailVerified: true,
+      isPhoneVerified: true,
+      status: "active",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    tokens: {
+      accessToken: "mock-access-token-deliverypartner",
+      refreshToken: "mock-refresh-token-deliverypartner",
+      expiresIn: 900,
+    },
+  },
 };
 
 const MOCK_PASSWORD = "Test@1234";
 
 function mockLogin(
   credentials: AuthCredentials,
-  role: "superAdmin" | "businessOwner" | "user"
+  role: "superAdmin" | "businessOwner" | "user" | "deliveryPartner"
 ): AuthResponse | null {
   const mockUser = MOCK_USERS[credentials.email.toLowerCase()];
   if (mockUser && credentials.password === MOCK_PASSWORD && mockUser.user.role === role) {
@@ -105,7 +126,7 @@ export const useAuth = () => {
 
   const login = async (
     credentials: AuthCredentials,
-    role: "superAdmin" | "businessOwner" | "user"
+    role: "superAdmin" | "businessOwner" | "user" | "deliveryPartner"
   ) => {
     dispatch(setLoading(true));
     try {
@@ -130,6 +151,9 @@ export const useAuth = () => {
           break;
         case "user":
           response = await authService.loginUser(credentials);
+          break;
+        case "deliveryPartner":
+          response = await authService.loginDeliveryPartner(credentials);
           break;
       }
 

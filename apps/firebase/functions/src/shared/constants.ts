@@ -25,6 +25,7 @@ export const FIREBASE_CONFIG = {
     PRODUCTS: 'products',
     REVIEWS: 'reviews',
     IDENTIFICATIONS: 'identifications',
+    DELIVERY_PROOFS: 'deliveryProofs',
   },
 };
 
@@ -58,6 +59,7 @@ export const USER_ROLES = {
   SUPER_ADMIN: 'superAdmin',
   BUSINESS_OWNER: 'businessOwner',
   USER: 'user',
+  DELIVERY_PARTNER: 'deliveryPartner',
 } as const;
 
 // Payment Methods
@@ -67,6 +69,15 @@ export const PAYMENT_METHODS = {
   UPI: 'upi',
   WALLET: 'wallet',
 } as const;
+
+export const PAYMENT_TIMING = {
+  AT_ORDER: 'atOrder',
+  AT_DELIVERY: 'atDelivery',
+} as const;
+
+/** True when money has not yet been collected / confirmed. */
+export const isPaymentOutstanding = (paymentStatus?: string | null): boolean =>
+  paymentStatus === 'pending' || paymentStatus === 'cod';
 
 // Business Categories
 export const BUSINESS_CATEGORIES = [

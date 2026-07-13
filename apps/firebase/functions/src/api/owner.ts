@@ -661,50 +661,350 @@ router.get('/stats', requireAuth, async (req, res) => {
     }
 
     const businessId = (business as any).id;
+    const startOfToday = admin.firestore.Timestamp.fromDate(
+      (() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+      })()
+    );
 
-    const [productsSnap, ordersSnap, pendingOrdersSnap] = await Promise.all([
-      db.collection('products').where('businessId', '==', businessId).get(),
-      db.collection('orders').where('businessId', '==', businessId).get(),
+    // Prefer cheap count aggregations + a narrow revenue query instead of
+    // reading every product/order document for the shop.
+    const [
+      totalProductsSnap,
+      totalOrdersSnap,
+      pendingOrdersSnap,
+      lowStockSnap,
+      todayDeliveredSnap,
+    ] = await Promise.all([
+      db.collection('products').where('businessId', '==', businessId).count().get(),
+      db.collection('orders').where('businessId', '==', businessId).count().get(),
       db
         .collection('orders')
         .where('businessId', '==', businessId)
         .where('status', '==', 'pending')
+        .count()
+        .get(),
+      db
+        .collection('products')
+        .where('businessId', '==', businessId)
+        .where('stock', '<=', 5)
+        .count()
+        .get()
+        .catch(() => null),
+      db
+        .collection('orders')
+        .where('businessId', '==', businessId)
+        .where('status', '==', 'delivered')
+        .where('createdAt', '>=', startOfToday)
+        .limit(100)
         .get(),
     ]);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     let todayRevenue = 0;
-    let lowStockProducts = 0;
-
-    productsSnap.docs.forEach((doc) => {
+    todayDeliveredSnap.docs.forEach((doc) => {
       const data = doc.data();
-      if (data.stock !== undefined && Number(data.stock) <= 5) {
-        lowStockProducts++;
-      }
-    });
-
-    ordersSnap.docs.forEach((doc) => {
-      const data = doc.data();
-      if (data.status === 'completed' || data.status === 'delivered') {
-        const createdAt: Date | undefined = data.createdAt?.toDate?.();
-        if (createdAt && createdAt >= today) {
-          todayRevenue += Number(data.total) || 0;
-        }
-      }
+      todayRevenue += Number(data.finalAmount ?? data.totalAmount ?? data.total) || 0;
     });
 
     return res.json({
       success: true,
       data: {
-        totalProducts: productsSnap.size,
-        totalOrders: ordersSnap.size,
-        pendingOrders: pendingOrdersSnap.size,
-        lowStockProducts,
+        totalProducts: totalProductsSnap.data().count,
+        totalOrders: totalOrdersSnap.data().count,
+        pendingOrders: pendingOrdersSnap.data().count,
+        lowStockProducts: lowStockSnap ? lowStockSnap.data().count : 0,
         todayRevenue,
       },
     });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Delivery partners — created & managed by the business owner
+// ---------------------------------------------------------------------------
+
+// GET /owner/delivery-partners
+router.get('/delivery-partners', requireAuth, async (req, res) => {
+  try {
+    const uid = (req as any).uid;
+    const business = await getOwnerBusiness(uid);
+    if (!business) {
+      return res.status(404).json({ success: false, error: 'No business found for this owner' });
+    }
+
+    const snapshot = await db
+      .collection('users')
+      .where('role', '==', 'deliveryPartner')
+      .where('businessId', '==', (business as any).id)
+      .limit(50)
+      .get();
+
+    const partners = snapshot.docs
+      .map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone,
+          status: data.status,
+          businessId: data.businessId,
+          societyId: data.societyId,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
+        };
+      })
+      .sort((a: any, b: any) => {
+        const aMs = a.createdAt?.toMillis?.() ?? 0;
+        const bMs = b.createdAt?.toMillis?.() ?? 0;
+        return bMs - aMs;
+      });
+
+    return res.json({ success: true, data: partners });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /owner/delivery-partners — create login credentials for a partner
+router.post('/delivery-partners', requireAuth, async (req, res) => {
+  try {
+    const uid = (req as any).uid;
+    const business = await getOwnerBusiness(uid);
+    if (!business) {
+      return res.status(404).json({ success: false, error: 'No business found for this owner' });
+    }
+
+    const { firstName, lastName, email, phone, password } = req.body ?? {};
+    if (!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'firstName, lastName, email, phone, and password are required',
+      });
+    }
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password must be at least 8 characters',
+      });
+    }
+    if (!/^[6-9]\d{9}$/.test(String(phone).replace(/\D/g, '').slice(-10))) {
+      return res.status(400).json({ success: false, error: 'Enter a valid 10-digit Indian phone number' });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const normalizedPhone = String(phone).replace(/\D/g, '').slice(-10);
+
+    const existingPhone = await db
+      .collection('users')
+      .where('phone', '==', normalizedPhone)
+      .limit(1)
+      .get();
+    if (!existingPhone.empty) {
+      return res.status(409).json({ success: false, error: 'This phone number is already registered' });
+    }
+
+    let userRecord: admin.auth.UserRecord;
+    try {
+      userRecord = await auth.createUser({
+        email: normalizedEmail,
+        password,
+        displayName: `${firstName.trim()} ${lastName.trim()}`,
+        emailVerified: true,
+      });
+    } catch (err: any) {
+      if (err?.code === 'auth/email-already-exists') {
+        return res.status(409).json({ success: false, error: 'This email is already registered' });
+      }
+      throw err;
+    }
+
+    await auth.setCustomUserClaims(userRecord.uid, { role: 'deliveryPartner' });
+
+    const now = admin.firestore.FieldValue.serverTimestamp();
+    const partnerDoc = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: normalizedEmail,
+      phone: normalizedPhone,
+      role: 'deliveryPartner',
+      societyId: (business as any).societyId,
+      businessId: (business as any).id,
+      ownerId: uid,
+      // Denormalized shop snapshot — delivery APIs avoid an extra business read.
+      businessName: (business as any).name ?? 'Shop',
+      businessAddress: (business as any).address ?? '',
+      businessPhone: (business as any).phone ?? '',
+      businessImageUrl: (business as any).imageUrl ?? null,
+      businessCategory: (business as any).category ?? null,
+      isEmailVerified: true,
+      isPhoneVerified: false,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await db.collection('users').doc(userRecord.uid).set(partnerDoc);
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        id: userRecord.uid,
+        firstName: partnerDoc.firstName,
+        lastName: partnerDoc.lastName,
+        email: partnerDoc.email,
+        phone: partnerDoc.phone,
+        status: partnerDoc.status,
+        businessId: partnerDoc.businessId,
+        societyId: partnerDoc.societyId,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// PATCH /owner/delivery-partners/:id — activate / deactivate
+router.patch('/delivery-partners/:id', requireAuth, async (req, res) => {
+  try {
+    const uid = (req as any).uid;
+    const business = await getOwnerBusiness(uid);
+    if (!business) {
+      return res.status(404).json({ success: false, error: 'No business found for this owner' });
+    }
+
+    const partnerRef = db.collection('users').doc(req.params.id);
+    const partnerDoc = await partnerRef.get();
+    if (!partnerDoc.exists) {
+      return res.status(404).json({ success: false, error: 'Delivery partner not found' });
+    }
+
+    const partner = partnerDoc.data()!;
+    if (partner.role !== 'deliveryPartner' || partner.businessId !== (business as any).id) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const { status } = req.body ?? {};
+    if (status !== 'active' && status !== 'inactive') {
+      return res.status(400).json({ success: false, error: 'status must be active or inactive' });
+    }
+
+    await partnerRef.update({
+      status,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    if (status === 'inactive') {
+      await auth.updateUser(req.params.id, { disabled: true }).catch(() => undefined);
+    } else {
+      await auth.updateUser(req.params.id, { disabled: false }).catch(() => undefined);
+    }
+
+    const updated = await partnerRef.get();
+    const data = updated.data()!;
+    return res.json({
+      success: true,
+      data: {
+        id: updated.id,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        status: data.status,
+        businessId: data.businessId,
+        societyId: data.societyId,
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /owner/orders/:orderId/assign-delivery-partner
+// ---------------------------------------------------------------------------
+router.post('/orders/:orderId/assign-delivery-partner', requireAuth, async (req, res) => {
+  try {
+    const uid = (req as any).uid;
+    const business = await getOwnerBusiness(uid);
+    if (!business) {
+      return res.status(404).json({ success: false, error: 'No business found for this owner' });
+    }
+
+    const orderRef = db.collection('orders').doc(req.params.orderId);
+    const orderDoc = await orderRef.get();
+    if (!orderDoc.exists) {
+      return res.status(404).json({ success: false, error: 'Order not found' });
+    }
+
+    const order = orderDoc.data()!;
+    if (order.businessId !== (business as any).id) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const assignable = ['confirmed', 'preparing', 'ready', 'outForDelivery'];
+    if (!assignable.includes(order.status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Only active orders can be assigned to a delivery partner',
+      });
+    }
+
+    const { partnerId } = req.body ?? {};
+
+    // Unassign
+    if (partnerId === null || partnerId === undefined || partnerId === '') {
+      await orderRef.update({
+        assignedDeliveryPartnerId: null,
+        assignedDeliveryPartnerName: null,
+        assignedAt: null,
+        trackingUpdates: admin.firestore.FieldValue.arrayUnion({
+          status: order.status,
+          timestamp: new Date().toISOString(),
+          notes: 'Delivery partner unassigned',
+        }),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      const updated = await orderRef.get();
+      return res.json({ success: true, data: { id: updated.id, ...updated.data() } });
+    }
+
+    const partnerDoc = await db.collection('users').doc(String(partnerId)).get();
+    if (!partnerDoc.exists) {
+      return res.status(404).json({ success: false, error: 'Delivery partner not found' });
+    }
+    const partner = partnerDoc.data()!;
+    if (
+      partner.role !== 'deliveryPartner' ||
+      partner.businessId !== (business as any).id ||
+      partner.status !== 'active'
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: 'Choose an active delivery partner for this shop',
+      });
+    }
+
+    const partnerName = `${partner.firstName ?? ''} ${partner.lastName ?? ''}`.trim() || 'Delivery partner';
+    await orderRef.update({
+      assignedDeliveryPartnerId: partnerDoc.id,
+      assignedDeliveryPartnerName: partnerName,
+      assignedAt: admin.firestore.FieldValue.serverTimestamp(),
+      trackingUpdates: admin.firestore.FieldValue.arrayUnion({
+        status: order.status,
+        timestamp: new Date().toISOString(),
+        notes: `Assigned to ${partnerName}`,
+      }),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    const updated = await orderRef.get();
+    return res.json({ success: true, data: { id: updated.id, ...updated.data() } });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }

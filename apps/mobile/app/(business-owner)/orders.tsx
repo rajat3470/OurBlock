@@ -35,6 +35,7 @@ export default function BusinessOwnerOrders() {
     filteredOrders,
     filters,
     handleAdvance,
+    handleAssignMissingPartner,
     handleAccept,
     handleReject,
     handleCountdownExpire,
@@ -156,6 +157,12 @@ export default function BusinessOwnerOrders() {
               <Text style={styles.infoText}>{(item as any).userName}{(item as any).userPhone ? ` · ${(item as any).userPhone}` : ""}</Text>
             </View>
           ) : null}
+          {(item as any).assignedDeliveryPartnerName ? (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoIcon}>🛵</Text>
+              <Text style={styles.infoText}>{(item as any).assignedDeliveryPartnerName}</Text>
+            </View>
+          ) : null}
           {addressLine ? (
             <View style={styles.infoRow}>
               <Text style={styles.infoIcon}>📍</Text>
@@ -198,6 +205,20 @@ export default function BusinessOwnerOrders() {
               )}
             </TouchableOpacity>
           </View>
+        ) : item.status === OrderStatus.OUT_FOR_DELIVERY &&
+          !(item as any).assignedDeliveryPartnerId ? (
+          <TouchableOpacity
+            style={[styles.advanceBtn, isAdvancing && styles.advanceBtnDisabled]}
+            onPress={() => handleAssignMissingPartner(item)}
+            disabled={isAdvancing}
+            activeOpacity={0.85}
+          >
+            {isAdvancing ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.advanceBtnText}>Assign Partner</Text>
+            )}
+          </TouchableOpacity>
         ) : next ? (
           <TouchableOpacity
             style={[styles.advanceBtn, isAdvancing && styles.advanceBtnDisabled]}

@@ -117,3 +117,42 @@ export function subscribeToOrdersByBusiness(
     }
   );
 }
+
+/**
+ * Subscribe to orders assigned to a delivery partner (realtime).
+ * Prefer subscribeToOrdersByBusiness + client filter in the partner hook —
+ * that receives assignment updates on existing shop orders more reliably.
+ */
+export function subscribeToOrdersByDeliveryPartner(
+  partnerId: string,
+  onChange: OrdersSyncCallback,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  const db = getFirestoreInstance();
+  const q = query(
+    collection(db, "orders"),
+    where("assignedDeliveryPartnerId", "==", partnerId)
+  );
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const orders = sortByCreatedAtDesc(mapCollection(snapshot));
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "[orderSync] delivery partner orders update:",
+          partnerId,
+          orders.length,
+          orders.map((o) => o.id)
+        );
+      }
+      onChange(orders);
+    },
+    (error) => {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[orderSync] delivery partner snapshot error:", error);
+      }
+      onError?.(error);
+    }
+  );
+}

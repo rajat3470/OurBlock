@@ -9,6 +9,27 @@ export interface UploadProgress {
 
 export const imageUploadService = {
   /**
+   * Upload a delivery proof photo for a completed drop-off
+   */
+  async uploadDeliveryProof(uri: string, orderId: string, partnerId: string): Promise<string> {
+    try {
+      const storage = getStorageInstance();
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const timestamp = Date.now();
+      const filename = `proof_${orderId}_${timestamp}.jpg`;
+      const storageRef = ref(storage, `deliveryProofs/${partnerId}/${filename}`);
+
+      await uploadBytes(storageRef, blob);
+      return await getDownloadURL(storageRef);
+    } catch (error) {
+      console.error("Error uploading delivery proof:", error);
+      throw new Error("Failed to upload delivery proof");
+    }
+  },
+
+  /**
    * Upload a profile image for a user
    * @param uri - Local file URI from image picker
    * @param userId - User ID

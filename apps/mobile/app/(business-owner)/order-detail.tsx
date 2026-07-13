@@ -20,9 +20,14 @@ export default function BusinessOwnerOrderDetail() {
     order,
     advancing,
     sharing,
+    partners,
+    partnersLoading,
+    canAssignPartner,
+    selectedPartnerId,
     derived,
     setDetailExpired,
     handleAdvance,
+    handleAssignPartner,
     goReject,
     handleShare,
     goBack,
@@ -149,6 +154,59 @@ export default function BusinessOwnerOrderDetail() {
           </View>
         </View>
 
+        {/* ── Assign partner before Out for Delivery ──────────────── */}
+        {canAssignPartner ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{content.sections.assignPartner}</Text>
+            <Text style={styles.assignHint}>{content.sections.assignPartnerHint}</Text>
+            {partnersLoading ? (
+              <ActivityIndicator style={{ marginTop: 10 }} color="#16A34A" />
+            ) : partners.length === 0 ? (
+              <Text style={styles.assignEmpty}>{content.alerts.noPartners}</Text>
+            ) : (
+              <View style={styles.partnerList}>
+                {partners.map((partner) => {
+                  const selected = selectedPartnerId === partner.id;
+                  const name = `${partner.firstName} ${partner.lastName}`.trim();
+                  return (
+                    <TouchableOpacity
+                      key={partner.id}
+                      style={[styles.partnerChip, selected ? styles.partnerChipActive : null]}
+                      disabled={advancing}
+                      onPress={() => handleAssignPartner(partner.id)}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.partnerIcon}>🛵</Text>
+                      <Text
+                        style={[
+                          styles.partnerName,
+                          selected ? styles.partnerNameActive : null,
+                        ]}
+                      >
+                        {name}
+                      </Text>
+                      {selected ? <Text style={styles.partnerCheck}>✓</Text> : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+            {selectedPartnerId ? (
+              <Text style={styles.assignedLabel}>
+                Ready to send with{" "}
+                {(() => {
+                  const p = partners.find((x) => x.id === selectedPartnerId);
+                  return p ? `${p.firstName} ${p.lastName}`.trim() : "selected partner";
+                })()}
+              </Text>
+            ) : (
+              <Text style={styles.assignedLabelMuted}>
+                Select a partner to enable Out for Delivery
+              </Text>
+            )}
+          </View>
+        ) : null}
+
         {/* ── Notes ───────────────────────────────────────────────── */}
         {order.notes ? (
           <View style={styles.section}>
@@ -239,9 +297,16 @@ export default function BusinessOwnerOrderDetail() {
           )
         ) : canAdvance ? (
           <TouchableOpacity
-            style={[styles.advanceBtn, advancing && { opacity: 0.7 }]}
+            style={[
+              styles.advanceBtn,
+              (advancing || (order.status === OrderStatus.READY && !selectedPartnerId)) && {
+                opacity: 0.7,
+              },
+            ]}
             onPress={handleAdvance}
-            disabled={advancing}
+            disabled={
+              advancing || (order.status === OrderStatus.READY && !selectedPartnerId)
+            }
             activeOpacity={0.85}
           >
             {advancing ? (
@@ -303,6 +368,50 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11, fontWeight: "700", color: "#94A3B8",
     textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10,
+  },
+  assignHint: {
+    fontSize: 12,
+    color: "#64748B",
+    marginTop: -4,
+    marginBottom: 10,
+    lineHeight: 17,
+  },
+  assignEmpty: {
+    fontSize: 13,
+    color: "#D97706",
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  partnerList: { gap: 8 },
+  partnerChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+  },
+  partnerChipActive: {
+    borderColor: "#16A34A",
+    backgroundColor: "#ECFDF5",
+  },
+  partnerIcon: { fontSize: 16, marginRight: 10 },
+  partnerName: { flex: 1, fontSize: 14, fontWeight: "700", color: "#334155" },
+  partnerNameActive: { color: "#15803D" },
+  partnerCheck: { fontSize: 14, fontWeight: "800", color: "#16A34A" },
+  assignedLabel: {
+    marginTop: 10,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#15803D",
+  },
+  assignedLabelMuted: {
+    marginTop: 10,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#94A3B8",
   },
   infoRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, marginBottom: 6 },
   infoText: { flex: 1, fontSize: 13, color: "#1E293B", fontWeight: "500", lineHeight: 20 },

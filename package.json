@@ -12,6 +12,7 @@
     "mobile": "yarn workspace @mohallamitr/mobile start",
     "mobile:customer": "yarn workspace @mohallamitr/mobile start:user",
     "mobile:business": "yarn workspace @mohallamitr/mobile start:business-owner",
+    "mobile:delivery": "yarn workspace @mohallamitr/mobile start:delivery-partner",
     "mobile:ios": "yarn workspace @mohallamitr/mobile ios",
     "mobile:android": "yarn workspace @mohallamitr/mobile android",
     "web": "yarn workspace @mohallamitr/web dev",

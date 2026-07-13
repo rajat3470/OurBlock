@@ -139,11 +139,28 @@ export const useBusinessOwner = () => {
   }, [dispatch]);
 
   const changeOrderStatus = useCallback(
-    async (orderId: string, status: Order["status"]) => {
+    async (
+      orderId: string,
+      status: Order["status"],
+      options?: { deliveryPartnerId?: string }
+    ) => {
       markPendingWrite(orderId);
       dispatch(setLoading(true));
       try {
-        const order = await businessOwnerService.updateOrderStatus(orderId, status);
+        // Persist assignment first so the delivery-partner Firestore listener
+        // sees the order immediately (even if the status endpoint is older).
+        if (options?.deliveryPartnerId) {
+          const assigned = await businessOwnerService.assignDeliveryPartner(
+            orderId,
+            options.deliveryPartnerId
+          );
+          dispatch(updateOrder(assigned));
+        }
+        const order = await businessOwnerService.updateOrderStatus(
+          orderId,
+          status,
+          options
+        );
         dispatch(updateOrder(order));
         return order;
       } catch (err: unknown) {
@@ -173,6 +190,24 @@ export const useBusinessOwner = () => {
       } finally {
         clearPendingWrite(orderId);
         dispatch(setLoading(false));
+      }
+    },
+    [dispatch]
+  );
+
+  const assignDeliveryPartner = useCallback(
+    async (orderId: string, partnerId: string | null) => {
+      markPendingWrite(orderId);
+      try {
+        const order = await businessOwnerService.assignDeliveryPartner(orderId, partnerId);
+        dispatch(updateOrder(order));
+        return order;
+      } catch (err: unknown) {
+        const message = extractErrorMessage(err, "Failed to assign delivery partner");
+        dispatch(setError(message));
+        throw err;
+      } finally {
+        clearPendingWrite(orderId);
       }
     },
     [dispatch]
@@ -246,6 +281,7 @@ export const useBusinessOwner = () => {
     loadOrders,
     changeOrderStatus,
     rejectOrder,
+    assignDeliveryPartner,
     loadStats,
     loadAnalytics,
     toggleTakingOrders,

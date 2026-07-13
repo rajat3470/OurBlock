@@ -1,0 +1,35 @@
+{
+  "headerTitle": "Delivery Partners",
+  "hero": {
+    "title": "Delivery partners",
+    "subtitle": "Create login credentials for riders who deliver your orders and collect payment."
+  },
+  "empty": {
+    "title": "No delivery partners yet",
+    "subtitle": "Add a partner so they can complete deliveries and close cash / UPI / card collections."
+  },
+  "form": {
+    "title": "Add partner",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "email": "Email (login)",
+    "phone": "Phone",
+    "password": "Temporary password",
+    "submit": "Create partner",
+    "cancel": "Cancel"
+  },
+  "actions": {
+    "add": "+ Add partner",
+    "deactivate": "Deactivate",
+    "activate": "Activate"
+  },
+  "toasts": {
+    "created": "Delivery partner created",
+    "updated": "Partner status updated",
+    "failed": "Something went wrong"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive"
+  }
+}

@@ -928,7 +928,7 @@ router.get('/home-feed', async (req, res) => {
 async function loginWithRole(
   req: any,
   res: any,
-  expectedRole: 'superAdmin' | 'businessOwner' | 'user'
+  expectedRole: 'superAdmin' | 'businessOwner' | 'user' | 'deliveryPartner'
 ) {
   const { email, password } = req.body;
 
@@ -951,12 +951,17 @@ async function loginWithRole(
 
   const userData = userDoc.data() as any;
 
-  const normalizeRole = (role: unknown): 'superAdmin' | 'businessOwner' | 'user' | null => {
+  const normalizeRole = (
+    role: unknown
+  ): 'superAdmin' | 'businessOwner' | 'user' | 'deliveryPartner' | null => {
     if (typeof role !== 'string') return null;
     const compact = role.replace(/[-_\s]/g, '').toLowerCase();
     if (compact === 'superadmin') return 'superAdmin';
     if (compact === 'businessowner' || compact === 'owner' || compact === 'merchant') return 'businessOwner';
     if (compact === 'user' || compact === 'resident' || compact === 'customer') return 'user';
+    if (compact === 'deliverypartner' || compact === 'delivery' || compact === 'rider') {
+      return 'deliveryPartner';
+    }
     return null;
   };
 
@@ -995,6 +1000,10 @@ async function loginWithRole(
     return res.status(403).json({ success: false, error: 'Your account has been suspended' });
   }
 
+  if (userData.status === 'inactive') {
+    return res.status(403).json({ success: false, error: 'Your account is inactive. Contact the business owner.' });
+  }
+
   return res.json({
     user: { id: authResult.localId, ...userData },
     tokens: {
@@ -1008,6 +1017,7 @@ async function loginWithRole(
 router.post('/superadmin/login', (req, res) => loginWithRole(req, res, 'superAdmin'));
 router.post('/businessowner/login', (req, res) => loginWithRole(req, res, 'businessOwner'));
 router.post('/user/login', (req, res) => loginWithRole(req, res, 'user'));
+router.post('/deliverypartner/login', (req, res) => loginWithRole(req, res, 'deliveryPartner'));
 
 // ---------------------------------------------------------------------------
 // Token refresh — exchange a Firebase refresh token for a new ID token.

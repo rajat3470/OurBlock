@@ -3,6 +3,7 @@ import { Alert, Share } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBusinessOwner } from "@hooks/useBusinessOwner";
+import { businessOwnerService } from "@services/businessOwnerService";
 import { Order, OrderStatus } from "@/types";
 import {
   getAcceptanceDeadlineMs,
@@ -10,6 +11,13 @@ import {
   toMillis,
 } from "@utils/orderAcceptance";
 import content from "@/content/boOrderDetail.json";
+
+type PartnerOption = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  status: string;
+};
 
 type StatusStyle = { color: string; bg: string; border: string; emoji: string; labelKey: keyof typeof content.statusLabels };
 
@@ -131,12 +139,46 @@ export function buildInvoiceText(order: Order, brandName = "OurBlock"): string {
 export const useBusinessOwnerOrderDetail = () => {
   const insets = useSafeAreaInsets();
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
-  const { orders, changeOrderStatus } = useBusinessOwner();
+  const { orders, changeOrderStatus, rejectOrder } = useBusinessOwner();
   const [advancing, setAdvancing] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [partners, setPartners] = useState<PartnerOption[]>([]);
+  const [partnersLoading, setPartnersLoading] = useState(false);
+  const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const [detailExpired, setDetailExpired] = useState(false);
 
   const order = useMemo(() => orders.find((o) => o.id === orderId), [orders, orderId]);
+
+  /** Partner must be chosen on the Ready → Out for Delivery step. */
+  const needsPartnerForDispatch = order?.status === OrderStatus.READY;
+
+  useEffect(() => {
+    if (!needsPartnerForDispatch) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setPartnersLoading(true);
+        const list = await businessOwnerService.getDeliveryPartners();
+        if (!cancelled) {
+          const active = list.filter((p) => p.status === "active");
+          setPartners(active);
+          const existing = order?.assignedDeliveryPartnerId;
+          if (existing && active.some((p) => p.id === existing)) {
+            setSelectedPartnerId(existing);
+          } else if (active.length === 1) {
+            setSelectedPartnerId(active[0].id);
+          }
+        }
+      } catch {
+        if (!cancelled) setPartners([]);
+      } finally {
+        if (!cancelled) setPartnersLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [needsPartnerForDispatch, order?.assignedDeliveryPartnerId]);
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -149,22 +191,45 @@ export const useBusinessOwnerOrderDetail = () => {
     if (!order) return;
     const next = NEXT_STATUS[order.status];
     if (!next) return;
+
+    let deliveryPartnerId: string | undefined;
+    if (next === OrderStatus.OUT_FOR_DELIVERY) {
+      deliveryPartnerId = selectedPartnerId ?? order.assignedDeliveryPartnerId ?? undefined;
+      if (!deliveryPartnerId) {
+        Alert.alert(content.alerts.partnerRequiredTitle, content.alerts.partnerRequiredMsg);
+        return;
+      }
+    }
+
     setAdvancing(true);
     try {
-      await changeOrderStatus(order.id, next);
+      await changeOrderStatus(
+        order.id,
+        next,
+        deliveryPartnerId ? { deliveryPartnerId } : undefined
+      );
     } catch (err) {
       const code = (err as any)?.response?.data?.code;
       const httpStatus = (err as any)?.response?.status;
       if (code === "ACCEPTANCE_WINDOW_EXPIRED" || code === "ORDER_NOT_PENDING" || httpStatus === 409) {
         setDetailExpired(true);
         Alert.alert(content.alerts.expiredTitle, content.alerts.expiredMsg);
+      } else if (code === "DELIVERY_PARTNER_REQUIRED") {
+        Alert.alert(content.alerts.partnerRequiredTitle, content.alerts.partnerRequiredMsg);
       } else {
-        Alert.alert(content.alerts.errorTitle, content.alerts.advanceFail);
+        Alert.alert(
+          content.alerts.errorTitle,
+          (err as any)?.response?.data?.error ?? content.alerts.advanceFail
+        );
       }
     } finally {
       setAdvancing(false);
     }
-  }, [changeOrderStatus, order]);
+  }, [changeOrderStatus, order, selectedPartnerId]);
+
+  const handleAssignPartner = useCallback((partnerId: string | null) => {
+    setSelectedPartnerId(partnerId);
+  }, []);
 
   const goReject = useCallback(() => {
     if (!order) return;
@@ -228,11 +293,17 @@ export const useBusinessOwnerOrderDetail = () => {
     orderId,
     advancing,
     sharing,
+    partners,
+    partnersLoading,
+    selectedPartnerId,
+    needsPartnerForDispatch,
+    canAssignPartner: needsPartnerForDispatch,
     detailExpired,
     setDetailExpired,
     now,
     derived,
     handleAdvance,
+    handleAssignPartner,
     goReject,
     handleShare,
     goBack,

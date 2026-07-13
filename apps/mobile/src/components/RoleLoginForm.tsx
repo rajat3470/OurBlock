@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   View,
   Text,
@@ -27,6 +27,8 @@ interface RoleLoginFormProps {
   subtitle: string;
   emailPlaceholder: string;
   successRoute: string;
+  /** Extra content rendered below the form inside the scroll view */
+  footer?: ReactNode;
 }
 
 export default function RoleLoginForm({
@@ -36,6 +38,7 @@ export default function RoleLoginForm({
   subtitle,
   emailPlaceholder,
   successRoute,
+  footer,
 }: RoleLoginFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,6 +55,8 @@ export default function RoleLoginForm({
       ? gradients.ctaBlue
       : role === "businessOwner"
       ? gradients.ctaGreen
+      : role === "deliveryPartner"
+      ? gradients.ctaTeal
       : gradients.ctaAmber;
 
   const validate = (): boolean => {
@@ -181,6 +186,8 @@ export default function RoleLoginForm({
               </LinearGradient>
             </TouchableOpacity>
           </View>
+
+          {footer ? <View style={styles.footerSlot}>{footer}</View> : null}
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -320,5 +327,8 @@ const styles = StyleSheet.create({
     fontSize: typography.button.fontSize,
     fontWeight: typography.button.fontWeight,
     letterSpacing: 0.3,
+  },
+  footerSlot: {
+    marginTop: spacing.lg,
   },
 });

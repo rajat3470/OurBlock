@@ -53,6 +53,7 @@ export const USER_ROLES = {
   SUPER_ADMIN: "superAdmin",
   BUSINESS_OWNER: "businessOwner",
   USER: "user",
+  DELIVERY_PARTNER: "deliveryPartner",
 };
 
 // Payment Methods
@@ -68,6 +69,11 @@ export const PAYMENT_METHOD_LABELS = {
   card: "Credit/Debit Card",
   upi: "UPI",
   wallet: "Wallet",
+};
+
+export const PAYMENT_TIMING_LABELS = {
+  atOrder: "Pay now",
+  atDelivery: "Pay on delivery",
 };
 
 // Address Types

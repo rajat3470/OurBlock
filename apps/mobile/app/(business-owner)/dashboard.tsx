@@ -313,7 +313,7 @@ export default function BusinessOwnerDashboard() {
                               { color: order.paymentStatus === "completed" ? "#166534" : "#92400E" },
                             ]}
                           >
-                            {order.paymentMethod.toUpperCase()} · {order.paymentStatus === "completed" ? content.order.paid : content.order.pending}
+                            {order.paymentMethod.toUpperCase()} · {order.paymentStatus === "completed" ? content.order.paid : order.paymentStatus === "cod" ? "COD" : content.order.pending}
                           </Text>
                         </View>
                       </View>

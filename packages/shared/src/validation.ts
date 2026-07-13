@@ -76,7 +76,21 @@ export const createOrderSchema = z.object({
   items: z.array(orderItemSchema).min(1, 'At least one item is required'),
   deliveryAddress: addressSchema,
   paymentMethod: z.enum(['cash', 'card', 'upi', 'wallet']),
+  paymentTiming: z.enum(['atOrder', 'atDelivery']).optional(),
   notes: z.string().max(VALIDATION_LIMITS.ORDER_NOTES_MAX).optional(),
+});
+
+export const createDeliveryPartnerSchema = z.object({
+  firstName: z.string().min(1).max(50),
+  lastName: z.string().min(1).max(50),
+  email: z.string().email(),
+  phone: z.string().regex(/^[6-9]\d{9}$/),
+  password: z.string().min(8).max(128),
+});
+
+export const completeDeliverySchema = z.object({
+  deliveryProofImageUrl: z.string().url(),
+  paymentCollectedMethod: z.enum(['cash', 'card', 'upi', 'wallet']).optional(),
 });
 
 // Review Validation
@@ -127,6 +141,8 @@ export const validationSchemas = {
   product: productSchema,
   address: addressSchema,
   createOrder: createOrderSchema,
+  createDeliveryPartner: createDeliveryPartnerSchema,
+  completeDelivery: completeDeliverySchema,
   review: reviewSchema,
   pagination: paginationSchema,
   searchQuery: searchQuerySchema,
@@ -142,6 +158,8 @@ export type BusinessData = z.infer<typeof businessSchema>;
 export type ProductData = z.infer<typeof productSchema>;
 export type AddressData = z.infer<typeof addressSchema>;
 export type CreateOrderData = z.infer<typeof createOrderSchema>;
+export type CreateDeliveryPartnerData = z.infer<typeof createDeliveryPartnerSchema>;
+export type CompleteDeliveryData = z.infer<typeof completeDeliverySchema>;
 export type ReviewData = z.infer<typeof reviewSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
 export type SearchQueryInput = z.infer<typeof searchQuerySchema>;

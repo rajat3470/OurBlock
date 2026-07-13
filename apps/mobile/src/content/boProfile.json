@@ -39,6 +39,11 @@
     },
     "save": "Save Settings"
   },
+  "deliveryPartners": {
+    "icon": "🛵",
+    "label": "Delivery Partners",
+    "subtitle": "Create logins for riders who deliver and collect payment"
+  },
   "password": {
     "icon": "🔑",
     "label": "Change Password",

@@ -14,9 +14,11 @@ const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
 export const PAYMENT_METHODS = [
   { key: "cash" as const, icon: "💵" },
   { key: "upi" as const, icon: "📱" },
+  { key: "card" as const, icon: "💳" },
 ];
 
-export type PaymentMethod = "cash" | "upi";
+export type PaymentMethod = "cash" | "upi" | "card";
+export type PaymentTiming = "atOrder" | "atDelivery";
 
 /**
  * Encapsulates the checkout flow: address loading, coupon validation,
@@ -31,6 +33,7 @@ export const useCheckout = () => {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [paymentTiming, setPaymentTiming] = useState<PaymentTiming>("atDelivery");
   const [loadingAddresses, setLoadingAddresses] = useState(true);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number } | null>(null);
@@ -115,16 +118,27 @@ export const useCheckout = () => {
       return;
     }
 
-    const paymentLabel = paymentMethod === "cash" ? content.payment.cash : content.payment.upi;
+    const paymentLabel =
+      paymentMethod === "cash"
+        ? content.payment.cash
+        : paymentMethod === "card"
+        ? content.payment.card
+        : content.payment.upi;
+    const timingLabel =
+      paymentMethod === "cash" || paymentTiming === "atDelivery"
+        ? content.payment.atDelivery
+        : content.payment.atOrder;
     Alert.alert(
       content.confirm.title,
-      `${content.confirm.totalPrefix} ${finalAmount}\n${content.confirm.paymentPrefix} ${paymentLabel}\n\n${content.confirm.question}`,
+      `${content.confirm.totalPrefix} ${finalAmount}\n${content.confirm.paymentPrefix} ${paymentLabel} (${timingLabel})\n\n${content.confirm.question}`,
       [
         { text: content.confirm.cancel, style: "cancel" },
         {
           text: content.confirm.confirm,
           onPress: async () => {
             try {
+              const effectiveTiming: PaymentTiming =
+                paymentMethod === "cash" ? "atDelivery" : paymentTiming;
               const payload = {
                 businessId: cartBusinessId,
                 items: cartItems.map((item) => ({
@@ -144,6 +158,7 @@ export const useCheckout = () => {
                   isDefault: selectedAddress.isDefault,
                 },
                 paymentMethod,
+                paymentTiming: effectiveTiming,
                 couponCode: appliedCoupon?.code,
               };
               orderPlacedRef.current = true;
@@ -158,7 +173,7 @@ export const useCheckout = () => {
         },
       ]
     );
-  }, [addresses, appliedCoupon, businesses, cartBusinessId, cartItems, finalAmount, paymentMethod, placeOrder, selectedAddressId, subTotal, toast]);
+  }, [addresses, appliedCoupon, businesses, cartBusinessId, cartItems, finalAmount, paymentMethod, paymentTiming, placeOrder, selectedAddressId, subTotal, toast]);
 
   const goBack = useCallback(() => {
     if (router.canGoBack()) {
@@ -176,7 +191,12 @@ export const useCheckout = () => {
     selectedAddressId,
     setSelectedAddressId,
     paymentMethod,
-    setPaymentMethod,
+    setPaymentMethod: (method: PaymentMethod) => {
+      setPaymentMethod(method);
+      if (method === "cash") setPaymentTiming("atDelivery");
+    },
+    paymentTiming,
+    setPaymentTiming,
     loadingAddresses,
     couponCode,
     setCouponCode,

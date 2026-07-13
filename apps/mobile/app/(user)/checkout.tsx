@@ -26,6 +26,8 @@ export default function CheckoutScreen() {
     setSelectedAddressId,
     paymentMethod,
     setPaymentMethod,
+    paymentTiming,
+    setPaymentTiming,
     loadingAddresses,
     couponCode,
     setCouponCode,
@@ -168,14 +170,42 @@ export default function CheckoutScreen() {
                 <Text style={styles.paymentLabel}>
                   {content.payment[method.key]}
                 </Text>
-                {method.key === "upi" ? (
-                  <View style={styles.comingSoonBadge}>
-                    <Text style={styles.comingSoonText}>{content.payment.comingSoon}</Text>
-                  </View>
-                ) : null}
               </TouchableOpacity>
             );
           })}
+
+          {paymentMethod !== "cash" ? (
+            <>
+              <Text style={[styles.sectionTitle, { marginTop: 16 }]}>
+                {content.payment.timingTitle}
+              </Text>
+              {(
+                [
+                  ["atOrder", content.payment.atOrder],
+                  ["atDelivery", content.payment.atDelivery],
+                ] as const
+              ).map(([key, label]) => {
+                const selected = paymentTiming === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.paymentCard, selected ? styles.paymentCardActive : null]}
+                    onPress={() => setPaymentTiming(key)}
+                  >
+                    <View style={styles.addressRadio}>
+                      <View
+                        style={[
+                          styles.radioCircle,
+                          selected ? styles.radioCircleActive : null,
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.paymentLabel}>{label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </>
+          ) : null}
         </View>
 
         {/* Coupon / Promo Code */}

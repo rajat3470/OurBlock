@@ -22,6 +22,10 @@
     "deliveryAddress": "Delivery Address",
     "orderNotes": "Order Notes",
     "timeline": "Order Timeline",
+    "assignPartner": "Delivery partner",
+    "assignPartnerHint": "Assign which rider should deliver this order",
+    "unassigned": "Not assigned",
+    "unassign": "Clear assignment",
     "rejectionTitle": "🚫 Rejection Reason",
     "rejectionFallback": "Store didn't respond within the 60-second window"
   },
@@ -45,7 +49,7 @@
     "pending": "✅ Accept Order",
     "confirmed": "⚙️ Start Processing",
     "preparing": "📦 Mark Ready",
-    "ready": "🚚 Out for Delivery",
+    "ready": "🚚 Assign Partner & Send Out",
     "outForDelivery": "✅ Mark Delivered"
   },
   "invoice": {
@@ -75,7 +79,12 @@
   "alerts": {
     "errorTitle": "Error",
     "advanceFail": "Failed to update order status. Please try again.",
+    "assignFail": "Failed to assign delivery partner.",
+    "assignSuccess": "Delivery partner assigned",
+    "partnerRequiredTitle": "Delivery partner required",
+    "partnerRequiredMsg": "Select a delivery partner before marking Out for Delivery.",
     "expiredTitle": "Order expired",
-    "expiredMsg": "This order was auto-rejected because it wasn't accepted within 60 seconds."
+    "expiredMsg": "This order was auto-rejected because it wasn't accepted within 60 seconds.",
+    "noPartners": "Add a delivery partner first from Profile → Delivery Partners."
   }
 }

@@ -2,7 +2,11 @@ import { Router, Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
 import * as https from 'https';
 import { computeCouponDiscount } from './coupons';
-import { ORDER_FEES, ORDER_ACCEPTANCE_WINDOW_SECONDS } from '../shared/constants';
+import {
+  ORDER_FEES,
+  ORDER_ACCEPTANCE_WINDOW_SECONDS,
+  isPaymentOutstanding,
+} from '../shared/constants';
 import { autoRejectIfExpired, isExpiredPending } from '../shared/orderExpiry';
 
 /**
@@ -34,7 +38,7 @@ const STATUS_MESSAGES: Record<string, { title: string; body: (name?: string) => 
   confirmed:  { title: '✅ Order Confirmed', body: (n) => `${n || 'Your order'} has been confirmed and is being prepared.` },
   preparing:  { title: '👨‍🍳 Being Prepared', body: (n) => `${n || 'Your order'} is now being prepared.` },
   ready:      { title: '🎉 Ready for Pickup', body: (n) => `${n || 'Your order'} is ready! Delivery is on the way.` },
-  out_for_delivery: { title: '🚚 Out for Delivery', body: (n) => `${n || 'Your order'} is on its way to you!` },
+  outForDelivery: { title: '🚚 Out for Delivery', body: (n) => `${n || 'Your order'} is on its way to you!` },
   delivered:  { title: '✅ Order Delivered', body: (n) => `${n || 'Your order'} has been delivered. Enjoy your order!` },
   cancelled:  { title: '❌ Order Cancelled', body: (n) => `${n || 'Your order'} has been cancelled.` },
 };
@@ -200,7 +204,15 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const { businessId, items, deliveryAddress, notes, paymentMethod, couponCode } = req.body;
+    const {
+      businessId,
+      items,
+      deliveryAddress,
+      notes,
+      paymentMethod,
+      paymentTiming: requestedTiming,
+      couponCode,
+    } = req.body;
 
     if (!businessId || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, error: 'businessId and items are required' });
@@ -305,7 +317,27 @@ router.post('/', requireAuth, async (req, res) => {
       deliveryAddress,
       status: 'pending',
       paymentMethod: paymentMethod || 'cash',
-      paymentStatus: (paymentMethod === 'cash' || !paymentMethod) ? 'cod' : 'pending',
+      // Cash is always collected at delivery. Online methods may be prepaid at
+      // checkout (atOrder) or collected on handoff (atDelivery) via UPI/card/cash.
+      paymentTiming: (() => {
+        const method = paymentMethod || 'cash';
+        if (method === 'cash') return 'atDelivery';
+        if (requestedTiming === 'atOrder' || requestedTiming === 'atDelivery') {
+          return requestedTiming;
+        }
+        return 'atOrder';
+      })(),
+      paymentStatus: (() => {
+        const method = paymentMethod || 'cash';
+        if (method === 'cash') return 'cod';
+        const timing =
+          requestedTiming === 'atDelivery' || requestedTiming === 'atOrder'
+            ? requestedTiming
+            : 'atOrder';
+        // Prepaid online (no live gateway yet) — treat as completed at order time.
+        if (timing === 'atOrder') return 'completed';
+        return 'pending';
+      })(),
       notes: notes ?? '',
       trackingUpdates: [
         { status: 'pending', timestamp: new Date().toISOString(), notes: 'Order placed' },
@@ -335,7 +367,13 @@ router.post('/', requireAuth, async (req, res) => {
 router.put('/:id/status', requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const { status, notes } = req.body;
+    const {
+      status,
+      notes,
+      paymentCollectedMethod,
+      deliveryProofImageUrl,
+      deliveryPartnerId,
+    } = req.body;
 
     if (!status) return res.status(400).json({ success: false, error: 'status is required' });
 
@@ -355,6 +393,66 @@ router.put('/:id/status', requireAuth, async (req, res) => {
 
     const trackingUpdate = { status, timestamp: new Date().toISOString(), notes: notes ?? '' };
     const orderRef = db.collection('orders').doc(req.params.id);
+    const deliveryPaymentFields: Record<string, unknown> = {};
+    const assignmentFields: Record<string, unknown> = {};
+
+    // Sending out for delivery requires a delivery partner assignment.
+    if (status === 'outForDelivery' && isOwner) {
+      let assignedId = orderData.assignedDeliveryPartnerId as string | undefined;
+      let assignedName = orderData.assignedDeliveryPartnerName as string | undefined;
+
+      if (deliveryPartnerId) {
+        const partnerDoc = await db.collection('users').doc(String(deliveryPartnerId)).get();
+        if (!partnerDoc.exists) {
+          return res.status(404).json({ success: false, error: 'Delivery partner not found' });
+        }
+        const partner = partnerDoc.data()!;
+        if (
+          partner.role !== 'deliveryPartner' ||
+          partner.businessId !== orderData.businessId ||
+          partner.status !== 'active'
+        ) {
+          return res.status(400).json({
+            success: false,
+            error: 'Choose an active delivery partner for this shop',
+          });
+        }
+        assignedId = partnerDoc.id;
+        assignedName = `${partner.firstName ?? ''} ${partner.lastName ?? ''}`.trim() || 'Delivery partner';
+        assignmentFields.assignedDeliveryPartnerId = assignedId;
+        assignmentFields.assignedDeliveryPartnerName = assignedName;
+        assignmentFields.assignedAt = admin.firestore.FieldValue.serverTimestamp();
+        trackingUpdate.notes =
+          notes || `Out for delivery · assigned to ${assignedName}`;
+      }
+
+      if (!assignedId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Select a delivery partner before marking Out for Delivery',
+          code: 'DELIVERY_PARTNER_REQUIRED',
+        });
+      }
+    }
+
+    if (status === 'delivered' && isOwner) {
+      deliveryPaymentFields.deliveredAt = admin.firestore.FieldValue.serverTimestamp();
+      deliveryPaymentFields.deliveredBy = uid;
+      if (typeof deliveryProofImageUrl === 'string' && deliveryProofImageUrl) {
+        deliveryPaymentFields.deliveryProofImageUrl = deliveryProofImageUrl;
+      }
+      if (isPaymentOutstanding(orderData.paymentStatus)) {
+        const method =
+          (['cash', 'upi', 'card', 'wallet'].includes(paymentCollectedMethod)
+            ? paymentCollectedMethod
+            : orderData.paymentMethod) || 'cash';
+        deliveryPaymentFields.paymentStatus = 'completed';
+        deliveryPaymentFields.paymentCollectedAt = admin.firestore.FieldValue.serverTimestamp();
+        deliveryPaymentFields.paymentCollectedBy = uid;
+        deliveryPaymentFields.paymentCollectedMethod = method;
+        deliveryPaymentFields.paymentMethod = method;
+      }
+    }
 
     // When an owner accepts a still-pending order, do it in a transaction so it
     // cannot race with the auto-reject sweeper. If the acceptance window has
@@ -403,6 +501,8 @@ router.put('/:id/status', requireAuth, async (req, res) => {
         status,
         trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        ...deliveryPaymentFields,
+        ...assignmentFields,
       });
     }
 

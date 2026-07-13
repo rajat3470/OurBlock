@@ -50,9 +50,18 @@ export const businessOwnerService = {
 
   async updateOrderStatus(
     orderId: string,
-    status: Order["status"]
+    status: Order["status"],
+    options?: { deliveryPartnerId?: string }
   ): Promise<Order> {
-    const res = await apiClient.put<{ success: boolean; data: Order }>(`/orders/${orderId}/status`, { status });
+    const res = await apiClient.put<{ success: boolean; data: Order }>(
+      `/orders/${orderId}/status`,
+      {
+        status,
+        ...(options?.deliveryPartnerId
+          ? { deliveryPartnerId: options.deliveryPartnerId }
+          : {}),
+      }
+    );
     return res.data;
   },
 
@@ -115,6 +124,65 @@ export const businessOwnerService = {
 
   async updateBusinessImage(data: { imageUrl?: string; bannerUrl?: string }): Promise<Business> {
     const res = await apiClient.patch<ApiEnvelope<Business>>("/owner/business/image", data);
+    return res.data;
+  },
+
+  async getDeliveryPartners(): Promise<
+    Array<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+      status: string;
+      businessId: string;
+      societyId: string;
+    }>
+  > {
+    const res = await apiClient.get<
+      ApiEnvelope<
+        Array<{
+          id: string;
+          firstName: string;
+          lastName: string;
+          email: string;
+          phone: string;
+          status: string;
+          businessId: string;
+          societyId: string;
+        }>
+      >
+    >("/owner/delivery-partners");
+    return res.data ?? [];
+  },
+
+  async createDeliveryPartner(data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    password: string;
+  }) {
+    const res = await apiClient.post<ApiEnvelope<any>>("/owner/delivery-partners", data);
+    return res.data;
+  },
+
+  async setDeliveryPartnerStatus(id: string, status: "active" | "inactive") {
+    const res = await apiClient.patch<ApiEnvelope<any>>(
+      `/owner/delivery-partners/${id}`,
+      { status }
+    );
+    return res.data;
+  },
+
+  async assignDeliveryPartner(
+    orderId: string,
+    partnerId: string | null
+  ): Promise<Order> {
+    const res = await apiClient.post<ApiEnvelope<Order>>(
+      `/owner/orders/${orderId}/assign-delivery-partner`,
+      { partnerId }
+    );
     return res.data;
   },
 };

@@ -10,6 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import { useBusinessOwnerProfile } from "@hooks/useBusinessOwnerProfile";
 import { ShopImagePicker } from "@/components/business-owner/ShopImagePicker";
 import content from "@/content/boProfile.json";
@@ -206,6 +207,22 @@ export default function BusinessOwnerProfile() {
               )}
             </View>
           ) : null}
+
+          {/* ── Delivery Partners ───────────────────────────────────────── */}
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.sectionRow}
+              onPress={() => router.push("/(business-owner)/delivery-partners")}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.sectionRowIcon}>{content.deliveryPartners.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionRowLabel}>{content.deliveryPartners.label}</Text>
+                <Text style={styles.sectionRowSub}>{content.deliveryPartners.subtitle}</Text>
+              </View>
+              <Text style={styles.sectionRowChevron}>›</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* ── Change Password ─────────────────────────────────────────── */}
           <View style={styles.section}>
@@ -427,6 +444,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#0F172A",
+  },
+  sectionRowSub: {
+    marginTop: 2,
+    fontSize: 12,
+    color: "#64748B",
   },
   sectionRowChevron: { fontSize: 12, color: "#94A3B8" },
 

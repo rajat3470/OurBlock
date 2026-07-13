@@ -9,6 +9,8 @@ import {
 } from "@utils/orderAcceptance";
 import { Order, OrderStatus } from "@/types";
 import content from "@/content/boOrders.json";
+import { businessOwnerService } from "@services/businessOwnerService";
+import { promptDeliveryPartnerSelection } from "@utils/promptDeliveryPartnerSelection";
 
 export type FilterKey = "all" | "pending" | "active" | "done";
 
@@ -83,7 +85,8 @@ export function timeAgo(date: unknown): string {
 }
 
 export const useBusinessOwnerOrders = () => {
-  const { orders, isLoading, changeOrderStatus, rejectOrder } = useBusinessOwner();
+  const { orders, isLoading, changeOrderStatus, rejectOrder, assignDeliveryPartner } =
+    useBusinessOwner();
   const { rejectOrderId } = useLocalSearchParams<{ rejectOrderId?: string }>();
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [advancing, setAdvancing] = useState<string | null>(null);
@@ -152,16 +155,68 @@ export const useBusinessOwnerOrders = () => {
     async (order: Order) => {
       const next = NEXT_STATUS[order.status];
       if (!next) return;
+
+      let deliveryPartnerId: string | undefined;
+      if (next === OrderStatus.OUT_FOR_DELIVERY) {
+        try {
+          const partners = (await businessOwnerService.getDeliveryPartners()).filter(
+            (p) => p.status === "active"
+          );
+          const picked = await promptDeliveryPartnerSelection(partners, {
+            preselectedId: order.assignedDeliveryPartnerId,
+            title: content.alerts.partnerRequiredTitle,
+            message: content.alerts.partnerRequiredMsg,
+          });
+          if (!picked) return;
+          deliveryPartnerId = picked;
+        } catch {
+          Alert.alert(content.alerts.errorTitle, content.alerts.advanceFail);
+          return;
+        }
+      }
+
       setAdvancing(order.id);
       try {
-        await changeOrderStatus(order.id, next);
+        await changeOrderStatus(
+          order.id,
+          next,
+          deliveryPartnerId ? { deliveryPartnerId } : undefined
+        );
+      } catch (err: any) {
+        if (err?.response?.data?.code === "DELIVERY_PARTNER_REQUIRED") {
+          Alert.alert(content.alerts.partnerRequiredTitle, content.alerts.partnerRequiredMsg);
+        } else {
+          Alert.alert(content.alerts.errorTitle, content.alerts.advanceFail);
+        }
+      } finally {
+        setAdvancing(null);
+      }
+    },
+    [changeOrderStatus]
+  );
+
+  /** Repair orders that were sent out without an assignment (older API). */
+  const handleAssignMissingPartner = useCallback(
+    async (order: Order) => {
+      if (order.assignedDeliveryPartnerId) return;
+      try {
+        const partners = (await businessOwnerService.getDeliveryPartners()).filter(
+          (p) => p.status === "active"
+        );
+        const picked = await promptDeliveryPartnerSelection(partners, {
+          title: content.alerts.partnerRequiredTitle,
+          message: content.alerts.partnerRequiredMsg,
+        });
+        if (!picked) return;
+        setAdvancing(order.id);
+        await assignDeliveryPartner(order.id, picked);
       } catch {
         Alert.alert(content.alerts.errorTitle, content.alerts.advanceFail);
       } finally {
         setAdvancing(null);
       }
     },
-    [changeOrderStatus]
+    [assignDeliveryPartner]
   );
 
   const markExpired = useCallback((orderId: string) => {
@@ -252,6 +307,7 @@ export const useBusinessOwnerOrders = () => {
     filteredOrders,
     filters,
     handleAdvance,
+    handleAssignMissingPartner,
     handleAccept,
     handleReject,
     handleCountdownExpire,

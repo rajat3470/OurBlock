@@ -119,6 +119,13 @@ export default function BusinessOwnerLayout() {
             tabBarStyle: { display: "none" },
           }}
         />
+        <Tabs.Screen
+          name="delivery-partners"
+          options={{
+            href: null,
+            tabBarStyle: { display: "none" },
+          }}
+        />
       </Tabs>
     </RoleGate>
   );

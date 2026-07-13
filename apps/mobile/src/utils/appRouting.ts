@@ -6,6 +6,8 @@ export const getHomeRouteByRole = (role?: UserRole) => {
   switch (role) {
     case "businessOwner":
       return "/(business-owner)/dashboard";
+    case "deliveryPartner":
+      return "/(delivery-partner)/dashboard";
     case "user":
       return "/(user)/home";
     default:
@@ -22,6 +24,12 @@ export const getDefaultRoute = (
     return isAuthenticated
       ? "/(business-owner)/dashboard"
       : "/(auth)/business-owner-login";
+  }
+
+  if (appTarget === "deliveryPartner") {
+    return isAuthenticated
+      ? "/(delivery-partner)/dashboard"
+      : "/(auth)/delivery-partner-login";
   }
 
   if (appTarget === "user") {

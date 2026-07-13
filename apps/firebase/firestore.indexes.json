@@ -138,6 +138,22 @@
         { "fieldPath": "societyId", "mode": "ASCENDING" },
         { "fieldPath": "role", "mode": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "businessId", "mode": "ASCENDING" },
+        { "fieldPath": "stock", "mode": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "role", "mode": "ASCENDING" },
+        { "fieldPath": "businessId", "mode": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

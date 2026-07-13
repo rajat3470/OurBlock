@@ -1,5 +1,10 @@
 // Role Types
-export type UserRole = "superAdmin" | "businessOwner" | "user";
+export type UserRole = "superAdmin" | "businessOwner" | "user" | "deliveryPartner";
+
+export type PaymentMethod = "cash" | "card" | "upi" | "wallet";
+export type PaymentStatus = "pending" | "completed" | "failed" | "cod";
+/** When the customer intends to pay — at checkout or when the order is handed over. */
+export type PaymentTiming = "atOrder" | "atDelivery";
 
 // Common Timestamps
 export interface Timestamps {
@@ -62,6 +67,13 @@ export interface AppUser extends User {
   societyId: string;
   favoriteBusinesses?: string[];
   addresses?: Address[];
+}
+
+export interface DeliveryPartner extends User {
+  role: "deliveryPartner";
+  societyId: string;
+  businessId: string;
+  ownerId: string;
 }
 
 // Business Types
@@ -183,11 +195,23 @@ export interface Order {
   finalAmount: number;
   deliveryAddress: Address;
   status: OrderStatus;
-  paymentMethod: "cash" | "card" | "upi" | "wallet";
-  paymentStatus: "pending" | "completed" | "failed" | "cod";
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  /** Prefer atOrder (prepaid) vs atDelivery (collect on handoff). Cash is always atDelivery. */
+  paymentTiming?: PaymentTiming;
   notes?: string;
   estimatedDeliveryTime?: Date;
   deliveredAt?: Date;
+  deliveredBy?: string;
+  deliveryProofImageUrl?: string;
+  paymentCollectedAt?: Date;
+  paymentCollectedBy?: string;
+  /** Method actually collected at delivery (may differ from checkout intent for pay-later). */
+  paymentCollectedMethod?: PaymentMethod;
+  /** Delivery partner assigned by the business owner (multi-rider shops). */
+  assignedDeliveryPartnerId?: string | null;
+  assignedDeliveryPartnerName?: string | null;
+  assignedAt?: Date;
   rejectionReason?: string;          // If order was rejected by business owner / system
   rejectedAt?: Date;                  // Timestamp of rejection
   rejectedBy?: "business_owner" | "system";
@@ -321,8 +345,24 @@ export interface CreateOrderPayload {
   items: Array<{ productId: string; quantity: number; price: number }>;
   deliveryAddress: Omit<Address, "id" | "userId" | "createdAt" | "updatedAt">;
   notes?: string;
-  paymentMethod: "cash" | "upi";
+  paymentMethod: "cash" | "upi" | "card";
+  /** Defaults to atDelivery for cash; atOrder for online methods unless overridden. */
+  paymentTiming?: PaymentTiming;
   couponCode?: string;
+}
+
+export interface CreateDeliveryPartnerPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  password: string;
+}
+
+export interface CompleteDeliveryPayload {
+  deliveryProofImageUrl: string;
+  /** Required when payment is still outstanding (pending/cod). */
+  paymentCollectedMethod?: PaymentMethod;
 }
 
 // Authentication Types

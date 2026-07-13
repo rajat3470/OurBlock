@@ -82,9 +82,11 @@ export const gradients = {
   superAdmin: ["#2563EB", "#4F46E5"],
   businessOwner: ["#0F9F68", "#0A7D55"],
   user: ["#0E9F6E", "#0891B2"],
+  deliveryPartner: ["#0891B2", "#0E7490"],
   ctaBlue: ["#2563EB", "#0A5CFF"],
   ctaGreen: ["#16A34A", "#0E8A3D"],
   ctaAmber: ["#F59E0B", "#D97706"],
+  ctaTeal: ["#0891B2", "#0E7490"],
 } as const;
 
 export const fonts = {
@@ -97,11 +99,12 @@ export const fonts = {
 
 type GradientTuple = readonly [string, string, ...string[]];
 
-export type AppRoleTheme = "superAdmin" | "businessOwner" | "user";
+export type AppRoleTheme = "superAdmin" | "businessOwner" | "user" | "deliveryPartner";
 
 export function getRoleGradient(role: AppRoleTheme): GradientTuple {
   if (role === "superAdmin") return gradients.superAdmin;
   if (role === "businessOwner") return gradients.businessOwner;
+  if (role === "deliveryPartner") return gradients.deliveryPartner;
   return gradients.user;
 }
 
@@ -160,5 +163,10 @@ export const roleTheme = {
     accent: colors.emerald[600],
     soft: colors.emerald[100],
     gradient: gradients.user,
+  },
+  deliveryPartner: {
+    accent: colors.teal[600],
+    soft: colors.teal[100],
+    gradient: gradients.deliveryPartner,
   },
 } as const;

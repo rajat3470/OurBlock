@@ -28,6 +28,10 @@ export const authService = {
     return apiClient.post<AuthResponse>("/auth/user/login", credentials);
   },
 
+  async loginDeliveryPartner(credentials: AuthCredentials): Promise<AuthResponse> {
+    return apiClient.post<AuthResponse>("/auth/deliverypartner/login", credentials);
+  },
+
   async registerSuperAdmin(data: Partial<SuperAdmin>): Promise<AuthResponse> {
     return apiClient.post<AuthResponse>("/auth/superadmin/register", data);
   },

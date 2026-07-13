@@ -6,12 +6,13 @@ const ROLE_GRADIENTS: Record<string, readonly [string, string]> = {
   businessOwner: ["#16A34A", "#0E8A3D"],
   superAdmin: ["#2563EB", "#1D4ED8"],
   user: ["#DC2626", "#991B1B"],
+  deliveryPartner: ["#0891B2", "#0E7490"],
 };
 
 interface AppTabIconProps {
   iconName: React.ComponentProps<typeof Ionicons>["name"];
   focused: boolean;
-  role: "superAdmin" | "businessOwner" | "user";
+  role: "superAdmin" | "businessOwner" | "user" | "deliveryPartner";
 }
 
 export default function AppTabIcon({ iconName, focused, role }: AppTabIconProps) {
