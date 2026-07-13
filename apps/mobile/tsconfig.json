@@ -45,6 +45,9 @@
       ],
       "@navigation/*": [
         "./src/navigation/*"
+      ],
+      "@mohallamitr/shared": [
+        "../../packages/shared/src"
       ]
     }
   },
