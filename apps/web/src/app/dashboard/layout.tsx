@@ -6,16 +6,22 @@ import { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
-const navigation = [
+const primaryNav = [
   { name: 'Dashboard', href: '/dashboard', icon: '📊' },
-  { name: 'Societies', href: '/dashboard/societies', icon: '🏘️' },
-  { name: 'Businesses', href: '/dashboard/businesses', icon: '🏪' },
+  { name: 'Businesses', href: '/dashboard/businesses', icon: '�' },
   { name: 'Users', href: '/dashboard/users', icon: '👥' },
-  { name: 'Orders', href: '/dashboard/orders', icon: '📦' },
+  { name: 'Orders', href: '/dashboard/orders', icon: '�' },
+  { name: 'Blacklist', href: '/dashboard/blacklist', icon: '�' },
+];
+
+const moreNav = [
+  { name: 'Societies', href: '/dashboard/societies', icon: '🏘️' },
   { name: 'Banners', href: '/dashboard/banners', icon: '🖼️' },
   { name: 'Analytics', href: '/dashboard/analytics', icon: '📈' },
   { name: 'Settings', href: '/dashboard/settings', icon: '⚙️' },
 ];
+
+const navigation = [...primaryNav, ...moreNav];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -23,6 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [authChecked, setAuthChecked] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -73,7 +80,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Desktop nav */}
             <nav className="hidden sm:flex items-center gap-1">
-              {navigation.map((item) => {
+              {primaryNav.map((item) => {
                 const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
                 return (
                   <Link
@@ -90,6 +97,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </Link>
                 );
               })}
+              {/* More dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setMoreOpen(!moreOpen)}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                    moreNav.some((i) => pathname === i.href || pathname?.startsWith(i.href + '/'))
+                      ? 'bg-indigo-50 text-indigo-700'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
+                >
+                  More
+                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {moreOpen && (
+                  <div className="absolute left-0 top-full mt-1 w-44 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+                    {moreNav.map((item) => {
+                      const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+                      return (
+                        <Link key={item.name} href={item.href} onClick={() => setMoreOpen(false)}
+                          className={`flex items-center gap-2 px-4 py-2 text-sm transition ${
+                            isActive ? 'text-indigo-700 bg-indigo-50 font-semibold' : 'text-gray-700 hover:bg-gray-50'
+                          }`}>
+                          <span>{item.icon}</span>{item.name}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </nav>
 
             {/* User menu */}
@@ -143,6 +181,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Click-outside to close menu */}
       {menuOpen && <div className="fixed inset-0 z-20" onClick={() => setMenuOpen(false)} />}
+      {moreOpen && <div className="fixed inset-0 z-20" onClick={() => setMoreOpen(false)} />}
 
       {/* Page content */}
       <main className="flex-1">{children}</main>

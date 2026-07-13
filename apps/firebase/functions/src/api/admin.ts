@@ -440,6 +440,222 @@ router.post("/users/:id/activate", async (req, res) => {
   }
 });
 
+// ─── Blacklist management ─────────────────────────────────────────────────────
+
+// GET /admin/blacklist — all suspended businesses with owner info + suspension history
+router.get("/blacklist", async (req, res) => {
+  try {
+    const snapshot = await db
+      .collection("businesses")
+      .where("status", "==", "suspended")
+      .get();
+
+    if (snapshot.empty) return res.json({success: true, data: []});
+
+    // Fetch all unique ownerIds in one batch
+    const ownerIds = [...new Set(
+      snapshot.docs.map((d) => d.data().ownerId).filter(Boolean)
+    )] as string[];
+
+    const ownerMap: Record<string, any> = {};
+    if (ownerIds.length > 0) {
+      const chunks: string[][] = [];
+      for (let i = 0; i < ownerIds.length; i += 10) chunks.push(ownerIds.slice(i, i + 10));
+      await Promise.all(
+        chunks.map(async (chunk) => {
+          const snaps = await db.collection("users")
+            .where(admin.firestore.FieldPath.documentId(), "in", chunk)
+            .get();
+          snaps.forEach((d) => { ownerMap[d.id] = {id: d.id, ...d.data()}; });
+        })
+      );
+    }
+
+    const data = snapshot.docs
+      .map((doc) => {
+        const biz = {id: doc.id, ...doc.data()} as any;
+        return {
+          ...biz,
+          owner: biz.ownerId ? ownerMap[biz.ownerId] ?? null : null,
+        };
+      })
+      .sort((a, b) => {
+        const aTime = a.suspendedAt ? new Date(a.suspendedAt).getTime() : 0;
+        const bTime = b.suspendedAt ? new Date(b.suspendedAt).getTime() : 0;
+        return bTime - aTime;
+      });
+
+    return res.json({success: true, data});
+  } catch (error: any) {
+    return res.status(500).json({success: false, error: error.message});
+  }
+});
+
+// GET /admin/suspension-history — audit log + synthesized records for pre-existing suspensions
+router.get("/suspension-history", async (req, res) => {
+  try {
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 100));
+
+    // 1. Fetch proper audit log
+    const histSnap = await db
+      .collection("suspensionHistory")
+      .orderBy("timestamp", "desc")
+      .limit(limit)
+      .get();
+    const auditEntries: any[] = histSnap.docs.map((d) => ({id: d.id, ...d.data()}));
+
+    // 2. Fetch currently-suspended businesses so we can synthesize missing records
+    const bizSnap = await db.collection("businesses").where("status", "==", "suspended").get();
+
+    // Build set of businessIds already covered by audit log
+    const auditedIds = new Set(
+      auditEntries
+        .filter((e) => e.action === "suspended")
+        .map((e) => e.entityId)
+    );
+
+    // Synthesize entries for businesses suspended before audit logging existed
+    const synthesized: any[] = [];
+    bizSnap.forEach((doc) => {
+      const biz = doc.data() as any;
+      if (!auditedIds.has(doc.id) && biz.suspendedAt) {
+        synthesized.push({
+          id: `synth_${doc.id}`,
+          action: "suspended",
+          entityType: "business",
+          entityId: doc.id,
+          entityName: biz.name ?? doc.id,
+          ownerId: biz.ownerId ?? null,
+          reason: biz.suspensionReason ?? "Suspended (legacy — reason not recorded)",
+          performedBy: "system",
+          // Convert ISO string to Firestore-like timestamp shape for frontend compatibility
+          timestamp: {_seconds: Math.floor(new Date(biz.suspendedAt).getTime() / 1000)},
+          _synthesized: true,
+        });
+      }
+    });
+
+    // Merge: audit entries + synthesized, sorted by timestamp desc
+    const merged = [...auditEntries, ...synthesized].sort((a, b) => {
+      const aS = a.timestamp?._seconds ?? a.timestamp?.seconds ?? 0;
+      const bS = b.timestamp?._seconds ?? b.timestamp?.seconds ?? 0;
+      return bS - aS;
+    });
+
+    return res.json({success: true, data: merged});
+  } catch (error: any) {
+    return res.status(500).json({success: false, error: error.message});
+  }
+});
+
+// POST /admin/businesses/:id/blacklist-suspend — admin manually suspends a business owner
+router.post("/businesses/:id/blacklist-suspend", async (req, res) => {
+  try {
+    const bizRef = db.collection("businesses").doc(req.params.id);
+    const bizSnap = await bizRef.get();
+    if (!bizSnap.exists) return res.status(404).json({success: false, error: "Business not found"});
+
+    const bizData = bizSnap.data() as any;
+    const reason = typeof req.body.reason === "string" && req.body.reason.trim()
+      ? req.body.reason.trim()
+      : "Suspended by admin";
+    const nowIso = new Date().toISOString();
+    const adminUid = (req as any).uid ?? "admin";
+
+    const batch = db.batch();
+
+    batch.update(bizRef, {
+      status: "suspended",
+      suspendedAt: nowIso,
+      suspensionReason: reason,
+      isTakingOrders: false,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    if (bizData.ownerId) {
+      const ownerRef = db.collection("users").doc(bizData.ownerId);
+      batch.update(ownerRef, {
+        status: "suspended",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      await auth.updateUser(bizData.ownerId, {disabled: true});
+    }
+
+    // Log to audit history
+    const histRef = db.collection("suspensionHistory").doc();
+    batch.set(histRef, {
+      action: "suspended",
+      entityType: "business",
+      entityId: req.params.id,
+      entityName: bizData.name ?? req.params.id,
+      ownerId: bizData.ownerId ?? null,
+      reason,
+      performedBy: adminUid,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+    const updated = await bizRef.get();
+    return res.json({success: true, data: {id: updated.id, ...updated.data()}});
+  } catch (error: any) {
+    return res.status(500).json({success: false, error: error.message});
+  }
+});
+
+// POST /admin/businesses/:id/blacklist-activate — admin unblocks a suspended business owner
+router.post("/businesses/:id/blacklist-activate", async (req, res) => {
+  try {
+    const bizRef = db.collection("businesses").doc(req.params.id);
+    const bizSnap = await bizRef.get();
+    if (!bizSnap.exists) return res.status(404).json({success: false, error: "Business not found"});
+
+    const bizData = bizSnap.data() as any;
+    const adminUid = (req as any).uid ?? "admin";
+
+    const batch = db.batch();
+
+    batch.update(bizRef, {
+      status: "active",
+      suspendedAt: null,
+      suspensionReason: null,
+      isTakingOrders: true,
+      recentRejections: {},
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    if (bizData.ownerId) {
+      const ownerRef = db.collection("users").doc(bizData.ownerId);
+      batch.update(ownerRef, {
+        status: "active",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      await auth.updateUser(bizData.ownerId, {disabled: false});
+    }
+
+    // Log to audit history
+    const histRef = db.collection("suspensionHistory").doc();
+    batch.set(histRef, {
+      action: "activated",
+      entityType: "business",
+      entityId: req.params.id,
+      entityName: bizData.name ?? req.params.id,
+      ownerId: bizData.ownerId ?? null,
+      reason: "Unblocked by admin",
+      performedBy: adminUid,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+    const updated = await bizRef.get();
+    return res.json({success: true, data: {id: updated.id, ...updated.data()}});
+  } catch (error: any) {
+    return res.status(500).json({success: false, error: error.message});
+  }
+});
+
+// POST /admin/users/:id/suspend — also logs to history (enhance existing)
+// POST /admin/users/:id/activate — also logs to history (enhance existing)
+
 // ─── Home Banners CMS (Super Admin only) ───────────────────────────────────
 
 function parseDateInput(value: any): admin.firestore.Timestamp | null {
