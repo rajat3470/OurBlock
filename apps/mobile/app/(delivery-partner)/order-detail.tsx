@@ -16,11 +16,9 @@ import {
   deliveryPartnerService,
   invalidateDeliveryQueueCache,
 } from "@services/deliveryPartnerService";
-import { imageUploadService } from "@services/imageUploadService";
 import { pickImageFromCamera } from "@/utils/imagePicker";
 import { Order, PaymentMethod } from "@/types";
 import { isPaymentOutstanding } from "@mohallamitr/shared";
-import { useAppSelector } from "@hooks/useRedux";
 import { colors } from "@/constants/theme";
 
 const COLLECT_METHODS: { key: PaymentMethod; label: string; icon: string }[] = [
@@ -33,7 +31,6 @@ export default function DeliveryPartnerOrderDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const user = useAppSelector((s) => s.auth.user);
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,8 +86,8 @@ export default function DeliveryPartnerOrderDetail() {
   };
 
   const handleComplete = async () => {
-    if (!order || !user) return;
-    if (!proofUri) {
+    if (!order) return;
+    if (!proofDataUrl) {
       toast.show("Take a delivery photo before completing", { type: "warning" });
       return;
     }
@@ -108,19 +105,10 @@ export default function DeliveryPartnerOrderDetail() {
           onPress: async () => {
             try {
               setSubmitting(true);
-              let deliveryProofImageUrl = proofDataUrl || proofUri;
-              try {
-                deliveryProofImageUrl = await imageUploadService.uploadDeliveryProof(
-                  proofUri,
-                  order.id,
-                  user.id
-                );
-              } catch {
-                // Fall back to data URL if storage upload fails in local/dev.
-              }
-
+              // Server persists the data URL to Storage (Admin SDK) — the app
+              // is not signed into Firebase Auth, so client uploads are denied.
               const updated = await deliveryPartnerService.completeDelivery(order.id, {
-                deliveryProofImageUrl,
+                deliveryProofImageUrl: proofDataUrl,
                 ...(outstanding ? { paymentCollectedMethod: collectMethod } : {}),
               });
               invalidateDeliveryQueueCache();

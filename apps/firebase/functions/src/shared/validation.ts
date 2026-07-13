@@ -89,8 +89,15 @@ export const createDeliveryPartnerSchema = z.object({
 });
 
 export const completeDeliverySchema = z.object({
-  deliveryProofImageUrl: z.string().url(),
-  paymentCollectedMethod: z.enum(["cash", "card", "upi", "wallet"]).optional(),
+  // https download URL, or a data:image/...;base64,... payload (server uploads to Storage)
+  deliveryProofImageUrl: z
+    .string()
+    .min(1)
+    .refine(
+      (v) => /^https:\/\//i.test(v) || /^data:image\/[a-zA-Z0-9.+-]+;base64,/i.test(v),
+      'Must be an https URL or image data URL'
+    ),
+  paymentCollectedMethod: z.enum(['cash', 'card', 'upi', 'wallet']).optional(),
 });
 
 // Review Validation

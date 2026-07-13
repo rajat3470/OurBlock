@@ -7,6 +7,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-cont
 import { useFonts, Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, Poppins_800ExtraBold } from "@expo-google-fonts/poppins";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
+import * as SplashScreen from "expo-splash-screen";
 import { store } from "../src/store/index";
 import { useAppDispatch, useAppSelector } from "../src/hooks/useRedux";
 import { logout, setAuth, setHydrated, setTokens } from "../src/store/slices/authSlice";
@@ -26,8 +27,12 @@ import {
   NEW_ORDER_SOUND_ANDROID,
   ORDER_REVIEW_CATEGORY,
 } from "../src/services/orderNotificationService";
-import { colors } from "../src/constants/theme";
+import { brand } from "../src/constants/theme";
 import { socketService } from "../src/services/socketService";
+
+SplashScreen.preventAutoHideAsync().catch(() => {
+  /* splash may already be hidden in fast refresh */
+});
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -287,7 +292,7 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
   if (!isHydrated) {
     return (
       <View style={styles.loaderWrap}>
-        <ActivityIndicator size="large" color={process.env.EXPO_PUBLIC_APP_TARGET === "user" ? colors.red[600] : colors.blue[500]} />
+        <ActivityIndicator size="large" color="#FFFFFF" />
       </View>
     );
   }
@@ -304,6 +309,9 @@ export default function RootLayout() {
     Poppins_800ExtraBold,
   });
 
+  const needsFonts = process.env.EXPO_PUBLIC_APP_TARGET === "user";
+  const appReady = !needsFonts || fontsLoaded;
+
   // Initialize OneSignal once at the root level, before any content renders.
   useEffect(() => {
     OneSignalService.initialize();
@@ -311,25 +319,28 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    const appTarget = process.env.EXPO_PUBLIC_APP_TARGET;
-    if (appTarget !== "user" || !fontsLoaded) return;
+    if (!appReady) return;
 
     const TextAny = Text as any;
     const TextInputAny = TextInput as any;
-    TextAny.defaultProps = {
-      ...(TextAny.defaultProps ?? {}),
-      style: [{ fontFamily: "Poppins_400Regular" }, TextAny.defaultProps?.style],
-    };
-    TextInputAny.defaultProps = {
-      ...(TextInputAny.defaultProps ?? {}),
-      style: [{ fontFamily: "Poppins_400Regular" }, TextInputAny.defaultProps?.style],
-    };
-  }, [fontsLoaded]);
+    if (needsFonts) {
+      TextAny.defaultProps = {
+        ...(TextAny.defaultProps ?? {}),
+        style: [{ fontFamily: "Poppins_400Regular" }, TextAny.defaultProps?.style],
+      };
+      TextInputAny.defaultProps = {
+        ...(TextInputAny.defaultProps ?? {}),
+        style: [{ fontFamily: "Poppins_400Regular" }, TextInputAny.defaultProps?.style],
+      };
+    }
 
-  if (!fontsLoaded && process.env.EXPO_PUBLIC_APP_TARGET === "user") {
+    SplashScreen.hideAsync().catch(() => null);
+  }, [appReady, needsFonts]);
+
+  if (!appReady) {
     return (
       <View style={styles.loaderWrap}>
-        <ActivityIndicator size="large" color={colors.red[600]} />
+        <ActivityIndicator size="large" color="#FFFFFF" />
       </View>
     );
   }
@@ -352,6 +363,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: colors.background,
+    backgroundColor: brand.primary,
   },
 });

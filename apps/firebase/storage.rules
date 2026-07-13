@@ -50,5 +50,13 @@ service firebase.storage {
                       isImageFile() &&
                       isValidSize();
     }
+
+    // Delivery proof photos — written by Cloud Functions (Admin SDK bypasses
+    // these rules). Public read so owners/customers can view handoff photos.
+    // Client apps do not use Firebase Auth, so direct client writes stay denied.
+    match /deliveryProofs/{partnerId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
   }
 }

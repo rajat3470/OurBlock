@@ -1,6 +1,7 @@
-import {Router, Request, Response, NextFunction} from "express";
-import * as admin from "firebase-admin";
-import {isPaymentOutstanding} from "../shared/constants";
+import { Router, Request, Response, NextFunction } from 'express';
+import * as admin from 'firebase-admin';
+import { randomUUID } from 'crypto';
+import { isPaymentOutstanding } from '../shared/constants';
 
 const router = Router();
 const db = admin.firestore();
@@ -19,6 +20,60 @@ const QUEUE_STATUS_LIST = ["confirmed", "preparing", "ready", "outForDelivery"] 
 const ACTIONABLE_STATUSES = new Set(["ready", "outForDelivery"]);
 /** Hard cap — keeps reads cheap even if a shop is busy. */
 const DELIVERY_QUEUE_LIMIT = 40;
+const MAX_PROOF_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Persist a delivery-proof data URL (or pass through an https URL) via Admin SDK.
+ * Client apps are not signed into Firebase Auth, so direct Storage uploads fail.
+ */
+async function resolveDeliveryProofUrl(
+  partnerId: string,
+  orderId: string,
+  proof: string
+): Promise<string> {
+  const trimmed = proof.trim();
+  if (/^https:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  let contentType = 'image/jpeg';
+  let base64Payload = trimmed;
+  const dataUrlMatch = trimmed.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,([\s\S]+)$/);
+  if (dataUrlMatch) {
+    contentType = dataUrlMatch[1];
+    base64Payload = dataUrlMatch[2];
+  } else if (!/^[A-Za-z0-9+/=\s]+$/.test(trimmed.slice(0, 80))) {
+    throw new Error('deliveryProofImageUrl must be an https URL or image data URL');
+  }
+
+  const buffer = Buffer.from(base64Payload.replace(/\s/g, ''), 'base64');
+  if (!buffer.length) {
+    throw new Error('Delivery proof image is empty');
+  }
+  if (buffer.length > MAX_PROOF_BYTES) {
+    throw new Error('Delivery proof image must be under 5MB');
+  }
+
+  const token = randomUUID();
+  const ext = contentType.includes('png') ? 'png' : 'jpg';
+  const objectPath = `deliveryProofs/${partnerId}/proof_${orderId}_${Date.now()}.${ext}`;
+  const bucket = admin.storage().bucket();
+  await bucket.file(objectPath).save(buffer, {
+    resumable: false,
+    metadata: {
+      contentType,
+      metadata: {
+        firebaseStorageDownloadTokens: token,
+      },
+    },
+  });
+
+  return (
+    `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/` +
+    `${encodeURIComponent(objectPath)}?alt=media&token=${token}`
+  );
+}
+
 
 const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split("Bearer ")[1];
@@ -257,7 +312,21 @@ router.post("/orders/:id/complete", requireAuth, async (req, res) => {
       });
     }
 
-    const orderRef = db.collection("orders").doc(req.params.id);
+    let storedProofUrl: string;
+    try {
+      storedProofUrl = await resolveDeliveryProofUrl(
+        partner.id,
+        req.params.id,
+        deliveryProofImageUrl
+      );
+    } catch (proofErr: any) {
+      return res.status(400).json({
+        success: false,
+        error: proofErr?.message || 'Invalid delivery proof image',
+      });
+    }
+
+    const orderRef = db.collection('orders').doc(req.params.id);
     const orderDoc = await orderRef.get();
     if (!orderDoc.exists) return res.status(404).json({success: false, error: "Order not found"});
 
@@ -301,7 +370,7 @@ router.post("/orders/:id/complete", requireAuth, async (req, res) => {
       status: "delivered",
       deliveredAt: admin.firestore.FieldValue.serverTimestamp(),
       deliveredBy: uid,
-      deliveryProofImageUrl,
+      deliveryProofImageUrl: storedProofUrl,
       trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };

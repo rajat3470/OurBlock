@@ -9,24 +9,13 @@ export interface UploadProgress {
 
 export const imageUploadService = {
   /**
-   * Upload a delivery proof photo for a completed drop-off
+   * Delivery proofs are uploaded by `POST /delivery/orders/:id/complete`
+   * via Admin SDK (mobile is not signed into Firebase Auth).
    */
-  async uploadDeliveryProof(uri: string, orderId: string, partnerId: string): Promise<string> {
-    try {
-      const storage = getStorageInstance();
-      const response = await fetch(uri);
-      const blob = await response.blob();
-
-      const timestamp = Date.now();
-      const filename = `proof_${orderId}_${timestamp}.jpg`;
-      const storageRef = ref(storage, `deliveryProofs/${partnerId}/${filename}`);
-
-      await uploadBytes(storageRef, blob);
-      return await getDownloadURL(storageRef);
-    } catch (error) {
-      console.error("Error uploading delivery proof:", error);
-      throw new Error("Failed to upload delivery proof");
-    }
+  async uploadDeliveryProof(_uri: string, _orderId: string, _partnerId: string): Promise<string> {
+    throw new Error(
+      "Use deliveryPartnerService.completeDelivery with a camera data URL; client Storage uploads are not supported."
+    );
   },
 
   /**
