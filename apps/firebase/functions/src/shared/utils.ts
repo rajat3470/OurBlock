@@ -1,10 +1,10 @@
-import { OrderStatus } from './types';
-import { ORDER_STATUS_FLOW } from './constants';
+import {OrderStatus} from "./types";
+import {ORDER_STATUS_FLOW} from "./constants";
 
 /**
  * Format price to currency string
  */
-export const formatPrice = (amount: number, currency = '₹'): string => {
+export const formatPrice = (amount: number, currency = "₹"): string => {
   return `${currency}${amount.toFixed(2)}`;
 };
 
@@ -20,7 +20,7 @@ export const calculateDiscount = (originalPrice: number, currentPrice: number): 
  * Format phone number
  */
 export const formatPhoneNumber = (phone: string): string => {
-  const cleaned = phone.replace(/\D/g, '');
+  const cleaned = phone.replace(/\D/g, "");
   if (cleaned.length === 10) {
     return `+91 ${cleaned.slice(0, 5)} ${cleaned.slice(5)}`;
   }
@@ -32,7 +32,7 @@ export const formatPhoneNumber = (phone: string): string => {
  */
 export const isValidPhoneNumber = (phone: string): boolean => {
   const phoneRegex = /^[6-9]\d{9}$/;
-  return phoneRegex.test(phone.replace(/\D/g, ''));
+  return phoneRegex.test(phone.replace(/\D/g, ""));
 };
 
 /**
@@ -61,23 +61,23 @@ export const generateId = (): string => {
 /**
  * Format date to readable string
  */
-export const formatDate = (date: Date | string, format: 'short' | 'long' = 'short'): string => {
-  const d = typeof date === 'string' ? new Date(date) : date;
-  
-  if (format === 'short') {
-    return d.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
+export const formatDate = (date: Date | string, format: "short" | "long" = "short"): string => {
+  const d = typeof date === "string" ? new Date(date) : date;
+
+  if (format === "short") {
+    return d.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
     });
   }
-  
-  return d.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+
+  return d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 };
 
@@ -85,7 +85,7 @@ export const formatDate = (date: Date | string, format: 'short' | 'long' = 'shor
  * Format time ago
  */
 export const timeAgo = (date: Date | string): string => {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = typeof date === "string" ? new Date(date) : date;
   const seconds = Math.floor((new Date().getTime() - d.getTime()) / 1000);
 
   const intervals = {
@@ -100,11 +100,11 @@ export const timeAgo = (date: Date | string): string => {
   for (const [unit, secondsInUnit] of Object.entries(intervals)) {
     const interval = Math.floor(seconds / secondsInUnit);
     if (interval >= 1) {
-      return `${interval} ${unit}${interval > 1 ? 's' : ''} ago`;
+      return `${interval} ${unit}${interval > 1 ? "s" : ""} ago`;
     }
   }
 
-  return 'Just now';
+  return "Just now";
 };
 
 /**
@@ -145,9 +145,9 @@ export const slugify = (text: string): string => {
   return text
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 };
 
 /**
@@ -209,15 +209,15 @@ export const groupBy = <T>(array: T[], key: keyof T): Record<string, T[]> => {
  */
 export const isBusinessOpen = (operatingHours?: any): boolean => {
   if (!operatingHours) return true;
-  
+
   const now = new Date();
-  const day = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() as keyof typeof operatingHours;
+  const day = now.toLocaleDateString("en-US", {weekday: "long"}).toLowerCase() as keyof typeof operatingHours;
   const dayHours = operatingHours[day];
-  
+
   if (!dayHours || dayHours.isClosed) return false;
-  
-  const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-  
+
+  const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+
   return currentTime >= dayHours.open && currentTime <= dayHours.close;
 };
 
@@ -225,5 +225,5 @@ export const isBusinessOpen = (operatingHours?: any): boolean => {
  * Sanitize search query
  */
 export const sanitizeSearchQuery = (query: string): string => {
-  return query.trim().toLowerCase().replace(/[^\w\s]/gi, '');
+  return query.trim().toLowerCase().replace(/[^\w\s]/gi, "");
 };

@@ -1,6 +1,6 @@
-import * as admin from 'firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
-import { ORDER_AUTO_REJECT_REASON, ORDER_ACCEPTANCE_WINDOW_SECONDS } from './constants';
+import * as admin from "firebase-admin";
+import {FieldValue} from "firebase-admin/firestore";
+import {ORDER_AUTO_REJECT_REASON, ORDER_ACCEPTANCE_WINDOW_SECONDS} from "./constants";
 
 type Db = admin.firestore.Firestore;
 type DocRef = admin.firestore.DocumentReference;
@@ -26,7 +26,7 @@ export function getDeadlineMs(data: DocData | undefined): number | undefined {
 
 /** True when an order doc is still pending and past its acceptance deadline. */
 export function isExpiredPending(data: DocData | undefined): boolean {
-  if (!data || data.status !== 'pending') return false;
+  if (!data || data.status !== "pending") return false;
   const deadlineMs = getDeadlineMs(data);
   return deadlineMs !== undefined && Date.now() > deadlineMs;
 }
@@ -49,7 +49,7 @@ export async function autoRejectIfExpired(
   ref: DocRef,
   data: DocData
 ): Promise<{ data: DocData; rejected: boolean }> {
-  if (!isExpiredPending(data)) return { data, rejected: false };
+  if (!isExpiredPending(data)) return {data, rejected: false};
 
   try {
     const didReject = await db.runTransaction(async (tx) => {
@@ -58,17 +58,17 @@ export async function autoRejectIfExpired(
       if (!isExpiredPending(cur)) return false;
 
       const trackingUpdate = {
-        status: 'rejected',
+        status: "rejected",
         timestamp: new Date().toISOString(),
         rejectionReason: ORDER_AUTO_REJECT_REASON,
-        rejectedBy: 'system',
+        rejectedBy: "system",
         notes: ORDER_AUTO_REJECT_REASON,
       };
 
       tx.update(ref, {
-        status: 'rejected',
+        status: "rejected",
         rejectionReason: ORDER_AUTO_REJECT_REASON,
-        rejectedBy: 'system',
+        rejectedBy: "system",
         rejectedAt: FieldValue.serverTimestamp(),
         trackingUpdates: FieldValue.arrayUnion(trackingUpdate),
         updatedAt: FieldValue.serverTimestamp(),
@@ -79,13 +79,13 @@ export async function autoRejectIfExpired(
     if (!didReject) {
       // Someone else won the race — return the freshest data we can.
       const latest = await ref.get();
-      return { data: latest.data() ?? data, rejected: false };
+      return {data: latest.data() ?? data, rejected: false};
     }
 
     const updated = await ref.get();
-    return { data: updated.data() ?? data, rejected: true };
+    return {data: updated.data() ?? data, rejected: true};
   } catch (err) {
-    console.error('autoRejectIfExpired failed for order', ref.id, err);
-    return { data, rejected: false };
+    console.error("autoRejectIfExpired failed for order", ref.id, err);
+    return {data, rejected: false};
   }
 }

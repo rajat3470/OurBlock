@@ -1,5 +1,5 @@
-import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
 
 const db = admin.firestore();
 const auth = admin.auth();
@@ -13,7 +13,7 @@ const auth = admin.auth();
  * so orphaned data is never left behind.
  */
 export const onSocietyDelete = functions.firestore
-  .document('societies/{societyId}')
+  .document("societies/{societyId}")
   .onDelete(async (snap, context) => {
     const societyId = context.params.societyId;
     console.log(`Society deleted: ${societyId} — starting cascade cleanup`);
@@ -41,8 +41,8 @@ export const onSocietyDelete = functions.firestore
     try {
       // 1. Find all businesses in this society
       const businessesSnap = await db
-        .collection('businesses')
-        .where('societyId', '==', societyId)
+        .collection("businesses")
+        .where("societyId", "==", societyId)
         .get();
 
       const businessIds = businessesSnap.docs.map((d) => d.id);
@@ -51,8 +51,8 @@ export const onSocietyDelete = functions.firestore
       // 2. For each business, delete products and orders
       for (const businessId of businessIds) {
         const [productsSnap, ordersSnap] = await Promise.all([
-          db.collection('products').where('businessId', '==', businessId).get(),
-          db.collection('orders').where('businessId', '==', businessId).get(),
+          db.collection("products").where("businessId", "==", businessId).get(),
+          db.collection("orders").where("businessId", "==", businessId).get(),
         ]);
         await Promise.all([
           deleteInBatches(productsSnap),
@@ -68,9 +68,9 @@ export const onSocietyDelete = functions.firestore
 
       // 4. Delete business-owner accounts (Firebase Auth + Firestore user docs)
       const ownerUsersSnap = await db
-        .collection('users')
-        .where('societyId', '==', societyId)
-        .where('role', '==', 'businessOwner')
+        .collection("users")
+        .where("societyId", "==", societyId)
+        .where("role", "==", "businessOwner")
         .get();
 
       const authDeletePromises = ownerUsersSnap.docs.map((d) =>

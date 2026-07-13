@@ -1,90 +1,90 @@
-import { Router } from 'express';
-import * as admin from 'firebase-admin';
+import {Router} from "express";
+import * as admin from "firebase-admin";
 
 const router = Router();
 const db = admin.firestore();
 
 // Get businesses by society
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
-    const { societyId, category, status = 'active' } = req.query;
-    
-    let query = db.collection('businesses').where('status', '==', status);
-    
+    const {societyId, category, status = "active"} = req.query;
+
+    let query = db.collection("businesses").where("status", "==", status);
+
     if (societyId) {
-      query = query.where('societyId', '==', societyId);
+      query = query.where("societyId", "==", societyId);
     }
-    
+
     if (category) {
-      query = query.where('category', '==', category);
+      query = query.where("category", "==", category);
     }
-    
+
     const snapshot = await query.get();
-    const businesses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
-    res.json({ success: true, data: businesses });
+    const businesses = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+
+    res.json({success: true, data: businesses});
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({success: false, error: error.message});
   }
 });
 
 // Get business by ID
-router.get('/:id', async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
-    const doc = await db.collection('businesses').doc(req.params.id).get();
-    
+    const doc = await db.collection("businesses").doc(req.params.id).get();
+
     if (!doc.exists) {
-      return res.status(404).json({ success: false, error: 'Business not found' });
+      return res.status(404).json({success: false, error: "Business not found"});
     }
-    
-    return res.json({ success: true, data: { id: doc.id, ...doc.data() } });
+
+    return res.json({success: true, data: {id: doc.id, ...doc.data()}});
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // Create business
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   try {
-    const docRef = await db.collection('businesses').add({
+    const docRef = await db.collection("businesses").add({
       ...req.body,
-      status: 'active',
+      status: "active",
       isVerified: false,
       rating: 0,
       totalReviews: 0,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    
+
     const newDoc = await docRef.get();
-    res.status(201).json({ success: true, data: { id: newDoc.id, ...newDoc.data() } });
+    res.status(201).json({success: true, data: {id: newDoc.id, ...newDoc.data()}});
   } catch (error: any) {
-    res.status(400).json({ success: false, error: error.message });
+    res.status(400).json({success: false, error: error.message});
   }
 });
 
 // Update business
-router.put('/:id', async (req, res) => {
+router.put("/:id", async (req, res) => {
   try {
-    await db.collection('businesses').doc(req.params.id).update({
+    await db.collection("businesses").doc(req.params.id).update({
       ...req.body,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    
-    const updatedDoc = await db.collection('businesses').doc(req.params.id).get();
-    res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
+
+    const updatedDoc = await db.collection("businesses").doc(req.params.id).get();
+    res.json({success: true, data: {id: updatedDoc.id, ...updatedDoc.data()}});
   } catch (error: any) {
-    res.status(400).json({ success: false, error: error.message });
+    res.status(400).json({success: false, error: error.message});
   }
 });
 
 // Delete business
-router.delete('/:id', async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
-    await db.collection('businesses').doc(req.params.id).delete();
-    res.json({ success: true, message: 'Business deleted successfully' });
+    await db.collection("businesses").doc(req.params.id).delete();
+    res.json({success: true, message: "Business deleted successfully"});
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({success: false, error: error.message});
   }
 });
 

@@ -1,6 +1,6 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import * as admin from 'firebase-admin';
-import { autoRejectIfExpired, isExpiredPending } from '../shared/orderExpiry';
+import {Router, Request, Response, NextFunction} from "express";
+import * as admin from "firebase-admin";
+import {autoRejectIfExpired, isExpiredPending} from "../shared/orderExpiry";
 
 const router = Router();
 const db = admin.firestore();
@@ -12,19 +12,19 @@ const auth = admin.auth();
 // real Firebase ID token. Remove this map once the real auth flow is active.
 // ---------------------------------------------------------------------------
 const MOCK_TOKEN_UIDS: Record<string, string> = {
-  'mock-access-token-superadmin': 'mock-super-admin-1',
-  'mock-access-token-businessowner': 'mock-business-owner-1',
-  'mock-access-token-user': 'mock-user-1',
+  "mock-access-token-superadmin": "mock-super-admin-1",
+  "mock-access-token-businessowner": "mock-business-owner-1",
+  "mock-access-token-user": "mock-user-1",
 };
 
 // ---------------------------------------------------------------------------
 // Auth middleware
 // ---------------------------------------------------------------------------
 const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split('Bearer ')[1];
+  const token = req.headers.authorization?.split("Bearer ")[1];
 
   if (!token) {
-    return res.status(401).json({ success: false, error: 'No token provided' });
+    return res.status(401).json({success: false, error: "No token provided"});
   }
 
   // Dev mock-token bypass
@@ -38,7 +38,7 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
     (req as any).uid = decoded.uid;
     return next();
   } catch {
-    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
+    return res.status(401).json({success: false, error: "Invalid or expired token"});
   }
 };
 
@@ -47,34 +47,34 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
 // ---------------------------------------------------------------------------
 const getOwnerBusiness = async (uid: string) => {
   const snapshot = await db
-    .collection('businesses')
-    .where('ownerId', '==', uid)
+    .collection("businesses")
+    .where("ownerId", "==", uid)
     .limit(1)
     .get();
 
   if (snapshot.empty) return null;
   const doc = snapshot.docs[0];
-  return { id: doc.id, ...doc.data() };
+  return {id: doc.id, ...doc.data()};
 };
 
 // ---------------------------------------------------------------------------
 // GET /owner/business — get the authenticated owner's business profile
 // ---------------------------------------------------------------------------
-router.get('/business', requireAuth, async (req, res) => {
+router.get("/business", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const business = await getOwnerBusiness(uid);
 
-    return res.json({ success: true, data: business });
+    return res.json({success: true, data: business});
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // GET /owner/products — paginated products for the owner's business
 // ---------------------------------------------------------------------------
-router.get('/products', requireAuth, async (req, res) => {
+router.get("/products", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const page = Math.max(1, Number(req.query.page) || 1);
@@ -86,19 +86,19 @@ router.get('/products', requireAuth, async (req, res) => {
       return res.json({
         success: true,
         data: [],
-        pagination: { page, limit, total: 0, totalPages: 0 },
+        pagination: {page, limit, total: 0, totalPages: 0},
       });
     }
 
     const snapshot = await db
-      .collection('products')
-      .where('businessId', '==', (business as any).id)
-      .orderBy('createdAt', 'desc')
+      .collection("products")
+      .where("businessId", "==", (business as any).id)
+      .orderBy("createdAt", "desc")
       .limit(limit)
       .offset((page - 1) * limit)
       .get();
 
-    const products = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const products = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
 
     return res.json({
       success: true,
@@ -111,14 +111,14 @@ router.get('/products', requireAuth, async (req, res) => {
       },
     });
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // POST /owner/products — create a product for the owner's business
 // ---------------------------------------------------------------------------
-router.post('/products', requireAuth, async (req, res) => {
+router.post("/products", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const business = await getOwnerBusiness(uid);
@@ -126,7 +126,7 @@ router.post('/products', requireAuth, async (req, res) => {
     if (!business) {
       return res.status(404).json({
         success: false,
-        error: 'No business found for this owner. Ask an admin to set up your business first.',
+        error: "No business found for this owner. Ask an admin to set up your business first.",
       });
     }
 
@@ -134,16 +134,16 @@ router.post('/products', requireAuth, async (req, res) => {
     if (!(business as any).isVerified) {
       return res.status(403).json({
         success: false,
-        error: 'Your business must be verified by an admin before you can add products.',
+        error: "Your business must be verified by an admin before you can add products.",
       });
     }
 
-    const docRef = await db.collection('products').add({
+    const docRef = await db.collection("products").add({
       ...req.body,
       businessId: (business as any).id,
-      status: 'inactive',          // not live until approved
+      status: "inactive", // not live until approved
       isVerified: false,
-      approvalStatus: 'pending',   // requires admin approval
+      approvalStatus: "pending", // requires admin approval
       approvalNote: null,
       rating: 0,
       totalReviews: 0,
@@ -152,79 +152,79 @@ router.post('/products', requireAuth, async (req, res) => {
     });
 
     const newDoc = await docRef.get();
-    return res.status(201).json({ success: true, data: { id: newDoc.id, ...newDoc.data() } });
+    return res.status(201).json({success: true, data: {id: newDoc.id, ...newDoc.data()}});
   } catch (error: any) {
-    return res.status(400).json({ success: false, error: error.message });
+    return res.status(400).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // PUT /owner/products/:id — update a product (must belong to owner's business)
 // ---------------------------------------------------------------------------
-router.put('/products/:id', requireAuth, async (req, res) => {
+router.put("/products/:id", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const business = await getOwnerBusiness(uid);
 
     if (!business) {
-      return res.status(404).json({ success: false, error: 'No business found for this owner' });
+      return res.status(404).json({success: false, error: "No business found for this owner"});
     }
 
-    const productDoc = await db.collection('products').doc(req.params.id).get();
+    const productDoc = await db.collection("products").doc(req.params.id).get();
     if (!productDoc.exists) {
-      return res.status(404).json({ success: false, error: 'Product not found' });
+      return res.status(404).json({success: false, error: "Product not found"});
     }
 
     if (productDoc.data()?.businessId !== (business as any).id) {
-      return res.status(403).json({ success: false, error: 'Product does not belong to your business' });
+      return res.status(403).json({success: false, error: "Product does not belong to your business"});
     }
 
-    const { businessId: _ignored, ...safeBody } = req.body; // prevent businessId override
-    await db.collection('products').doc(req.params.id).update({
+    const {businessId: _ignored, ...safeBody} = req.body; // prevent businessId override
+    await db.collection("products").doc(req.params.id).update({
       ...safeBody,
       businessId: (business as any).id,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    const updatedDoc = await db.collection('products').doc(req.params.id).get();
-    return res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
+    const updatedDoc = await db.collection("products").doc(req.params.id).get();
+    return res.json({success: true, data: {id: updatedDoc.id, ...updatedDoc.data()}});
   } catch (error: any) {
-    return res.status(400).json({ success: false, error: error.message });
+    return res.status(400).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // DELETE /owner/products/:id — delete a product (must belong to owner's business)
 // ---------------------------------------------------------------------------
-router.delete('/products/:id', requireAuth, async (req, res) => {
+router.delete("/products/:id", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const business = await getOwnerBusiness(uid);
 
     if (!business) {
-      return res.status(404).json({ success: false, error: 'No business found for this owner' });
+      return res.status(404).json({success: false, error: "No business found for this owner"});
     }
 
-    const productDoc = await db.collection('products').doc(req.params.id).get();
+    const productDoc = await db.collection("products").doc(req.params.id).get();
     if (!productDoc.exists) {
-      return res.status(404).json({ success: false, error: 'Product not found' });
+      return res.status(404).json({success: false, error: "Product not found"});
     }
 
     if (productDoc.data()?.businessId !== (business as any).id) {
-      return res.status(403).json({ success: false, error: 'Product does not belong to your business' });
+      return res.status(403).json({success: false, error: "Product does not belong to your business"});
     }
 
-    await db.collection('products').doc(req.params.id).delete();
-    return res.json({ success: true, message: 'Product deleted successfully' });
+    await db.collection("products").doc(req.params.id).delete();
+    return res.json({success: true, message: "Product deleted successfully"});
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // GET /owner/orders — paginated orders for the owner's business
 // ---------------------------------------------------------------------------
-router.get('/orders', requireAuth, async (req, res) => {
+router.get("/orders", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const page = Math.max(1, Number(req.query.page) || 1);
@@ -236,14 +236,14 @@ router.get('/orders', requireAuth, async (req, res) => {
       return res.json({
         success: true,
         data: [],
-        pagination: { page, limit, total: 0, totalPages: 0 },
+        pagination: {page, limit, total: 0, totalPages: 0},
       });
     }
 
     const snapshot = await db
-      .collection('orders')
-      .where('businessId', '==', (business as any).id)
-      .orderBy('createdAt', 'desc')
+      .collection("orders")
+      .where("businessId", "==", (business as any).id)
+      .orderBy("createdAt", "desc")
       .limit(limit)
       .offset((page - 1) * limit)
       .get();
@@ -251,9 +251,9 @@ router.get('/orders', requireAuth, async (req, res) => {
     const orders = await Promise.all(
       snapshot.docs.map(async (doc) => {
         const data = doc.data();
-        if (!isExpiredPending(data)) return { id: doc.id, ...data };
-        const { data: effective } = await autoRejectIfExpired(db, doc.ref, data);
-        return { id: doc.id, ...effective };
+        if (!isExpiredPending(data)) return {id: doc.id, ...data};
+        const {data: effective} = await autoRejectIfExpired(db, doc.ref, data);
+        return {id: doc.id, ...effective};
       })
     );
 
@@ -268,51 +268,51 @@ router.get('/orders', requireAuth, async (req, res) => {
       },
     });
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // PATCH /owner/orders/:orderId/status — update an order's status
 // ---------------------------------------------------------------------------
-router.patch('/orders/:orderId/status', requireAuth, async (req, res) => {
+router.patch("/orders/:orderId/status", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const { status } = req.body;
+    const {status} = req.body;
 
     if (!status) {
-      return res.status(400).json({ success: false, error: 'status is required' });
+      return res.status(400).json({success: false, error: "status is required"});
     }
 
     const business = await getOwnerBusiness(uid);
     if (!business) {
-      return res.status(404).json({ success: false, error: 'No business found for this owner' });
+      return res.status(404).json({success: false, error: "No business found for this owner"});
     }
 
-    const orderDoc = await db.collection('orders').doc(req.params.orderId).get();
+    const orderDoc = await db.collection("orders").doc(req.params.orderId).get();
     if (!orderDoc.exists) {
-      return res.status(404).json({ success: false, error: 'Order not found' });
+      return res.status(404).json({success: false, error: "Order not found"});
     }
 
     const orderData = orderDoc.data();
     if (orderData?.businessId !== (business as any).id) {
-      return res.status(403).json({ success: false, error: 'Order does not belong to your business' });
+      return res.status(403).json({success: false, error: "Order does not belong to your business"});
     }
 
-    const trackingUpdate = { status, timestamp: new Date() };
-    const orderRef = db.collection('orders').doc(req.params.orderId);
+    const trackingUpdate = {status, timestamp: new Date()};
+    const orderRef = db.collection("orders").doc(req.params.orderId);
 
     // Accepting a still-pending order must respect the 60s acceptance window and
     // cannot race with the auto-reject sweeper — do it transactionally.
-    const isAcceptance = orderData?.status === 'pending' && status !== 'cancelled' && status !== 'rejected';
+    const isAcceptance = orderData?.status === "pending" && status !== "cancelled" && status !== "rejected";
     if (isAcceptance) {
       try {
         await db.runTransaction(async (tx) => {
           const fresh = await tx.get(orderRef);
           const data = fresh.data();
-          if (!data || data.status !== 'pending') throw new Error('ORDER_NOT_PENDING');
+          if (!data || data.status !== "pending") throw new Error("ORDER_NOT_PENDING");
           const deadlineMs = data.autoRejectAt?.toMillis?.();
-          if (deadlineMs !== undefined && Date.now() > deadlineMs) throw new Error('ACCEPTANCE_WINDOW_EXPIRED');
+          if (deadlineMs !== undefined && Date.now() > deadlineMs) throw new Error("ACCEPTANCE_WINDOW_EXPIRED");
           tx.update(orderRef, {
             status,
             trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
@@ -320,18 +320,18 @@ router.patch('/orders/:orderId/status', requireAuth, async (req, res) => {
           });
         });
       } catch (txErr: any) {
-        if (txErr?.message === 'ACCEPTANCE_WINDOW_EXPIRED') {
+        if (txErr?.message === "ACCEPTANCE_WINDOW_EXPIRED") {
           return res.status(409).json({
             success: false,
-            error: 'This order expired and was auto-rejected because it was not accepted within 60 seconds.',
-            code: 'ACCEPTANCE_WINDOW_EXPIRED',
+            error: "This order expired and was auto-rejected because it was not accepted within 60 seconds.",
+            code: "ACCEPTANCE_WINDOW_EXPIRED",
           });
         }
-        if (txErr?.message === 'ORDER_NOT_PENDING') {
+        if (txErr?.message === "ORDER_NOT_PENDING") {
           return res.status(409).json({
             success: false,
-            error: 'This order can no longer be accepted (it is no longer pending).',
-            code: 'ORDER_NOT_PENDING',
+            error: "This order can no longer be accepted (it is no longer pending).",
+            code: "ORDER_NOT_PENDING",
           });
         }
         throw txErr;
@@ -345,151 +345,151 @@ router.patch('/orders/:orderId/status', requireAuth, async (req, res) => {
     }
 
     const updatedDoc = await orderRef.get();
-    return res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
+    return res.json({success: true, data: {id: updatedDoc.id, ...updatedDoc.data()}});
   } catch (error: any) {
-    return res.status(400).json({ success: false, error: error.message });
+    return res.status(400).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // POST /owner/orders/:orderId/reject — reject an order with reason
 // ---------------------------------------------------------------------------
-router.post('/orders/:orderId/reject', requireAuth, async (req, res) => {
+router.post("/orders/:orderId/reject", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const { reason } = req.body;
+    const {reason} = req.body;
 
-    if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
-      return res.status(400).json({ success: false, error: 'Rejection reason is required' });
+    if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
+      return res.status(400).json({success: false, error: "Rejection reason is required"});
     }
 
     const business = await getOwnerBusiness(uid);
     if (!business) {
-      return res.status(404).json({ success: false, error: 'No business found for this owner' });
+      return res.status(404).json({success: false, error: "No business found for this owner"});
     }
 
-    const orderDoc = await db.collection('orders').doc(req.params.orderId).get();
+    const orderDoc = await db.collection("orders").doc(req.params.orderId).get();
     if (!orderDoc.exists) {
-      return res.status(404).json({ success: false, error: 'Order not found' });
+      return res.status(404).json({success: false, error: "Order not found"});
     }
 
     const orderData = orderDoc.data();
     if (orderData?.businessId !== (business as any).id) {
-      return res.status(403).json({ success: false, error: 'Order does not belong to your business' });
+      return res.status(403).json({success: false, error: "Order does not belong to your business"});
     }
 
     // Only allow rejection of PENDING orders
-    if (orderData?.status !== 'pending') {
-      return res.status(400).json({ 
-        success: false, 
-        error: `Cannot reject order with status "${orderData?.status}". Only pending orders can be rejected.` 
+    if (orderData?.status !== "pending") {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot reject order with status "${orderData?.status}". Only pending orders can be rejected.`,
       });
     }
 
     const trackingUpdate = {
-      status: 'rejected',
+      status: "rejected",
       timestamp: new Date().toISOString(),
       rejectionReason: reason.trim(),
-      rejectedBy: 'business_owner',
+      rejectedBy: "business_owner",
       notes: `Order rejected by ${(business as any).name}: ${reason}`,
     };
 
-    await db.collection('orders').doc(req.params.orderId).update({
-      status: 'rejected',
+    await db.collection("orders").doc(req.params.orderId).update({
+      status: "rejected",
       rejectionReason: reason.trim(),
       rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
       trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    const updatedDoc = await db.collection('orders').doc(req.params.orderId).get();
-    return res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
+    const updatedDoc = await db.collection("orders").doc(req.params.orderId).get();
+    return res.json({success: true, data: {id: updatedDoc.id, ...updatedDoc.data()}});
   } catch (error: any) {
-    return res.status(400).json({ success: false, error: error.message });
+    return res.status(400).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // PATCH /owner/business/taking-orders — toggle isTakingOrders
 // ---------------------------------------------------------------------------
-router.patch('/business/taking-orders', requireAuth, async (req, res) => {
+router.patch("/business/taking-orders", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const { isTakingOrders } = req.body;
-    if (typeof isTakingOrders !== 'boolean') {
-      return res.status(400).json({ success: false, error: 'isTakingOrders must be a boolean' });
+    const {isTakingOrders} = req.body;
+    if (typeof isTakingOrders !== "boolean") {
+      return res.status(400).json({success: false, error: "isTakingOrders must be a boolean"});
     }
     const business = await getOwnerBusiness(uid);
-    if (!business) return res.status(404).json({ success: false, error: 'No business found' });
+    if (!business) return res.status(404).json({success: false, error: "No business found"});
 
-    await db.collection('businesses').doc((business as any).id).update({
+    await db.collection("businesses").doc((business as any).id).update({
       isTakingOrders,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    return res.json({ success: true, data: { isTakingOrders } });
+    return res.json({success: true, data: {isTakingOrders}});
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // PATCH /owner/business/settings — update operational settings
 // ---------------------------------------------------------------------------
-router.patch('/business/settings', requireAuth, async (req, res) => {
+router.patch("/business/settings", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const { minimumOrderAmount, estimatedDeliveryTime, preparationTime, deliveryFee, tags } = req.body;
+    const {minimumOrderAmount, estimatedDeliveryTime, preparationTime, deliveryFee, tags} = req.body;
     const business = await getOwnerBusiness(uid);
-    if (!business) return res.status(404).json({ success: false, error: 'No business found' });
+    if (!business) return res.status(404).json({success: false, error: "No business found"});
 
-    const updates: Record<string, any> = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
+    const updates: Record<string, any> = {updatedAt: admin.firestore.FieldValue.serverTimestamp()};
     if (minimumOrderAmount !== undefined) updates.minimumOrderAmount = Number(minimumOrderAmount);
     if (estimatedDeliveryTime !== undefined) updates.estimatedDeliveryTime = String(estimatedDeliveryTime);
     if (preparationTime !== undefined) updates.preparationTime = String(preparationTime);
     if (deliveryFee !== undefined) updates.deliveryFee = Number(deliveryFee);
     if (Array.isArray(tags)) updates.tags = tags.map(String);
 
-    await db.collection('businesses').doc((business as any).id).update(updates);
-    const updated = await db.collection('businesses').doc((business as any).id).get();
-    return res.json({ success: true, data: { id: updated.id, ...updated.data() } });
+    await db.collection("businesses").doc((business as any).id).update(updates);
+    const updated = await db.collection("businesses").doc((business as any).id).get();
+    return res.json({success: true, data: {id: updated.id, ...updated.data()}});
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // PATCH /owner/business/image — update shop / banner image
 // ---------------------------------------------------------------------------
-router.patch('/business/image', requireAuth, async (req, res) => {
+router.patch("/business/image", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const { imageUrl, bannerUrl } = req.body;
+    const {imageUrl, bannerUrl} = req.body;
     const business = await getOwnerBusiness(uid);
-    if (!business) return res.status(404).json({ success: false, error: 'No business found' });
+    if (!business) return res.status(404).json({success: false, error: "No business found"});
 
-    const updates: Record<string, any> = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
-    if (typeof imageUrl === 'string') updates.imageUrl = imageUrl.trim() || null;
-    if (typeof bannerUrl === 'string') updates.bannerUrl = bannerUrl.trim() || null;
+    const updates: Record<string, any> = {updatedAt: admin.firestore.FieldValue.serverTimestamp()};
+    if (typeof imageUrl === "string") updates.imageUrl = imageUrl.trim() || null;
+    if (typeof bannerUrl === "string") updates.bannerUrl = bannerUrl.trim() || null;
     if (Object.keys(updates).length === 1) {
-      return res.status(400).json({ success: false, error: 'imageUrl or bannerUrl is required' });
+      return res.status(400).json({success: false, error: "imageUrl or bannerUrl is required"});
     }
 
-    await db.collection('businesses').doc((business as any).id).update(updates);
-    const updated = await db.collection('businesses').doc((business as any).id).get();
-    return res.json({ success: true, data: { id: updated.id, ...updated.data() } });
+    await db.collection("businesses").doc((business as any).id).update(updates);
+    const updated = await db.collection("businesses").doc((business as any).id).get();
+    return res.json({success: true, data: {id: updated.id, ...updated.data()}});
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // GET /owner/analytics — revenue (last 7 days) + popular items
 // ---------------------------------------------------------------------------
-router.get('/analytics', requireAuth, async (req, res) => {
+router.get("/analytics", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const business = await getOwnerBusiness(uid);
-    if (!business) return res.json({ success: true, data: { daily: [], popularItems: [], totalRevenue7d: 0 } });
+    if (!business) return res.json({success: true, data: {daily: [], popularItems: [], totalRevenue7d: 0}});
 
     const businessId = (business as any).id;
 
@@ -498,9 +498,9 @@ router.get('/analytics', requireAuth, async (req, res) => {
     since.setDate(since.getDate() - 30);
 
     const snapshot = await db
-      .collection('orders')
-      .where('businessId', '==', businessId)
-      .where('status', '==', 'delivered')
+      .collection("orders")
+      .where("businessId", "==", businessId)
+      .where("status", "==", "delivered")
       .get();
 
     // Build day buckets for last 7 days
@@ -509,7 +509,7 @@ router.get('/analytics', requireAuth, async (req, res) => {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      days[key] = { date: key, revenue: 0, orders: 0 };
+      days[key] = {date: key, revenue: 0, orders: 0};
     }
 
     // Tally popular items
@@ -529,7 +529,7 @@ router.get('/analytics', requireAuth, async (req, res) => {
       (data.items || []).forEach((item: any) => {
         const pid = item.productId;
         if (!pid) return;
-        if (!itemCounts[pid]) itemCounts[pid] = { productId: pid, name: item.productName ?? pid, count: 0, revenue: 0 };
+        if (!itemCounts[pid]) itemCounts[pid] = {productId: pid, name: item.productName ?? pid, count: 0, revenue: 0};
         itemCounts[pid].count += Number(item.quantity ?? 1);
         itemCounts[pid].revenue += Number(item.lineTotal ?? 0);
       });
@@ -542,34 +542,34 @@ router.get('/analytics', requireAuth, async (req, res) => {
     const daily = Object.values(days);
     const totalRevenue7d = daily.reduce((sum, d) => sum + d.revenue, 0);
 
-    return res.json({ success: true, data: { daily, popularItems, totalRevenue7d } });
+    return res.json({success: true, data: {daily, popularItems, totalRevenue7d}});
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // POST /owner/coupons — create a coupon scoped to this business
 // ---------------------------------------------------------------------------
-router.post('/coupons', requireAuth, async (req, res) => {
+router.post("/coupons", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const business = await getOwnerBusiness(uid);
-    if (!business) return res.status(404).json({ success: false, error: 'No business found' });
+    if (!business) return res.status(404).json({success: false, error: "No business found"});
 
-    const { code, type, value, minOrderAmount, maxDiscount, expiresAt, usageLimit, description } = req.body;
+    const {code, type, value, minOrderAmount, maxDiscount, expiresAt, usageLimit, description} = req.body;
     if (!code || !type || !value) {
-      return res.status(400).json({ success: false, error: 'code, type, and value are required' });
+      return res.status(400).json({success: false, error: "code, type, and value are required"});
     }
-    if (!['percentage', 'flat'].includes(type)) {
-      return res.status(400).json({ success: false, error: 'type must be percentage or flat' });
+    if (!["percentage", "flat"].includes(type)) {
+      return res.status(400).json({success: false, error: "type must be percentage or flat"});
     }
 
     // Ensure code is unique
-    const existing = await db.collection('coupons').where('code', '==', code.toUpperCase()).limit(1).get();
-    if (!existing.empty) return res.status(400).json({ success: false, error: 'Coupon code already exists' });
+    const existing = await db.collection("coupons").where("code", "==", code.toUpperCase()).limit(1).get();
+    if (!existing.empty) return res.status(400).json({success: false, error: "Coupon code already exists"});
 
-    const docRef = await db.collection('coupons').add({
+    const docRef = await db.collection("coupons").add({
       code: code.toUpperCase().trim(),
       type,
       value: Number(value),
@@ -579,70 +579,70 @@ router.post('/coupons', requireAuth, async (req, res) => {
       usageLimit: usageLimit ? Number(usageLimit) : null,
       usageCount: 0,
       perUserLimit: 1,
-      description: description ?? '',
+      description: description ?? "",
       expiresAt: expiresAt ? new Date(expiresAt) : null,
-      status: 'active',
+      status: "active",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     const newDoc = await docRef.get();
-    return res.status(201).json({ success: true, data: { id: newDoc.id, ...newDoc.data() } });
+    return res.status(201).json({success: true, data: {id: newDoc.id, ...newDoc.data()}});
   } catch (error: any) {
-    return res.status(400).json({ success: false, error: error.message });
+    return res.status(400).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // GET /owner/coupons — list this business's coupons
 // ---------------------------------------------------------------------------
-router.get('/coupons', requireAuth, async (req, res) => {
+router.get("/coupons", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const business = await getOwnerBusiness(uid);
-    if (!business) return res.json({ success: true, data: [] });
+    if (!business) return res.json({success: true, data: []});
 
     const snap = await db
-      .collection('coupons')
-      .where('businessId', '==', (business as any).id)
-      .orderBy('createdAt', 'desc')
+      .collection("coupons")
+      .where("businessId", "==", (business as any).id)
+      .orderBy("createdAt", "desc")
       .get();
 
-    const coupons = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    return res.json({ success: true, data: coupons });
+    const coupons = snap.docs.map((d) => ({id: d.id, ...d.data()}));
+    return res.json({success: true, data: coupons});
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // DELETE /owner/coupons/:id — deactivate / delete a coupon
 // ---------------------------------------------------------------------------
-router.delete('/coupons/:id', requireAuth, async (req, res) => {
+router.delete("/coupons/:id", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const business = await getOwnerBusiness(uid);
-    if (!business) return res.status(404).json({ success: false, error: 'No business found' });
+    if (!business) return res.status(404).json({success: false, error: "No business found"});
 
-    const couponDoc = await db.collection('coupons').doc(req.params.id).get();
-    if (!couponDoc.exists) return res.status(404).json({ success: false, error: 'Coupon not found' });
+    const couponDoc = await db.collection("coupons").doc(req.params.id).get();
+    if (!couponDoc.exists) return res.status(404).json({success: false, error: "Coupon not found"});
     if (couponDoc.data()?.businessId !== (business as any).id) {
-      return res.status(403).json({ success: false, error: 'Coupon does not belong to your business' });
+      return res.status(403).json({success: false, error: "Coupon does not belong to your business"});
     }
 
-    await db.collection('coupons').doc(req.params.id).update({
-      status: 'inactive',
+    await db.collection("coupons").doc(req.params.id).update({
+      status: "inactive",
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    return res.json({ success: true, message: 'Coupon deactivated' });
+    return res.json({success: true, message: "Coupon deactivated"});
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // GET /owner/stats — dashboard statistics for the owner
 // ---------------------------------------------------------------------------
-router.get('/stats', requireAuth, async (req, res) => {
+router.get("/stats", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const business = await getOwnerBusiness(uid);
@@ -678,26 +678,26 @@ router.get('/stats', requireAuth, async (req, res) => {
       lowStockSnap,
       todayDeliveredSnap,
     ] = await Promise.all([
-      db.collection('products').where('businessId', '==', businessId).count().get(),
-      db.collection('orders').where('businessId', '==', businessId).count().get(),
+      db.collection("products").where("businessId", "==", businessId).count().get(),
+      db.collection("orders").where("businessId", "==", businessId).count().get(),
       db
-        .collection('orders')
-        .where('businessId', '==', businessId)
-        .where('status', '==', 'pending')
+        .collection("orders")
+        .where("businessId", "==", businessId)
+        .where("status", "==", "pending")
         .count()
         .get(),
       db
-        .collection('products')
-        .where('businessId', '==', businessId)
-        .where('stock', '<=', 5)
+        .collection("products")
+        .where("businessId", "==", businessId)
+        .where("stock", "<=", 5)
         .count()
         .get()
         .catch(() => null),
       db
-        .collection('orders')
-        .where('businessId', '==', businessId)
-        .where('status', '==', 'delivered')
-        .where('createdAt', '>=', startOfToday)
+        .collection("orders")
+        .where("businessId", "==", businessId)
+        .where("status", "==", "delivered")
+        .where("createdAt", ">=", startOfToday)
         .limit(100)
         .get(),
     ]);
@@ -719,7 +719,7 @@ router.get('/stats', requireAuth, async (req, res) => {
       },
     });
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
@@ -728,18 +728,18 @@ router.get('/stats', requireAuth, async (req, res) => {
 // ---------------------------------------------------------------------------
 
 // GET /owner/delivery-partners
-router.get('/delivery-partners', requireAuth, async (req, res) => {
+router.get("/delivery-partners", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const business = await getOwnerBusiness(uid);
     if (!business) {
-      return res.status(404).json({ success: false, error: 'No business found for this owner' });
+      return res.status(404).json({success: false, error: "No business found for this owner"});
     }
 
     const snapshot = await db
-      .collection('users')
-      .where('role', '==', 'deliveryPartner')
-      .where('businessId', '==', (business as any).id)
+      .collection("users")
+      .where("role", "==", "deliveryPartner")
+      .where("businessId", "==", (business as any).id)
       .limit(50)
       .get();
 
@@ -765,48 +765,48 @@ router.get('/delivery-partners', requireAuth, async (req, res) => {
         return bMs - aMs;
       });
 
-    return res.json({ success: true, data: partners });
+    return res.json({success: true, data: partners});
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // POST /owner/delivery-partners — create login credentials for a partner
-router.post('/delivery-partners', requireAuth, async (req, res) => {
+router.post("/delivery-partners", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const business = await getOwnerBusiness(uid);
     if (!business) {
-      return res.status(404).json({ success: false, error: 'No business found for this owner' });
+      return res.status(404).json({success: false, error: "No business found for this owner"});
     }
 
-    const { firstName, lastName, email, phone, password } = req.body ?? {};
+    const {firstName, lastName, email, phone, password} = req.body ?? {};
     if (!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !password) {
       return res.status(400).json({
         success: false,
-        error: 'firstName, lastName, email, phone, and password are required',
+        error: "firstName, lastName, email, phone, and password are required",
       });
     }
-    if (typeof password !== 'string' || password.length < 8) {
+    if (typeof password !== "string" || password.length < 8) {
       return res.status(400).json({
         success: false,
-        error: 'Password must be at least 8 characters',
+        error: "Password must be at least 8 characters",
       });
     }
-    if (!/^[6-9]\d{9}$/.test(String(phone).replace(/\D/g, '').slice(-10))) {
-      return res.status(400).json({ success: false, error: 'Enter a valid 10-digit Indian phone number' });
+    if (!/^[6-9]\d{9}$/.test(String(phone).replace(/\D/g, "").slice(-10))) {
+      return res.status(400).json({success: false, error: "Enter a valid 10-digit Indian phone number"});
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
-    const normalizedPhone = String(phone).replace(/\D/g, '').slice(-10);
+    const normalizedPhone = String(phone).replace(/\D/g, "").slice(-10);
 
     const existingPhone = await db
-      .collection('users')
-      .where('phone', '==', normalizedPhone)
+      .collection("users")
+      .where("phone", "==", normalizedPhone)
       .limit(1)
       .get();
     if (!existingPhone.empty) {
-      return res.status(409).json({ success: false, error: 'This phone number is already registered' });
+      return res.status(409).json({success: false, error: "This phone number is already registered"});
     }
 
     let userRecord: admin.auth.UserRecord;
@@ -818,13 +818,13 @@ router.post('/delivery-partners', requireAuth, async (req, res) => {
         emailVerified: true,
       });
     } catch (err: any) {
-      if (err?.code === 'auth/email-already-exists') {
-        return res.status(409).json({ success: false, error: 'This email is already registered' });
+      if (err?.code === "auth/email-already-exists") {
+        return res.status(409).json({success: false, error: "This email is already registered"});
       }
       throw err;
     }
 
-    await auth.setCustomUserClaims(userRecord.uid, { role: 'deliveryPartner' });
+    await auth.setCustomUserClaims(userRecord.uid, {role: "deliveryPartner"});
 
     const now = admin.firestore.FieldValue.serverTimestamp();
     const partnerDoc = {
@@ -832,24 +832,24 @@ router.post('/delivery-partners', requireAuth, async (req, res) => {
       lastName: lastName.trim(),
       email: normalizedEmail,
       phone: normalizedPhone,
-      role: 'deliveryPartner',
+      role: "deliveryPartner",
       societyId: (business as any).societyId,
       businessId: (business as any).id,
       ownerId: uid,
       // Denormalized shop snapshot — delivery APIs avoid an extra business read.
-      businessName: (business as any).name ?? 'Shop',
-      businessAddress: (business as any).address ?? '',
-      businessPhone: (business as any).phone ?? '',
+      businessName: (business as any).name ?? "Shop",
+      businessAddress: (business as any).address ?? "",
+      businessPhone: (business as any).phone ?? "",
       businessImageUrl: (business as any).imageUrl ?? null,
       businessCategory: (business as any).category ?? null,
       isEmailVerified: true,
       isPhoneVerified: false,
-      status: 'active',
+      status: "active",
       createdAt: now,
       updatedAt: now,
     };
 
-    await db.collection('users').doc(userRecord.uid).set(partnerDoc);
+    await db.collection("users").doc(userRecord.uid).set(partnerDoc);
 
     return res.status(201).json({
       success: true,
@@ -865,33 +865,33 @@ router.post('/delivery-partners', requireAuth, async (req, res) => {
       },
     });
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // PATCH /owner/delivery-partners/:id — activate / deactivate
-router.patch('/delivery-partners/:id', requireAuth, async (req, res) => {
+router.patch("/delivery-partners/:id", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const business = await getOwnerBusiness(uid);
     if (!business) {
-      return res.status(404).json({ success: false, error: 'No business found for this owner' });
+      return res.status(404).json({success: false, error: "No business found for this owner"});
     }
 
-    const partnerRef = db.collection('users').doc(req.params.id);
+    const partnerRef = db.collection("users").doc(req.params.id);
     const partnerDoc = await partnerRef.get();
     if (!partnerDoc.exists) {
-      return res.status(404).json({ success: false, error: 'Delivery partner not found' });
+      return res.status(404).json({success: false, error: "Delivery partner not found"});
     }
 
     const partner = partnerDoc.data()!;
-    if (partner.role !== 'deliveryPartner' || partner.businessId !== (business as any).id) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
+    if (partner.role !== "deliveryPartner" || partner.businessId !== (business as any).id) {
+      return res.status(403).json({success: false, error: "Access denied"});
     }
 
-    const { status } = req.body ?? {};
-    if (status !== 'active' && status !== 'inactive') {
-      return res.status(400).json({ success: false, error: 'status must be active or inactive' });
+    const {status} = req.body ?? {};
+    if (status !== "active" && status !== "inactive") {
+      return res.status(400).json({success: false, error: "status must be active or inactive"});
     }
 
     await partnerRef.update({
@@ -899,10 +899,10 @@ router.patch('/delivery-partners/:id', requireAuth, async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    if (status === 'inactive') {
-      await auth.updateUser(req.params.id, { disabled: true }).catch(() => undefined);
+    if (status === "inactive") {
+      await auth.updateUser(req.params.id, {disabled: true}).catch(() => undefined);
     } else {
-      await auth.updateUser(req.params.id, { disabled: false }).catch(() => undefined);
+      await auth.updateUser(req.params.id, {disabled: false}).catch(() => undefined);
     }
 
     const updated = await partnerRef.get();
@@ -921,44 +921,44 @@ router.patch('/delivery-partners/:id', requireAuth, async (req, res) => {
       },
     });
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // POST /owner/orders/:orderId/assign-delivery-partner
 // ---------------------------------------------------------------------------
-router.post('/orders/:orderId/assign-delivery-partner', requireAuth, async (req, res) => {
+router.post("/orders/:orderId/assign-delivery-partner", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
     const business = await getOwnerBusiness(uid);
     if (!business) {
-      return res.status(404).json({ success: false, error: 'No business found for this owner' });
+      return res.status(404).json({success: false, error: "No business found for this owner"});
     }
 
-    const orderRef = db.collection('orders').doc(req.params.orderId);
+    const orderRef = db.collection("orders").doc(req.params.orderId);
     const orderDoc = await orderRef.get();
     if (!orderDoc.exists) {
-      return res.status(404).json({ success: false, error: 'Order not found' });
+      return res.status(404).json({success: false, error: "Order not found"});
     }
 
     const order = orderDoc.data()!;
     if (order.businessId !== (business as any).id) {
-      return res.status(403).json({ success: false, error: 'Access denied' });
+      return res.status(403).json({success: false, error: "Access denied"});
     }
 
-    const assignable = ['confirmed', 'preparing', 'ready', 'outForDelivery'];
+    const assignable = ["confirmed", "preparing", "ready", "outForDelivery"];
     if (!assignable.includes(order.status)) {
       return res.status(400).json({
         success: false,
-        error: 'Only active orders can be assigned to a delivery partner',
+        error: "Only active orders can be assigned to a delivery partner",
       });
     }
 
-    const { partnerId } = req.body ?? {};
+    const {partnerId} = req.body ?? {};
 
     // Unassign
-    if (partnerId === null || partnerId === undefined || partnerId === '') {
+    if (partnerId === null || partnerId === undefined || partnerId === "") {
       await orderRef.update({
         assignedDeliveryPartnerId: null,
         assignedDeliveryPartnerName: null,
@@ -966,31 +966,31 @@ router.post('/orders/:orderId/assign-delivery-partner', requireAuth, async (req,
         trackingUpdates: admin.firestore.FieldValue.arrayUnion({
           status: order.status,
           timestamp: new Date().toISOString(),
-          notes: 'Delivery partner unassigned',
+          notes: "Delivery partner unassigned",
         }),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
       const updated = await orderRef.get();
-      return res.json({ success: true, data: { id: updated.id, ...updated.data() } });
+      return res.json({success: true, data: {id: updated.id, ...updated.data()}});
     }
 
-    const partnerDoc = await db.collection('users').doc(String(partnerId)).get();
+    const partnerDoc = await db.collection("users").doc(String(partnerId)).get();
     if (!partnerDoc.exists) {
-      return res.status(404).json({ success: false, error: 'Delivery partner not found' });
+      return res.status(404).json({success: false, error: "Delivery partner not found"});
     }
     const partner = partnerDoc.data()!;
     if (
-      partner.role !== 'deliveryPartner' ||
+      partner.role !== "deliveryPartner" ||
       partner.businessId !== (business as any).id ||
-      partner.status !== 'active'
+      partner.status !== "active"
     ) {
       return res.status(400).json({
         success: false,
-        error: 'Choose an active delivery partner for this shop',
+        error: "Choose an active delivery partner for this shop",
       });
     }
 
-    const partnerName = `${partner.firstName ?? ''} ${partner.lastName ?? ''}`.trim() || 'Delivery partner';
+    const partnerName = `${partner.firstName ?? ""} ${partner.lastName ?? ""}`.trim() || "Delivery partner";
     await orderRef.update({
       assignedDeliveryPartnerId: partnerDoc.id,
       assignedDeliveryPartnerName: partnerName,
@@ -1004,9 +1004,9 @@ router.post('/orders/:orderId/assign-delivery-partner', requireAuth, async (req,
     });
 
     const updated = await orderRef.get();
-    return res.json({ success: true, data: { id: updated.id, ...updated.data() } });
+    return res.json({success: true, data: {id: updated.id, ...updated.data()}});
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 

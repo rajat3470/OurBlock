@@ -1,5 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import * as admin from 'firebase-admin';
+import {Router, Request, Response, NextFunction} from "express";
+import * as admin from "firebase-admin";
 
 const router = Router();
 const db = admin.firestore();
@@ -9,17 +9,17 @@ const auth = admin.auth();
 // Mock tokens
 // ---------------------------------------------------------------------------
 const MOCK_TOKEN_UIDS: Record<string, string> = {
-  'mock-access-token-superadmin': 'mock-super-admin-1',
-  'mock-access-token-businessowner': 'mock-business-owner-1',
-  'mock-access-token-user': 'mock-user-1',
+  "mock-access-token-superadmin": "mock-super-admin-1",
+  "mock-access-token-businessowner": "mock-business-owner-1",
+  "mock-access-token-user": "mock-user-1",
 };
 
 // ---------------------------------------------------------------------------
 // Auth middleware
 // ---------------------------------------------------------------------------
 const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split('Bearer ')[1];
-  if (!token) return res.status(401).json({ success: false, error: 'No token provided' });
+  const token = req.headers.authorization?.split("Bearer ")[1];
+  if (!token) return res.status(401).json({success: false, error: "No token provided"});
   if (token in MOCK_TOKEN_UIDS) {
     (req as any).uid = MOCK_TOKEN_UIDS[token];
     return next();
@@ -29,7 +29,7 @@ const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
     (req as any).uid = decoded.uid;
     return next();
   } catch {
-    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
+    return res.status(401).json({success: false, error: "Invalid or expired token"});
   }
 };
 
@@ -44,25 +44,25 @@ export async function computeCouponDiscount(
   businessId: string
 ): Promise<{ code: string; discountAmount: number; couponId: string }> {
   const snap = await db
-    .collection('coupons')
-    .where('code', '==', code.toUpperCase().trim())
-    .where('status', '==', 'active')
+    .collection("coupons")
+    .where("code", "==", code.toUpperCase().trim())
+    .where("status", "==", "active")
     .limit(1)
     .get();
 
-  if (snap.empty) throw new Error('Coupon not found or inactive');
+  if (snap.empty) throw new Error("Coupon not found or inactive");
   const coupon = snap.docs[0].data() as any;
   const couponId = snap.docs[0].id;
 
   // Expiry check
   if (coupon.expiresAt) {
     const expiresAt = coupon.expiresAt.toDate ? coupon.expiresAt.toDate() : new Date(coupon.expiresAt);
-    if (expiresAt < new Date()) throw new Error('This coupon has expired');
+    if (expiresAt < new Date()) throw new Error("This coupon has expired");
   }
 
   // Business-specific check
   if (coupon.businessId && coupon.businessId !== businessId) {
-    throw new Error('Coupon is not valid for this shop');
+    throw new Error("Coupon is not valid for this shop");
   }
 
   // Minimum order check
@@ -72,45 +72,45 @@ export async function computeCouponDiscount(
 
   // Global usage limit
   if (coupon.usageLimit && (coupon.usageCount ?? 0) >= coupon.usageLimit) {
-    throw new Error('Coupon usage limit reached');
+    throw new Error("Coupon usage limit reached");
   }
 
   // Per-user limit
   if (coupon.perUserLimit) {
     const userUsageSnap = await db
-      .collection('orders')
-      .where('userId', '==', uid)
-      .where('couponCode', '==', code.toUpperCase().trim())
+      .collection("orders")
+      .where("userId", "==", uid)
+      .where("couponCode", "==", code.toUpperCase().trim())
       .get();
     if (userUsageSnap.size >= coupon.perUserLimit) {
-      throw new Error('You have already used this coupon the maximum number of times');
+      throw new Error("You have already used this coupon the maximum number of times");
     }
   }
 
   // Compute discount
   let discountAmount = 0;
-  if (coupon.type === 'percentage') {
+  if (coupon.type === "percentage") {
     discountAmount = Math.floor((subTotal * coupon.value) / 100);
     if (coupon.maxDiscount) discountAmount = Math.min(discountAmount, coupon.maxDiscount);
-  } else if (coupon.type === 'flat') {
+  } else if (coupon.type === "flat") {
     discountAmount = Math.min(coupon.value, subTotal);
   }
 
-  return { code: code.toUpperCase().trim(), discountAmount, couponId };
+  return {code: code.toUpperCase().trim(), discountAmount, couponId};
 }
 
 // ---------------------------------------------------------------------------
 // POST /coupons/validate — check a coupon before placing order (auth required)
 // ---------------------------------------------------------------------------
-router.post('/validate', requireAuth, async (req, res) => {
+router.post("/validate", requireAuth, async (req, res) => {
   try {
     const uid = (req as any).uid;
-    const { code, businessId, subTotal } = req.body;
+    const {code, businessId, subTotal} = req.body;
 
-    if (!code) return res.status(400).json({ success: false, error: 'code is required' });
-    if (!businessId) return res.status(400).json({ success: false, error: 'businessId is required' });
-    if (typeof subTotal !== 'number' || subTotal <= 0) {
-      return res.status(400).json({ success: false, error: 'Valid subTotal is required' });
+    if (!code) return res.status(400).json({success: false, error: "code is required"});
+    if (!businessId) return res.status(400).json({success: false, error: "businessId is required"});
+    if (typeof subTotal !== "number" || subTotal <= 0) {
+      return res.status(400).json({success: false, error: "Valid subTotal is required"});
     }
 
     const result = await computeCouponDiscount(db, uid, code, subTotal, businessId);
@@ -123,19 +123,19 @@ router.post('/validate', requireAuth, async (req, res) => {
       },
     });
   } catch (error: any) {
-    return res.status(400).json({ success: false, error: error.message });
+    return res.status(400).json({success: false, error: error.message});
   }
 });
 
 // ---------------------------------------------------------------------------
 // GET /coupons — list active platform-wide coupons (for discovery)
 // ---------------------------------------------------------------------------
-router.get('/', requireAuth, async (req, res) => {
+router.get("/", requireAuth, async (req, res) => {
   try {
     const snap = await db
-      .collection('coupons')
-      .where('status', '==', 'active')
-      .orderBy('createdAt', 'desc')
+      .collection("coupons")
+      .where("status", "==", "active")
+      .orderBy("createdAt", "desc")
       .limit(20)
       .get();
 
@@ -154,9 +154,9 @@ router.get('/', requireAuth, async (req, res) => {
       };
     });
 
-    return res.json({ success: true, data: coupons });
+    return res.json({success: true, data: coupons});
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 

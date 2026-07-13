@@ -1,6 +1,6 @@
-import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
-import { autoRejectIfExpired } from '../shared/orderExpiry';
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
+import {autoRejectIfExpired} from "../shared/orderExpiry";
 
 const db = admin.firestore();
 
@@ -25,14 +25,14 @@ const db = admin.firestore();
  *   and cannot race an owner accepting at the last second.
  */
 export const autoRejectExpiredOrders = functions.pubsub
-  .schedule('every 1 minutes')
+  .schedule("every 1 minutes")
   .onRun(async () => {
     const now = admin.firestore.Timestamp.now();
 
     const snapshot = await db
-      .collection('orders')
-      .where('status', '==', 'pending')
-      .where('autoRejectAt', '<=', now)
+      .collection("orders")
+      .where("status", "==", "pending")
+      .where("autoRejectAt", "<=", now)
       .limit(300)
       .get();
 
@@ -43,7 +43,7 @@ export const autoRejectExpiredOrders = functions.pubsub
     let rejected = 0;
 
     for (const doc of snapshot.docs) {
-      const { rejected: didReject } = await autoRejectIfExpired(db, doc.ref, doc.data());
+      const {rejected: didReject} = await autoRejectIfExpired(db, doc.ref, doc.data());
       if (didReject) rejected++;
     }
 

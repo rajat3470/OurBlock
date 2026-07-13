@@ -1,18 +1,18 @@
-import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
 import {
   NEW_ORDER_SOUND_ANDROID,
   NEW_ORDER_SOUND_IOS,
   notifyOwnerNewOrder,
   notifyUsersByExternalIds,
   sendExpoPushNotification,
-} from '../utils/oneSignal';
+} from "../utils/oneSignal";
 
 const db = admin.firestore();
 
 async function sendPushNotification(userId: string, title: string, body: string, data: Record<string, string>) {
   try {
-    const userDoc = await db.collection('users').doc(userId).get();
+    const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data() ?? {};
     const fcmToken = userData.fcmToken;
     const pushToken = userData.pushToken;
@@ -21,10 +21,10 @@ async function sendPushNotification(userId: string, title: string, body: string,
     if (fcmToken) {
       await admin.messaging().send({
         token: fcmToken,
-        notification: { title, body },
+        notification: {title, body},
         data,
-        android: { priority: 'high', notification: { channelId: 'orders', sound: 'default' } },
-        apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+        android: {priority: "high", notification: {channelId: "orders", sound: "default"}},
+        apns: {payload: {aps: {sound: "default", badge: 1}}},
       });
     }
 
@@ -32,7 +32,7 @@ async function sendPushNotification(userId: string, title: string, body: string,
       await sendExpoPushNotification(pushToken, title, body, data);
     }
   } catch (err) {
-    console.warn('FCM send failed for user', userId, err);
+    console.warn("FCM send failed for user", userId, err);
   }
 }
 
@@ -43,7 +43,7 @@ async function sendOwnerNewOrderPush(
   data: Record<string, string>
 ) {
   try {
-    const userDoc = await db.collection('users').doc(userId).get();
+    const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data() ?? {};
     const fcmToken = userData.fcmToken;
     const pushToken = userData.pushToken;
@@ -52,14 +52,14 @@ async function sendOwnerNewOrderPush(
     if (fcmToken) {
       await admin.messaging().send({
         token: fcmToken,
-        notification: { title, body },
+        notification: {title, body},
         data,
         android: {
-          priority: 'high',
+          priority: "high",
           notification: {
-            channelId: 'orders',
+            channelId: "orders",
             sound: NEW_ORDER_SOUND_ANDROID,
-            clickAction: 'OPEN_ORDERS',
+            clickAction: "OPEN_ORDERS",
           },
         },
         apns: {
@@ -67,7 +67,7 @@ async function sendOwnerNewOrderPush(
             aps: {
               sound: NEW_ORDER_SOUND_IOS,
               badge: 1,
-              category: 'ORDER_REVIEW',
+              category: "ORDER_REVIEW",
             },
           },
         },
@@ -78,61 +78,61 @@ async function sendOwnerNewOrderPush(
       await sendExpoPushNotification(pushToken, title, body, data);
     }
   } catch (err) {
-    console.warn('Owner FCM send failed for user', userId, err);
+    console.warn("Owner FCM send failed for user", userId, err);
   }
 }
 
 export const onOrderCreate = functions.firestore
-  .document('orders/{orderId}')
+  .document("orders/{orderId}")
   .onCreate(async (snap, context) => {
     try {
       const order = snap.data();
       const orderId = context.params.orderId;
       const orderRef = orderId.substring(0, 8).toUpperCase();
 
-      console.log('New order created:', orderId);
+      console.log("New order created:", orderId);
 
-      const customerTitle = 'Order Placed Successfully';
+      const customerTitle = "Order Placed Successfully";
       const customerBody = `Your order #${orderRef} for Rs ${order.finalAmount} has been placed. Waiting for store confirmation.`;
 
       // In-app notification (Firestore)
-      await db.collection('notifications').add({
+      await db.collection("notifications").add({
         userId: order.userId,
-        type: 'order',
+        type: "order",
         title: customerTitle,
         body: customerBody,
-        data: { orderId, status: 'pending' },
+        data: {orderId, status: "pending"},
         read: false,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
       // FCM push to customer
-      await sendPushNotification(order.userId, customerTitle, customerBody, { orderId, status: 'pending' });
+      await sendPushNotification(order.userId, customerTitle, customerBody, {orderId, status: "pending"});
       // OneSignal push to customer (if mobile registered external_user_id)
-      const customerOneSignalResult = await notifyUsersByExternalIds([order.userId], customerTitle, customerBody, { orderId, status: 'pending' });
+      const customerOneSignalResult = await notifyUsersByExternalIds([order.userId], customerTitle, customerBody, {orderId, status: "pending"});
       if (!customerOneSignalResult || customerOneSignalResult.ok === false) {
-        const customerDoc = await db.collection('users').doc(order.userId).get();
+        const customerDoc = await db.collection("users").doc(order.userId).get();
         const customerPushToken = customerDoc.data()?.pushToken;
         if (customerPushToken) {
-          await sendExpoPushNotification(customerPushToken, customerTitle, customerBody, { orderId, status: 'pending' });
+          await sendExpoPushNotification(customerPushToken, customerTitle, customerBody, {orderId, status: "pending"});
         }
       }
 
       // Notify business owner
-      const business = await db.collection('businesses').doc(order.businessId).get();
+      const business = await db.collection("businesses").doc(order.businessId).get();
       const businessData = business.data();
 
       if (businessData?.ownerId) {
-        const ownerTitle = '🔔 New Order!';
+        const ownerTitle = "🔔 New Order!";
         const ownerBody = `Order #${orderRef} from ${order.userName} — Rs ${order.finalAmount} · ${order.items.length} item(s). Tap to accept or reject.`;
 
-        await db.collection('notifications').add({
+        await db.collection("notifications").add({
           userId: businessData.ownerId,
-          type: 'order',
+          type: "order",
           title: ownerTitle,
           body: ownerBody,
-          data: { orderId, status: 'pending', action: 'review' },
+          data: {orderId, status: "pending", action: "review"},
           read: false,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -140,8 +140,8 @@ export const onOrderCreate = functions.firestore
 
         const ownerData = {
           orderId: String(orderId),
-          status: 'pending',
-          action: 'review',
+          status: "pending",
+          action: "review",
         };
 
         // FCM push to business owner — custom sound + iOS action category
@@ -149,16 +149,16 @@ export const onOrderCreate = functions.firestore
         // OneSignal push to business owner — custom sound + accept/reject buttons
         const ownerOneSignalResult = await notifyOwnerNewOrder([businessData.ownerId], ownerTitle, ownerBody, ownerData);
         if (!ownerOneSignalResult || ownerOneSignalResult.ok === false) {
-          const ownerDoc = await db.collection('users').doc(businessData.ownerId).get();
+          const ownerDoc = await db.collection("users").doc(businessData.ownerId).get();
           const ownerPushToken = ownerDoc.data()?.pushToken;
           if (ownerPushToken) {
-            await sendExpoPushNotification(ownerPushToken, ownerTitle, ownerBody, { orderId, status: 'pending', action: 'review' });
+            await sendExpoPushNotification(ownerPushToken, ownerTitle, ownerBody, {orderId, status: "pending", action: "review"});
           }
         }
       }
 
-      console.log('Order notifications sent');
+      console.log("Order notifications sent");
     } catch (error) {
-      console.error('Error in onOrderCreate trigger:', error);
+      console.error("Error in onOrderCreate trigger:", error);
     }
   });

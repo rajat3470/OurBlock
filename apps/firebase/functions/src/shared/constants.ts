@@ -1,6 +1,6 @@
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001',
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || process.env.EXPO_PUBLIC_API_URL || "http://localhost:5001",
   TIMEOUT: 30000,
   RETRY_ATTEMPTS: 3,
 };
@@ -8,34 +8,34 @@ export const API_CONFIG = {
 // Firebase Configuration
 export const FIREBASE_CONFIG = {
   COLLECTIONS: {
-    USERS: 'users',
-    SOCIETIES: 'societies',
-    BUSINESSES: 'businesses',
-    PRODUCTS: 'products',
-    ORDERS: 'orders',
-    REVIEWS: 'reviews',
-    NOTIFICATIONS: 'notifications',
-    ADDRESSES: 'addresses',
-    MESSAGES: 'messages',
-    CHAT_SESSIONS: 'chatSessions',
+    USERS: "users",
+    SOCIETIES: "societies",
+    BUSINESSES: "businesses",
+    PRODUCTS: "products",
+    ORDERS: "orders",
+    REVIEWS: "reviews",
+    NOTIFICATIONS: "notifications",
+    ADDRESSES: "addresses",
+    MESSAGES: "messages",
+    CHAT_SESSIONS: "chatSessions",
   },
   STORAGE: {
-    PROFILES: 'profiles',
-    BUSINESSES: 'businesses',
-    PRODUCTS: 'products',
-    REVIEWS: 'reviews',
-    IDENTIFICATIONS: 'identifications',
-    DELIVERY_PROOFS: 'deliveryProofs',
+    PROFILES: "profiles",
+    BUSINESSES: "businesses",
+    PRODUCTS: "products",
+    REVIEWS: "reviews",
+    IDENTIFICATIONS: "identifications",
+    DELIVERY_PROOFS: "deliveryProofs",
   },
 };
 
 // Order Status Flow
 export const ORDER_STATUS_FLOW = {
-  pending: ['confirmed', 'cancelled', 'rejected'],
-  confirmed: ['preparing', 'cancelled'],
-  preparing: ['ready', 'cancelled'],
-  ready: ['outForDelivery'],
-  outForDelivery: ['delivered'],
+  pending: ["confirmed", "cancelled", "rejected"],
+  confirmed: ["preparing", "cancelled"],
+  preparing: ["ready", "cancelled"],
+  ready: ["outForDelivery"],
+  outForDelivery: ["delivered"],
   delivered: [],
   cancelled: [],
   rejected: [],
@@ -56,43 +56,43 @@ export const ORDER_FEES = {
 
 // User Roles
 export const USER_ROLES = {
-  SUPER_ADMIN: 'superAdmin',
-  BUSINESS_OWNER: 'businessOwner',
-  USER: 'user',
-  DELIVERY_PARTNER: 'deliveryPartner',
+  SUPER_ADMIN: "superAdmin",
+  BUSINESS_OWNER: "businessOwner",
+  USER: "user",
+  DELIVERY_PARTNER: "deliveryPartner",
 } as const;
 
 // Payment Methods
 export const PAYMENT_METHODS = {
-  CASH: 'cash',
-  CARD: 'card',
-  UPI: 'upi',
-  WALLET: 'wallet',
+  CASH: "cash",
+  CARD: "card",
+  UPI: "upi",
+  WALLET: "wallet",
 } as const;
 
 export const PAYMENT_TIMING = {
-  AT_ORDER: 'atOrder',
-  AT_DELIVERY: 'atDelivery',
+  AT_ORDER: "atOrder",
+  AT_DELIVERY: "atDelivery",
 } as const;
 
 /** True when money has not yet been collected / confirmed. */
 export const isPaymentOutstanding = (paymentStatus?: string | null): boolean =>
-  paymentStatus === 'pending' || paymentStatus === 'cod';
+  paymentStatus === "pending" || paymentStatus === "cod";
 
 // Business Categories
 export const BUSINESS_CATEGORIES = [
-  { value: 'dairy', label: 'Dairy & Daily Essentials' },
-  { value: 'groceries', label: 'Groceries' },
-  { value: 'food', label: 'Food & Beverages' },
-  { value: 'home_services', label: 'Home Services' },
-  { value: 'personal_care', label: 'Personal Care' },
-  { value: 'education', label: 'Education' },
-  { value: 'pet_care', label: 'Pet Care' },
-  { value: 'preowned', label: 'Pre-owned Items' },
-  { value: 'laundry', label: 'Laundry & Dry Cleaning' },
-  { value: 'plants', label: 'Plants & Gardening' },
-  { value: 'events', label: 'Event Services' },
-  { value: 'other', label: 'Other' },
+  {value: "dairy", label: "Dairy & Daily Essentials"},
+  {value: "groceries", label: "Groceries"},
+  {value: "food", label: "Food & Beverages"},
+  {value: "home_services", label: "Home Services"},
+  {value: "personal_care", label: "Personal Care"},
+  {value: "education", label: "Education"},
+  {value: "pet_care", label: "Pet Care"},
+  {value: "preowned", label: "Pre-owned Items"},
+  {value: "laundry", label: "Laundry & Dry Cleaning"},
+  {value: "plants", label: "Plants & Gardening"},
+  {value: "events", label: "Event Services"},
+  {value: "other", label: "Other"},
 ] as const;
 
 // Pagination
@@ -123,39 +123,39 @@ export const UPLOAD_LIMITS = {
   MAX_IMAGE_SIZE: 5 * 1024 * 1024, // 5MB
   MAX_IMAGES_PER_PRODUCT: 5,
   MAX_IMAGES_PER_REVIEW: 3,
-  ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
+  ALLOWED_IMAGE_TYPES: ["image/jpeg", "image/png", "image/webp"],
 };
 
 // Notification Types
 export const NOTIFICATION_TYPES = {
-  ORDER: 'order',
-  PROMOTION: 'promotion',
-  SYSTEM: 'system',
-  MESSAGE: 'message',
+  ORDER: "order",
+  PROMOTION: "promotion",
+  SYSTEM: "system",
+  MESSAGE: "message",
 } as const;
 
 // Status Values
 export const STATUS = {
-  ACTIVE: 'active',
-  INACTIVE: 'inactive',
-  SUSPENDED: 'suspended',
-  PENDING: 'pending',
-  APPROVED: 'approved',
-  REJECTED: 'rejected',
+  ACTIVE: "active",
+  INACTIVE: "inactive",
+  SUSPENDED: "suspended",
+  PENDING: "pending",
+  APPROVED: "approved",
+  REJECTED: "rejected",
 } as const;
 
 // Error Codes
 export const ERROR_CODES = {
-  UNAUTHORIZED: 'UNAUTHORIZED',
-  FORBIDDEN: 'FORBIDDEN',
-  NOT_FOUND: 'NOT_FOUND',
-  VALIDATION_ERROR: 'VALIDATION_ERROR',
-  INTERNAL_ERROR: 'INTERNAL_ERROR',
-  SOCIETY_NOT_FOUND: 'SOCIETY_NOT_FOUND',
-  BUSINESS_NOT_FOUND: 'BUSINESS_NOT_FOUND',
-  PRODUCT_NOT_FOUND: 'PRODUCT_NOT_FOUND',
-  ORDER_NOT_FOUND: 'ORDER_NOT_FOUND',
-  INSUFFICIENT_STOCK: 'INSUFFICIENT_STOCK',
-  INVALID_ORDER_STATUS: 'INVALID_ORDER_STATUS',
-  PAYMENT_FAILED: 'PAYMENT_FAILED',
+  UNAUTHORIZED: "UNAUTHORIZED",
+  FORBIDDEN: "FORBIDDEN",
+  NOT_FOUND: "NOT_FOUND",
+  VALIDATION_ERROR: "VALIDATION_ERROR",
+  INTERNAL_ERROR: "INTERNAL_ERROR",
+  SOCIETY_NOT_FOUND: "SOCIETY_NOT_FOUND",
+  BUSINESS_NOT_FOUND: "BUSINESS_NOT_FOUND",
+  PRODUCT_NOT_FOUND: "PRODUCT_NOT_FOUND",
+  ORDER_NOT_FOUND: "ORDER_NOT_FOUND",
+  INSUFFICIENT_STOCK: "INSUFFICIENT_STOCK",
+  INVALID_ORDER_STATUS: "INVALID_ORDER_STATUS",
+  PAYMENT_FAILED: "PAYMENT_FAILED",
 } as const;

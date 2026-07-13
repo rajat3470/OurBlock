@@ -143,15 +143,15 @@ export interface Product {
   description?: string;
   category: string;
   menuSection?: string; // e.g. "Starters", "Main Course", "Beverages"
-  isVeg?: boolean;      // true = veg (green dot), false = non-veg (red dot)
-  tags?: string[];      // e.g. ["bestseller", "recommended", "new", "spicy"]
+  isVeg?: boolean; // true = veg (green dot), false = non-veg (red dot)
+  tags?: string[]; // e.g. ["bestseller", "recommended", "new", "spicy"]
   price: number;
   originalPrice?: number;
   discount?: number; // percentage
   imageUrls: string[];
   stock: number;
-  unit?: ProductUnit;    // unit of measure — default "piece"
-  unitStep?: number;    // purchasable increment in that unit (e.g. 100 for 100g)
+  unit?: ProductUnit; // unit of measure — default "piece"
+  unitStep?: number; // purchasable increment in that unit (e.g. 100 for 100g)
   rating?: number;
   totalReviews?: number;
   status: "active" | "inactive";
@@ -212,11 +212,11 @@ export interface Order {
   assignedDeliveryPartnerId?: string | null;
   assignedDeliveryPartnerName?: string | null;
   assignedAt?: Date;
-  rejectionReason?: string;          // If order was rejected by business owner / system
-  rejectedAt?: Date;                  // Timestamp of rejection
+  rejectionReason?: string; // If order was rejected by business owner / system
+  rejectedAt?: Date; // Timestamp of rejection
   rejectedBy?: "business_owner" | "system";
-  acceptanceWindowSeconds?: number;   // Owner accept/reject window (seconds)
-  autoRejectAt?: any;                 // Deadline after which a pending order is auto-rejected
+  acceptanceWindowSeconds?: number; // Owner accept/reject window (seconds)
+  autoRejectAt?: any; // Deadline after which a pending order is auto-rejected
   trackingUpdates?: TrackingUpdate[];
   createdAt: Date;
   updatedAt: Date;

@@ -23,7 +23,7 @@ import { isPaymentOutstanding } from "@mohallamitr/shared";
 import { useAppSelector } from "@hooks/useRedux";
 import { colors } from "@/constants/theme";
 
-const COLLECT_METHODS: Array<{ key: PaymentMethod; label: string; icon: string }> = [
+const COLLECT_METHODS: { key: PaymentMethod; label: string; icon: string }[] = [
   { key: "cash", label: "Cash", icon: "💵" },
   { key: "upi", label: "UPI", icon: "📱" },
   { key: "card", label: "Card", icon: "💳" },

@@ -128,7 +128,7 @@ export const businessOwnerService = {
   },
 
   async getDeliveryPartners(): Promise<
-    Array<{
+    {
       id: string;
       firstName: string;
       lastName: string;
@@ -137,11 +137,11 @@ export const businessOwnerService = {
       status: string;
       businessId: string;
       societyId: string;
-    }>
+    }[]
   > {
     const res = await apiClient.get<
       ApiEnvelope<
-        Array<{
+        {
           id: string;
           firstName: string;
           lastName: string;
@@ -150,7 +150,7 @@ export const businessOwnerService = {
           status: string;
           businessId: string;
           societyId: string;
-        }>
+        }[]
       >
     >("/owner/delivery-partners");
     return res.data ?? [];

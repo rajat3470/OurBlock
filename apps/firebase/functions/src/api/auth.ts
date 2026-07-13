@@ -1,19 +1,19 @@
-import { Router } from 'express';
-import * as admin from 'firebase-admin';
-import { validationSchemas } from '../shared/validation';
+import {Router} from "express";
+import * as admin from "firebase-admin";
+import {validationSchemas} from "../shared/validation";
 
 const router = Router();
 const auth = admin.auth();
 const db = admin.firestore();
 
 const MOCK_TOKEN_UIDS: Record<string, string> = {
-  'mock-access-token-superadmin': 'mock-super-admin-1',
-  'mock-access-token-businessowner': 'mock-business-owner-1',
-  'mock-access-token-user': 'mock-user-1',
+  "mock-access-token-superadmin": "mock-super-admin-1",
+  "mock-access-token-businessowner": "mock-business-owner-1",
+  "mock-access-token-user": "mock-user-1",
 };
 
 // Firebase Web API key (public — used only for client-facing REST auth endpoints)
-const FIREBASE_API_KEY = 'AIzaSyAcL3sv1VuMTq1gNrTVuIH_Si7_J1hNXAE';
+const FIREBASE_API_KEY = "AIzaSyAcL3sv1VuMTq1gNrTVuIH_Si7_J1hNXAE";
 
 interface FirebaseSignInResult {
   idToken: string;
@@ -31,9 +31,9 @@ async function firebaseSignIn(email: string, password: string): Promise<Firebase
   const response = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FIREBASE_API_KEY}`,
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, returnSecureToken: true }),
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email, password, returnSecureToken: true}),
     }
   );
 
@@ -41,24 +41,24 @@ async function firebaseSignIn(email: string, password: string): Promise<Firebase
 
   if (!response.ok) {
     // Map Firebase error codes to user-friendly messages
-    const code: string = data?.error?.message ?? 'UNKNOWN';
-    if (code.includes('EMAIL_NOT_FOUND') || code.includes('INVALID_PASSWORD') || code.includes('INVALID_LOGIN_CREDENTIALS')) {
-      throw Object.assign(new Error('Invalid email or password'), { statusCode: 401 });
+    const code: string = data?.error?.message ?? "UNKNOWN";
+    if (code.includes("EMAIL_NOT_FOUND") || code.includes("INVALID_PASSWORD") || code.includes("INVALID_LOGIN_CREDENTIALS")) {
+      throw Object.assign(new Error("Invalid email or password"), {statusCode: 401});
     }
-    if (code.includes('USER_DISABLED')) {
-      throw Object.assign(new Error('This account has been suspended'), { statusCode: 403 });
+    if (code.includes("USER_DISABLED")) {
+      throw Object.assign(new Error("This account has been suspended"), {statusCode: 403});
     }
-    throw Object.assign(new Error(code), { statusCode: 400 });
+    throw Object.assign(new Error(code), {statusCode: 400});
   }
 
   return data as FirebaseSignInResult;
 }
 
 async function getAuthenticatedUid(req: any): Promise<string> {
-  const token = req.headers.authorization?.split('Bearer ')[1];
+  const token = req.headers.authorization?.split("Bearer ")[1];
 
   if (!token) {
-    throw Object.assign(new Error('No token provided'), { statusCode: 401 });
+    throw Object.assign(new Error("No token provided"), {statusCode: 401});
   }
 
   if (token in MOCK_TOKEN_UIDS) {
@@ -71,38 +71,38 @@ async function getAuthenticatedUid(req: any): Promise<string> {
 
 const HOME_BUSINESS_SEEDS = [
   {
-    name: 'DailyFresh Mart',
-    category: 'grocery',
-    description: 'Fresh groceries and daily essentials delivered fast.',
-    addressSuffix: 'Central Plaza, Main Gate',
-    phone: '9876501001',
+    name: "DailyFresh Mart",
+    category: "grocery",
+    description: "Fresh groceries and daily essentials delivered fast.",
+    addressSuffix: "Central Plaza, Main Gate",
+    phone: "9876501001",
     rating: 4.6,
     totalReviews: 248,
   },
   {
-    name: 'Spice Route Kitchen',
-    category: 'restaurant',
-    description: 'North Indian and street food favorites.',
-    addressSuffix: 'Food Court, Block B',
-    phone: '9876501002',
+    name: "Spice Route Kitchen",
+    category: "restaurant",
+    description: "North Indian and street food favorites.",
+    addressSuffix: "Food Court, Block B",
+    phone: "9876501002",
     rating: 4.4,
     totalReviews: 196,
   },
   {
-    name: 'MediTrust Pharmacy',
-    category: 'pharmacy',
-    description: 'Medicines, wellness, and health essentials.',
-    addressSuffix: 'Wellness Street, Block A',
-    phone: '9876501003',
+    name: "MediTrust Pharmacy",
+    category: "pharmacy",
+    description: "Medicines, wellness, and health essentials.",
+    addressSuffix: "Wellness Street, Block A",
+    phone: "9876501003",
     rating: 4.7,
     totalReviews: 312,
   },
   {
-    name: 'BrewBean Cafe',
-    category: 'cafe',
-    description: 'Coffee, snacks, and quick bites.',
-    addressSuffix: 'Clubhouse Corner',
-    phone: '9876501004',
+    name: "BrewBean Cafe",
+    category: "cafe",
+    description: "Coffee, snacks, and quick bites.",
+    addressSuffix: "Clubhouse Corner",
+    phone: "9876501004",
     rating: 4.5,
     totalReviews: 154,
   },
@@ -118,36 +118,36 @@ const HOME_PRODUCT_SEEDS: Record<string, Array<{
   totalReviews: number;
 }>> = {
   grocery: [
-    { name: 'A2 Cow Milk 1L', category: 'Dairy', price: 72, originalPrice: 82, stock: 120, rating: 4.5, totalReviews: 92 },
-    { name: 'Farm Eggs 12 pcs', category: 'Dairy', price: 96, originalPrice: 110, stock: 80, rating: 4.6, totalReviews: 74 },
-    { name: 'Organic Atta 5kg', category: 'Staples', price: 269, originalPrice: 299, stock: 40, rating: 4.7, totalReviews: 65 },
-    { name: 'Seasonal Fruit Box', category: 'Fruits', price: 349, originalPrice: 399, stock: 35, rating: 4.4, totalReviews: 51 },
+    {name: "A2 Cow Milk 1L", category: "Dairy", price: 72, originalPrice: 82, stock: 120, rating: 4.5, totalReviews: 92},
+    {name: "Farm Eggs 12 pcs", category: "Dairy", price: 96, originalPrice: 110, stock: 80, rating: 4.6, totalReviews: 74},
+    {name: "Organic Atta 5kg", category: "Staples", price: 269, originalPrice: 299, stock: 40, rating: 4.7, totalReviews: 65},
+    {name: "Seasonal Fruit Box", category: "Fruits", price: 349, originalPrice: 399, stock: 35, rating: 4.4, totalReviews: 51},
   ],
   restaurant: [
-    { name: 'Paneer Butter Masala', category: 'Main Course', price: 229, originalPrice: 259, stock: 60, rating: 4.4, totalReviews: 119 },
-    { name: 'Veg Biryani Family Pack', category: 'Main Course', price: 299, originalPrice: 349, stock: 45, rating: 4.5, totalReviews: 141 },
-    { name: 'Tandoori Roti (6)', category: 'Breads', price: 79, originalPrice: 99, stock: 90, rating: 4.3, totalReviews: 88 },
-    { name: 'Gulab Jamun', category: 'Desserts', price: 99, originalPrice: 129, stock: 55, rating: 4.6, totalReviews: 97 },
+    {name: "Paneer Butter Masala", category: "Main Course", price: 229, originalPrice: 259, stock: 60, rating: 4.4, totalReviews: 119},
+    {name: "Veg Biryani Family Pack", category: "Main Course", price: 299, originalPrice: 349, stock: 45, rating: 4.5, totalReviews: 141},
+    {name: "Tandoori Roti (6)", category: "Breads", price: 79, originalPrice: 99, stock: 90, rating: 4.3, totalReviews: 88},
+    {name: "Gulab Jamun", category: "Desserts", price: 99, originalPrice: 129, stock: 55, rating: 4.6, totalReviews: 97},
   ],
   pharmacy: [
-    { name: 'Vitamin C Tablets', category: 'Supplements', price: 189, originalPrice: 229, stock: 70, rating: 4.6, totalReviews: 77 },
-    { name: 'Digital Thermometer', category: 'Devices', price: 249, originalPrice: 299, stock: 32, rating: 4.5, totalReviews: 43 },
-    { name: 'Pain Relief Spray', category: 'First Aid', price: 139, originalPrice: 159, stock: 66, rating: 4.4, totalReviews: 38 },
-    { name: 'Hand Sanitizer 500ml', category: 'Hygiene', price: 99, originalPrice: 129, stock: 88, rating: 4.3, totalReviews: 52 },
+    {name: "Vitamin C Tablets", category: "Supplements", price: 189, originalPrice: 229, stock: 70, rating: 4.6, totalReviews: 77},
+    {name: "Digital Thermometer", category: "Devices", price: 249, originalPrice: 299, stock: 32, rating: 4.5, totalReviews: 43},
+    {name: "Pain Relief Spray", category: "First Aid", price: 139, originalPrice: 159, stock: 66, rating: 4.4, totalReviews: 38},
+    {name: "Hand Sanitizer 500ml", category: "Hygiene", price: 99, originalPrice: 129, stock: 88, rating: 4.3, totalReviews: 52},
   ],
   cafe: [
-    { name: 'Cold Coffee', category: 'Beverages', price: 129, originalPrice: 149, stock: 100, rating: 4.5, totalReviews: 80 },
-    { name: 'Cappuccino', category: 'Beverages', price: 119, originalPrice: 139, stock: 100, rating: 4.6, totalReviews: 97 },
-    { name: 'Veg Sandwich', category: 'Snacks', price: 149, originalPrice: 179, stock: 72, rating: 4.4, totalReviews: 63 },
-    { name: 'Blueberry Muffin', category: 'Bakery', price: 89, originalPrice: 109, stock: 54, rating: 4.2, totalReviews: 44 },
+    {name: "Cold Coffee", category: "Beverages", price: 129, originalPrice: 149, stock: 100, rating: 4.5, totalReviews: 80},
+    {name: "Cappuccino", category: "Beverages", price: 119, originalPrice: 139, stock: 100, rating: 4.6, totalReviews: 97},
+    {name: "Veg Sandwich", category: "Snacks", price: 149, originalPrice: 179, stock: 72, rating: 4.4, totalReviews: 63},
+    {name: "Blueberry Muffin", category: "Bakery", price: 89, originalPrice: 109, stock: 54, rating: 4.2, totalReviews: 44},
   ],
 };
 
 async function ensureSocietyDemoCatalog(societyId: string) {
   const existingBusinessesSnap = await db
-    .collection('businesses')
-    .where('societyId', '==', societyId)
-    .where('status', '==', 'active')
+    .collection("businesses")
+    .where("societyId", "==", societyId)
+    .where("status", "==", "active")
     .limit(1)
     .get();
 
@@ -155,16 +155,16 @@ async function ensureSocietyDemoCatalog(societyId: string) {
     return;
   }
 
-  const societyDoc = await db.collection('societies').doc(societyId).get();
-  const societyName = (societyDoc.data()?.name as string) || 'Your Society';
+  const societyDoc = await db.collection("societies").doc(societyId).get();
+  const societyName = (societyDoc.data()?.name as string) || "Your Society";
   const now = admin.firestore.FieldValue.serverTimestamp();
 
   const businessesBatch = db.batch();
   const businessRefs: Array<{ id: string; category: string }> = [];
 
   HOME_BUSINESS_SEEDS.forEach((seed, index) => {
-    const ref = db.collection('businesses').doc();
-    businessRefs.push({ id: ref.id, category: seed.category });
+    const ref = db.collection("businesses").doc();
+    businessRefs.push({id: ref.id, category: seed.category});
 
     businessesBatch.set(ref, {
       id: ref.id,
@@ -175,11 +175,11 @@ async function ensureSocietyDemoCatalog(societyId: string) {
       societyId,
       address: `${societyName}, ${seed.addressSuffix}`,
       phone: seed.phone,
-      email: `hello+${seed.name.toLowerCase().replace(/\s+/g, '')}@mohallamitr.in`,
+      email: `hello+${seed.name.toLowerCase().replace(/\s+/g, "")}@mohallamitr.in`,
       rating: seed.rating,
       totalReviews: seed.totalReviews,
       isVerified: true,
-      status: 'active',
+      status: "active",
       metadata: {
         isDemo: true,
         etaMins: 12 + index * 3,
@@ -195,10 +195,10 @@ async function ensureSocietyDemoCatalog(societyId: string) {
   businessRefs.forEach((business) => {
     const seeds = HOME_PRODUCT_SEEDS[business.category] ?? [];
     seeds.forEach((productSeed) => {
-      const productRef = db.collection('products').doc();
-      const discount = productSeed.originalPrice
-        ? Math.round(((productSeed.originalPrice - productSeed.price) / productSeed.originalPrice) * 100)
-        : 0;
+      const productRef = db.collection("products").doc();
+      const discount = productSeed.originalPrice ?
+        Math.round(((productSeed.originalPrice - productSeed.price) / productSeed.originalPrice) * 100) :
+        0;
 
       productsBatch.set(productRef, {
         id: productRef.id,
@@ -213,7 +213,7 @@ async function ensureSocietyDemoCatalog(societyId: string) {
         stock: productSeed.stock,
         rating: productSeed.rating,
         totalReviews: productSeed.totalReviews,
-        status: 'active',
+        status: "active",
         availableToday: true,
         metadata: {
           isDemo: true,
@@ -241,22 +241,22 @@ async function getSocietyProducts(businessIds: string[]) {
   const snapshots = await Promise.all(
     chunks.map((chunk) =>
       db
-        .collection('products')
-        .where('businessId', 'in', chunk)
+        .collection("products")
+        .where("businessId", "in", chunk)
         .get()
     )
   );
 
   return snapshots
-    .flatMap((snapshot) => snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })))
-    .filter((product: any) => (product.isVerified === true || product.approvalStatus === 'approved') && product.status === 'active');
+    .flatMap((snapshot) => snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()})))
+    .filter((product: any) => (product.isVerified === true || product.approvalStatus === "approved") && product.status === "active");
 }
 
 // Register user
-router.post('/register', async (req, res) => {
+router.post("/register", async (req, res) => {
   try {
-    const { email, password, firstName, lastName, phone, role = 'user' } = req.body;
-    
+    const {email, password, firstName, lastName, phone, role = "user"} = req.body;
+
     // Validate input
     const validatedData = validationSchemas.register.parse({
       email,
@@ -265,7 +265,7 @@ router.post('/register', async (req, res) => {
       lastName,
       phone,
     });
-    
+
     // Create Firebase auth user
     const userRecord = await auth.createUser({
       email: validatedData.email,
@@ -273,9 +273,9 @@ router.post('/register', async (req, res) => {
       displayName: `${validatedData.firstName} ${validatedData.lastName}`,
       phoneNumber: `+91${validatedData.phone}`,
     });
-    
+
     // Create user document
-    await db.collection('users').doc(userRecord.uid).set({
+    await db.collection("users").doc(userRecord.uid).set({
       id: userRecord.uid,
       firstName: validatedData.firstName,
       lastName: validatedData.lastName,
@@ -284,14 +284,14 @@ router.post('/register', async (req, res) => {
       role,
       isEmailVerified: false,
       isPhoneVerified: false,
-      status: 'active',
+      status: "active",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    
+
     // Generate custom token
     const customToken = await auth.createCustomToken(userRecord.uid);
-    
+
     res.status(201).json({
       success: true,
       data: {
@@ -300,42 +300,42 @@ router.post('/register', async (req, res) => {
       },
     });
   } catch (error: any) {
-    console.error('Registration error:', error);
+    console.error("Registration error:", error);
     res.status(400).json({
       success: false,
-      error: error.message || 'Registration failed',
+      error: error.message || "Registration failed",
     });
   }
 });
 
 // Business owner self-registration
-router.post('/businessowner/register', async (req, res) => {
+router.post("/businessowner/register", async (req, res) => {
   try {
-    const { firstName, lastName, email, password, phone, societyId,
-            businessName, businessCategory, businessAddress, businessImageUrl } = req.body;
+    const {firstName, lastName, email, password, phone, societyId,
+      businessName, businessCategory, businessAddress, businessImageUrl} = req.body;
 
     if (!firstName || !lastName || !email || !password || !phone || !societyId) {
       return res.status(400).json({
         success: false,
-        error: 'firstName, lastName, email, password, phone and societyId are all required',
+        error: "firstName, lastName, email, password, phone and societyId are all required",
       });
     }
 
     if (!businessName || !businessCategory || !businessAddress) {
       return res.status(400).json({
         success: false,
-        error: 'businessName, businessCategory and businessAddress are all required',
+        error: "businessName, businessCategory and businessAddress are all required",
       });
     }
 
     if (password.length < 8) {
-      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters' });
+      return res.status(400).json({success: false, error: "Password must be at least 8 characters"});
     }
 
     // Confirm society exists
-    const societyDoc = await db.collection('societies').doc(societyId).get();
+    const societyDoc = await db.collection("societies").doc(societyId).get();
     if (!societyDoc.exists) {
-      return res.status(404).json({ success: false, error: 'Society not found' });
+      return res.status(404).json({success: false, error: "Society not found"});
     }
 
     const userRecord = await auth.createUser({
@@ -345,20 +345,20 @@ router.post('/businessowner/register', async (req, res) => {
       phoneNumber: `+91${phone}`,
     });
 
-    await auth.setCustomUserClaims(userRecord.uid, { role: 'businessOwner' });
+    await auth.setCustomUserClaims(userRecord.uid, {role: "businessOwner"});
 
-    await db.collection('users').doc(userRecord.uid).set({
+    await db.collection("users").doc(userRecord.uid).set({
       id: userRecord.uid,
       firstName,
       lastName,
       email,
       phone,
-      role: 'businessOwner',
+      role: "businessOwner",
       societyId,
       isEmailVerified: false,
       isPhoneVerified: false,
-      status: 'active',
-      verificationStatus: 'pending',
+      status: "active",
+      verificationStatus: "pending",
       mustChangePassword: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -373,17 +373,17 @@ router.post('/businessowner/register', async (req, res) => {
       email,
       ownerId: userRecord.uid,
       societyId,
-      status: 'active',
+      status: "active",
       isVerified: false,
       rating: 0,
       totalReviews: 0,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
-    if (businessImageUrl && typeof businessImageUrl === 'string') {
+    if (businessImageUrl && typeof businessImageUrl === "string") {
       businessData.imageUrl = businessImageUrl;
     }
-    const businessRef = await db.collection('businesses').add(businessData);
+    const businessRef = await db.collection("businesses").add(businessData);
 
     // Sign in immediately after creation to get a real ID token for the client
     const authResult = await firebaseSignIn(email, password);
@@ -395,10 +395,10 @@ router.post('/businessowner/register', async (req, res) => {
         lastName,
         email,
         phone,
-        role: 'businessOwner',
+        role: "businessOwner",
         societyId,
         businessId: businessRef.id,
-        status: 'active',
+        status: "active",
         isEmailVerified: false,
         isPhoneVerified: false,
         mustChangePassword: false,
@@ -410,37 +410,37 @@ router.post('/businessowner/register', async (req, res) => {
       },
     });
   } catch (error: any) {
-    console.error('Business owner registration error:', error);
-    if (error.code === 'auth/email-already-exists') {
-      return res.status(409).json({ success: false, error: 'An account with this email already exists' });
+    console.error("Business owner registration error:", error);
+    if (error.code === "auth/email-already-exists") {
+      return res.status(409).json({success: false, error: "An account with this email already exists"});
     }
-    if (error.code === 'auth/phone-number-already-exists') {
-      return res.status(409).json({ success: false, error: 'This phone number is already registered' });
+    if (error.code === "auth/phone-number-already-exists") {
+      return res.status(409).json({success: false, error: "This phone number is already registered"});
     }
-    return res.status(400).json({ success: false, error: error.message || 'Registration failed' });
+    return res.status(400).json({success: false, error: error.message || "Registration failed"});
   }
 });
 
 // User (resident) self-registration
-router.post('/user/register', async (req, res) => {
+router.post("/user/register", async (req, res) => {
   try {
-    const { firstName, lastName, email, password, phone, societyId } = req.body;
+    const {firstName, lastName, email, password, phone, societyId} = req.body;
 
     if (!firstName || !lastName || !email || !password || !phone || !societyId) {
       return res.status(400).json({
         success: false,
-        error: 'firstName, lastName, email, password, phone and societyId are all required',
+        error: "firstName, lastName, email, password, phone and societyId are all required",
       });
     }
 
     if (password.length < 8) {
-      return res.status(400).json({ success: false, error: 'Password must be at least 8 characters' });
+      return res.status(400).json({success: false, error: "Password must be at least 8 characters"});
     }
 
     // Confirm society exists
-    const societyDoc = await db.collection('societies').doc(societyId).get();
+    const societyDoc = await db.collection("societies").doc(societyId).get();
     if (!societyDoc.exists) {
-      return res.status(404).json({ success: false, error: 'Society not found' });
+      return res.status(404).json({success: false, error: "Society not found"});
     }
 
     const userRecord = await auth.createUser({
@@ -450,19 +450,19 @@ router.post('/user/register', async (req, res) => {
       phoneNumber: `+91${phone}`,
     });
 
-    await auth.setCustomUserClaims(userRecord.uid, { role: 'user' });
+    await auth.setCustomUserClaims(userRecord.uid, {role: "user"});
 
-    await db.collection('users').doc(userRecord.uid).set({
+    await db.collection("users").doc(userRecord.uid).set({
       id: userRecord.uid,
       firstName,
       lastName,
       email,
       phone,
-      role: 'user',
+      role: "user",
       societyId,
       isEmailVerified: false,
       isPhoneVerified: false,
-      status: 'active',
+      status: "active",
       favoriteBusinesses: [],
       addresses: [],
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -479,9 +479,9 @@ router.post('/user/register', async (req, res) => {
         lastName,
         email,
         phone,
-        role: 'user',
+        role: "user",
         societyId,
-        status: 'active',
+        status: "active",
         isEmailVerified: false,
         isPhoneVerified: false,
         favoriteBusinesses: [],
@@ -494,160 +494,160 @@ router.post('/user/register', async (req, res) => {
       },
     });
   } catch (error: any) {
-    console.error('User registration error:', error);
-    if (error.code === 'auth/email-already-exists') {
-      return res.status(409).json({ success: false, error: 'An account with this email already exists' });
+    console.error("User registration error:", error);
+    if (error.code === "auth/email-already-exists") {
+      return res.status(409).json({success: false, error: "An account with this email already exists"});
     }
-    if (error.code === 'auth/phone-number-already-exists') {
-      return res.status(409).json({ success: false, error: 'This phone number is already registered' });
+    if (error.code === "auth/phone-number-already-exists") {
+      return res.status(409).json({success: false, error: "This phone number is already registered"});
     }
-    return res.status(400).json({ success: false, error: error.message || 'Registration failed' });
+    return res.status(400).json({success: false, error: error.message || "Registration failed"});
   }
 });
 
 // Login (client-side handles Firebase Auth, this is for custom claims)
-router.post('/login', async (req, res) => {
+router.post("/login", async (req, res) => {
   try {
-    const { uid } = req.body;
-    
+    const {uid} = req.body;
+
     if (!uid) {
-      return res.status(400).json({ success: false, error: 'UID required' });
+      return res.status(400).json({success: false, error: "UID required"});
     }
-    
-    const userDoc = await db.collection('users').doc(uid).get();
-    
+
+    const userDoc = await db.collection("users").doc(uid).get();
+
     if (!userDoc.exists) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({success: false, error: "User not found"});
     }
-    
+
     const userData = userDoc.data();
-    
+
     // Set custom claims for role-based access
-    await auth.setCustomUserClaims(uid, { role: userData?.role });
-    
+    await auth.setCustomUserClaims(uid, {role: userData?.role});
+
     return res.json({
       success: true,
       data: userData,
     });
   } catch (error: any) {
-    console.error('Login error:', error);
+    console.error("Login error:", error);
     return res.status(500).json({
       success: false,
-      error: error.message || 'Login failed',
+      error: error.message || "Login failed",
     });
   }
 });
 
 // Change password (authenticated user — works for all roles)
-router.post('/change-password', async (req, res) => {
+router.post("/change-password", async (req, res) => {
   try {
-    const token = req.headers.authorization?.split('Bearer ')[1];
+    const token = req.headers.authorization?.split("Bearer ")[1];
 
     if (!token) {
-      return res.status(401).json({ success: false, error: 'No token provided' });
+      return res.status(401).json({success: false, error: "No token provided"});
     }
 
-    const { newPassword } = req.body;
+    const {newPassword} = req.body;
 
-    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+    if (!newPassword || typeof newPassword !== "string" || newPassword.length < 8) {
       return res
         .status(400)
-        .json({ success: false, error: 'New password must be at least 8 characters' });
+        .json({success: false, error: "New password must be at least 8 characters"});
     }
 
     const decodedToken = await auth.verifyIdToken(token);
 
-    await auth.updateUser(decodedToken.uid, { password: newPassword });
+    await auth.updateUser(decodedToken.uid, {password: newPassword});
 
     // Clear the "must change password" flag if set
-    await db.collection('users').doc(decodedToken.uid).update({
+    await db.collection("users").doc(decodedToken.uid).update({
       mustChangePassword: false,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    return res.json({ success: true, message: 'Password updated successfully' });
+    return res.json({success: true, message: "Password updated successfully"});
   } catch (error: any) {
-    console.error('Change password error:', error);
-    return res.status(500).json({ success: false, error: error.message });
+    console.error("Change password error:", error);
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 
 // Get current user — used on app launch to validate/restore the session.
 // Returns 401 only for missing/invalid access tokens (client should refresh).
-router.get('/me', async (req, res) => {
+router.get("/me", async (req, res) => {
   try {
     const uid = await getAuthenticatedUid(req);
-    const userDoc = await db.collection('users').doc(uid).get();
+    const userDoc = await db.collection("users").doc(uid).get();
 
     if (!userDoc.exists) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({success: false, error: "User not found"});
     }
 
     const userData = userDoc.data() as any;
-    if (userData?.status === 'suspended') {
+    if (userData?.status === "suspended") {
       return res.status(403).json({
         success: false,
-        error: 'Your account has been suspended',
-        code: 'ACCOUNT_SUSPENDED',
+        error: "Your account has been suspended",
+        code: "ACCOUNT_SUSPENDED",
       });
     }
 
     return res.json({
       success: true,
-      data: { id: userDoc.id, ...userData },
+      data: {id: userDoc.id, ...userData},
     });
   } catch (error: any) {
-    console.error('Get user error:', error);
+    console.error("Get user error:", error);
     return res.status(error.statusCode || 401).json({
       success: false,
-      error: error.message || 'Unauthorized',
+      error: error.message || "Unauthorized",
     });
   }
 });
 
-router.get('/profile/me', async (req, res) => {
+router.get("/profile/me", async (req, res) => {
   try {
     const uid = await getAuthenticatedUid(req);
-    const userDoc = await db.collection('users').doc(uid).get();
+    const userDoc = await db.collection("users").doc(uid).get();
 
     if (!userDoc.exists) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({success: false, error: "User not found"});
     }
 
-    return res.json({ id: userDoc.id, ...userDoc.data() });
+    return res.json({id: userDoc.id, ...userDoc.data()});
   } catch (error: any) {
-    return res.status(error.statusCode || 401).json({ success: false, error: error.message || 'Unauthorized' });
+    return res.status(error.statusCode || 401).json({success: false, error: error.message || "Unauthorized"});
   }
 });
 
-router.put('/profile/me', async (req, res) => {
+router.put("/profile/me", async (req, res) => {
   try {
     const uid = await getAuthenticatedUid(req);
-    const { email, password, role, createdAt, id, ...updateData } = req.body;
+    const {email, password, role, createdAt, id, ...updateData} = req.body;
 
-    await db.collection('users').doc(uid).update({
+    await db.collection("users").doc(uid).update({
       ...updateData,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    const updatedDoc = await db.collection('users').doc(uid).get();
-    return res.json({ id: updatedDoc.id, ...updatedDoc.data() });
+    const updatedDoc = await db.collection("users").doc(uid).get();
+    return res.json({id: updatedDoc.id, ...updatedDoc.data()});
   } catch (error: any) {
-    return res.status(error.statusCode || 400).json({ success: false, error: error.message });
+    return res.status(error.statusCode || 400).json({success: false, error: error.message});
   }
 });
 
-router.get('/addresses/me', async (req, res) => {
+router.get("/addresses/me", async (req, res) => {
   try {
     const uid = await getAuthenticatedUid(req);
-    const snapshot = await db.collection('users').doc(uid).collection('addresses').get();
+    const snapshot = await db.collection("users").doc(uid).collection("addresses").get();
 
-    const addresses = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
+    const addresses = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()})) as any[];
     const getTime = (v: any) => {
       if (!v) return 0;
-      if (typeof v.toMillis === 'function') return v.toMillis();
-      if (typeof v.seconds === 'number') return v.seconds * 1000;
-      if (typeof v._seconds === 'number') return v._seconds * 1000;
+      if (typeof v.toMillis === "function") return v.toMillis();
+      if (typeof v.seconds === "number") return v.seconds * 1000;
+      if (typeof v._seconds === "number") return v._seconds * 1000;
       return 0;
     };
 
@@ -660,29 +660,29 @@ router.get('/addresses/me', async (req, res) => {
 
     return res.json(addresses);
   } catch (error: any) {
-    return res.status(error.statusCode || 400).json({ success: false, error: error.message });
+    return res.status(error.statusCode || 400).json({success: false, error: error.message});
   }
 });
 
-router.post('/addresses/me', async (req, res) => {
+router.post("/addresses/me", async (req, res) => {
   try {
     const uid = await getAuthenticatedUid(req);
-    const { type, name, street, landmark, city, state, pincode, phone, isDefault } = req.body;
+    const {type, name, street, landmark, city, state, pincode, phone, isDefault} = req.body;
 
     if (!type || !street || !city || !state || !pincode || !phone) {
-      return res.status(400).json({ success: false, error: 'Missing required fields' });
+      return res.status(400).json({success: false, error: "Missing required fields"});
     }
 
     if (isDefault) {
-      const addressesSnapshot = await db.collection('users').doc(uid).collection('addresses').get();
+      const addressesSnapshot = await db.collection("users").doc(uid).collection("addresses").get();
       const batch = db.batch();
       addressesSnapshot.docs.forEach((doc) => {
-        batch.update(doc.ref, { isDefault: false });
+        batch.update(doc.ref, {isDefault: false});
       });
       await batch.commit();
     }
 
-    const addressRef = db.collection('users').doc(uid).collection('addresses').doc();
+    const addressRef = db.collection("users").doc(uid).collection("addresses").doc();
     const newAddress = {
       id: addressRef.id,
       userId: uid,
@@ -700,31 +700,31 @@ router.post('/addresses/me', async (req, res) => {
     };
 
     await addressRef.set(newAddress);
-    return res.status(201).json({ ...newAddress });
+    return res.status(201).json({...newAddress});
   } catch (error: any) {
-    return res.status(error.statusCode || 400).json({ success: false, error: error.message });
+    return res.status(error.statusCode || 400).json({success: false, error: error.message});
   }
 });
 
-router.put('/addresses/:addressId', async (req, res) => {
+router.put("/addresses/:addressId", async (req, res) => {
   try {
     const uid = await getAuthenticatedUid(req);
-    const { addressId } = req.params;
-    const addressRef = db.collection('users').doc(uid).collection('addresses').doc(addressId);
+    const {addressId} = req.params;
+    const addressRef = db.collection("users").doc(uid).collection("addresses").doc(addressId);
     const addressDoc = await addressRef.get();
 
     if (!addressDoc.exists) {
-      return res.status(404).json({ success: false, error: 'Address not found' });
+      return res.status(404).json({success: false, error: "Address not found"});
     }
 
-    const { id, userId, createdAt, ...updateData } = req.body;
+    const {id, userId, createdAt, ...updateData} = req.body;
 
     if (updateData.isDefault) {
-      const addressesSnapshot = await db.collection('users').doc(uid).collection('addresses').get();
+      const addressesSnapshot = await db.collection("users").doc(uid).collection("addresses").get();
       const batch = db.batch();
       addressesSnapshot.docs.forEach((doc) => {
         if (doc.id !== addressId) {
-          batch.update(doc.ref, { isDefault: false });
+          batch.update(doc.ref, {isDefault: false});
         }
       });
       await batch.commit();
@@ -736,123 +736,123 @@ router.put('/addresses/:addressId', async (req, res) => {
     });
 
     const updatedDoc = await addressRef.get();
-    return res.json({ id: updatedDoc.id, ...updatedDoc.data() });
+    return res.json({id: updatedDoc.id, ...updatedDoc.data()});
   } catch (error: any) {
-    return res.status(error.statusCode || 400).json({ success: false, error: error.message });
+    return res.status(error.statusCode || 400).json({success: false, error: error.message});
   }
 });
 
-router.delete('/addresses/:addressId', async (req, res) => {
+router.delete("/addresses/:addressId", async (req, res) => {
   try {
     const uid = await getAuthenticatedUid(req);
-    const { addressId } = req.params;
-    const addressRef = db.collection('users').doc(uid).collection('addresses').doc(addressId);
+    const {addressId} = req.params;
+    const addressRef = db.collection("users").doc(uid).collection("addresses").doc(addressId);
     const addressDoc = await addressRef.get();
 
     if (!addressDoc.exists) {
-      return res.status(404).json({ success: false, error: 'Address not found' });
+      return res.status(404).json({success: false, error: "Address not found"});
     }
 
     await addressRef.delete();
-    return res.json({ success: true, message: 'Address deleted successfully' });
+    return res.json({success: true, message: "Address deleted successfully"});
   } catch (error: any) {
-    return res.status(error.statusCode || 400).json({ success: false, error: error.message });
+    return res.status(error.statusCode || 400).json({success: false, error: error.message});
   }
 });
 
-router.put('/addresses/:addressId/set-default', async (req, res) => {
+router.put("/addresses/:addressId/set-default", async (req, res) => {
   try {
     const uid = await getAuthenticatedUid(req);
-    const { addressId } = req.params;
-    const addressRef = db.collection('users').doc(uid).collection('addresses').doc(addressId);
+    const {addressId} = req.params;
+    const addressRef = db.collection("users").doc(uid).collection("addresses").doc(addressId);
     const addressDoc = await addressRef.get();
 
     if (!addressDoc.exists) {
-      return res.status(404).json({ success: false, error: 'Address not found' });
+      return res.status(404).json({success: false, error: "Address not found"});
     }
 
-    const addressesSnapshot = await db.collection('users').doc(uid).collection('addresses').get();
+    const addressesSnapshot = await db.collection("users").doc(uid).collection("addresses").get();
     const batch = db.batch();
     addressesSnapshot.docs.forEach((doc) => {
-      batch.update(doc.ref, { isDefault: doc.id === addressId });
+      batch.update(doc.ref, {isDefault: doc.id === addressId});
     });
     await batch.commit();
 
     const updatedDoc = await addressRef.get();
-    return res.json({ id: updatedDoc.id, ...updatedDoc.data() });
+    return res.json({id: updatedDoc.id, ...updatedDoc.data()});
   } catch (error: any) {
-    return res.status(error.statusCode || 400).json({ success: false, error: error.message });
+    return res.status(error.statusCode || 400).json({success: false, error: error.message});
   }
 });
 
-router.post('/verify-phone', async (req, res) => {
+router.post("/verify-phone", async (req, res) => {
   try {
     const uid = await getAuthenticatedUid(req);
-    const { code, verificationId } = req.body;
+    const {code, verificationId} = req.body;
 
     if (!code || !verificationId) {
-      return res.status(400).json({ success: false, error: 'Code and verificationId are required' });
+      return res.status(400).json({success: false, error: "Code and verificationId are required"});
     }
 
-    await db.collection('users').doc(uid).update({
+    await db.collection("users").doc(uid).update({
       isPhoneVerified: true,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    return res.json({ success: true, message: 'Phone verified successfully' });
+    return res.json({success: true, message: "Phone verified successfully"});
   } catch (error: any) {
-    return res.status(error.statusCode || 400).json({ success: false, error: error.message });
+    return res.status(error.statusCode || 400).json({success: false, error: error.message});
   }
 });
 
-router.get('/home-feed', async (req, res) => {
+router.get("/home-feed", async (req, res) => {
   try {
     const uid = await getAuthenticatedUid(req);
-    const userDoc = await db.collection('users').doc(uid).get();
+    const userDoc = await db.collection("users").doc(uid).get();
 
     if (!userDoc.exists) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({success: false, error: "User not found"});
     }
 
     const userData = userDoc.data() as any;
-    const requestedSocietyId = typeof req.query.societyId === 'string' ? req.query.societyId : undefined;
+    const requestedSocietyId = typeof req.query.societyId === "string" ? req.query.societyId : undefined;
     const societyId = requestedSocietyId || userData.societyId;
 
     if (!societyId) {
-      return res.status(400).json({ success: false, error: 'Society not selected for user' });
+      return res.status(400).json({success: false, error: "Society not selected for user"});
     }
 
     await ensureSocietyDemoCatalog(societyId);
 
     const businessesSnapshot = await db
-      .collection('businesses')
-      .where('societyId', '==', societyId)
-      .where('status', '==', 'active')
+      .collection("businesses")
+      .where("societyId", "==", societyId)
+      .where("status", "==", "active")
       .get();
 
-    const businesses = businessesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
+    const businesses = businessesSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()})) as any[];
     const businessIds = businesses.map((business) => business.id);
     const products = await getSocietyProducts(businessIds);
 
-    const activeOrderStatuses = new Set(['pending', 'confirmed', 'preparing', 'ready', 'outForDelivery']);
+    const activeOrderStatuses = new Set(["pending", "confirmed", "preparing", "ready", "outForDelivery"]);
 
     const ordersSnapshot = await db
-      .collection('orders')
-      .where('userId', '==', uid)
+      .collection("orders")
+      .where("userId", "==", uid)
       .limit(100)
       .get();
 
-    const orders = ordersSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as any[];
+    const orders = ordersSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()})) as any[];
     const activeOrders = orders.filter((order) => activeOrderStatuses.has(order.status)).length;
 
     const categoryMap = new Map<string, number>();
     businesses.forEach((business) => {
-      const key = String(business.category || 'other').toLowerCase();
+      const key = String(business.category || "other").toLowerCase();
       categoryMap.set(key, (categoryMap.get(key) ?? 0) + 1);
     });
 
     const categories = Array.from(categoryMap.entries())
-      .map(([key, count]) => ({ key, count }))
+      .map(([key, count]) => ({key, count}))
       .sort((a, b) => b.count - a.count);
 
     const featuredProducts = [...products]
@@ -872,23 +872,23 @@ router.get('/home-feed', async (req, res) => {
     const nowMs = Date.now();
     const toMillis = (value: any): number => {
       if (!value) return 0;
-      if (typeof value?.toMillis === 'function') return value.toMillis();
-      if (typeof value?.seconds === 'number') return value.seconds * 1000;
+      if (typeof value?.toMillis === "function") return value.toMillis();
+      if (typeof value?.seconds === "number") return value.seconds * 1000;
       if (value instanceof Date) return value.getTime();
       const parsed = new Date(value).getTime();
       return Number.isNaN(parsed) ? 0 : parsed;
     };
 
     const bannersSnapshot = await db
-      .collection('homeBanners')
-      .where('isActive', '==', true)
+      .collection("homeBanners")
+      .where("isActive", "==", true)
       .get();
 
     const banners = bannersSnapshot.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() } as any))
+      .map((doc) => ({id: doc.id, ...doc.data()} as any))
       .filter((banner) => {
-        const targetSociety = String(banner.societyId || 'global');
-        if (targetSociety !== 'global' && targetSociety !== societyId) return false;
+        const targetSociety = String(banner.societyId || "global");
+        if (targetSociety !== "global" && targetSociety !== societyId) return false;
         const startAtMs = toMillis(banner.startAt);
         const endAtMs = toMillis(banner.endAt);
         if (startAtMs && nowMs < startAtMs) return false;
@@ -918,7 +918,7 @@ router.get('/home-feed', async (req, res) => {
       banners,
     });
   } catch (error: any) {
-    return res.status(error.statusCode || 500).json({ success: false, error: error.message || 'Failed to load home feed' });
+    return res.status(error.statusCode || 500).json({success: false, error: error.message || "Failed to load home feed"});
   }
 });
 
@@ -928,39 +928,39 @@ router.get('/home-feed', async (req, res) => {
 async function loginWithRole(
   req: any,
   res: any,
-  expectedRole: 'superAdmin' | 'businessOwner' | 'user' | 'deliveryPartner'
+  expectedRole: "superAdmin" | "businessOwner" | "user" | "deliveryPartner"
 ) {
-  const { email, password } = req.body;
+  const {email, password} = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ success: false, error: 'Email and password are required' });
+    return res.status(400).json({success: false, error: "Email and password are required"});
   }
 
   let authResult: FirebaseSignInResult;
   try {
     authResult = await firebaseSignIn(email, password);
   } catch (err: any) {
-    return res.status(err.statusCode ?? 401).json({ success: false, error: err.message });
+    return res.status(err.statusCode ?? 401).json({success: false, error: err.message});
   }
 
   // Fetch the Firestore user document to check role
-  const userDoc = await db.collection('users').doc(authResult.localId).get();
+  const userDoc = await db.collection("users").doc(authResult.localId).get();
   if (!userDoc.exists) {
-    return res.status(404).json({ success: false, error: 'User account not found' });
+    return res.status(404).json({success: false, error: "User account not found"});
   }
 
   const userData = userDoc.data() as any;
 
   const normalizeRole = (
     role: unknown
-  ): 'superAdmin' | 'businessOwner' | 'user' | 'deliveryPartner' | null => {
-    if (typeof role !== 'string') return null;
-    const compact = role.replace(/[-_\s]/g, '').toLowerCase();
-    if (compact === 'superadmin') return 'superAdmin';
-    if (compact === 'businessowner' || compact === 'owner' || compact === 'merchant') return 'businessOwner';
-    if (compact === 'user' || compact === 'resident' || compact === 'customer') return 'user';
-    if (compact === 'deliverypartner' || compact === 'delivery' || compact === 'rider') {
-      return 'deliveryPartner';
+  ): "superAdmin" | "businessOwner" | "user" | "deliveryPartner" | null => {
+    if (typeof role !== "string") return null;
+    const compact = role.replace(/[-_\s]/g, "").toLowerCase();
+    if (compact === "superadmin") return "superAdmin";
+    if (compact === "businessowner" || compact === "owner" || compact === "merchant") return "businessOwner";
+    if (compact === "user" || compact === "resident" || compact === "customer") return "user";
+    if (compact === "deliverypartner" || compact === "delivery" || compact === "rider") {
+      return "deliveryPartner";
     }
     return null;
   };
@@ -969,23 +969,23 @@ async function loginWithRole(
 
   // Repair legacy business-owner accounts that were authenticated successfully
   // but have stale or incorrect role values in Firestore.
-  if (expectedRole === 'businessOwner' && normalizedRole !== 'businessOwner') {
+  if (expectedRole === "businessOwner" && normalizedRole !== "businessOwner") {
     const ownedBusinessSnap = await db
-      .collection('businesses')
-      .where('ownerId', '==', authResult.localId)
+      .collection("businesses")
+      .where("ownerId", "==", authResult.localId)
       .limit(1)
       .get();
 
     if (!ownedBusinessSnap.empty) {
-      normalizedRole = 'businessOwner';
+      normalizedRole = "businessOwner";
       await Promise.all([
-        db.collection('users').doc(authResult.localId).update({
-          role: 'businessOwner',
+        db.collection("users").doc(authResult.localId).update({
+          role: "businessOwner",
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         }),
-        auth.setCustomUserClaims(authResult.localId, { role: 'businessOwner' }),
+        auth.setCustomUserClaims(authResult.localId, {role: "businessOwner"}),
       ]);
-      userData.role = 'businessOwner';
+      userData.role = "businessOwner";
     }
   }
 
@@ -996,16 +996,16 @@ async function loginWithRole(
     });
   }
 
-  if (userData.status === 'suspended') {
-    return res.status(403).json({ success: false, error: 'Your account has been suspended' });
+  if (userData.status === "suspended") {
+    return res.status(403).json({success: false, error: "Your account has been suspended"});
   }
 
-  if (userData.status === 'inactive') {
-    return res.status(403).json({ success: false, error: 'Your account is inactive. Contact the business owner.' });
+  if (userData.status === "inactive") {
+    return res.status(403).json({success: false, error: "Your account is inactive. Contact the business owner."});
   }
 
   return res.json({
-    user: { id: authResult.localId, ...userData },
+    user: {id: authResult.localId, ...userData},
     tokens: {
       accessToken: authResult.idToken,
       refreshToken: authResult.refreshToken,
@@ -1014,10 +1014,10 @@ async function loginWithRole(
   });
 }
 
-router.post('/superadmin/login', (req, res) => loginWithRole(req, res, 'superAdmin'));
-router.post('/businessowner/login', (req, res) => loginWithRole(req, res, 'businessOwner'));
-router.post('/user/login', (req, res) => loginWithRole(req, res, 'user'));
-router.post('/deliverypartner/login', (req, res) => loginWithRole(req, res, 'deliveryPartner'));
+router.post("/superadmin/login", (req, res) => loginWithRole(req, res, "superAdmin"));
+router.post("/businessowner/login", (req, res) => loginWithRole(req, res, "businessOwner"));
+router.post("/user/login", (req, res) => loginWithRole(req, res, "user"));
+router.post("/deliverypartner/login", (req, res) => loginWithRole(req, res, "deliveryPartner"));
 
 // ---------------------------------------------------------------------------
 // Token refresh — exchange a Firebase refresh token for a new ID token.
@@ -1025,27 +1025,27 @@ router.post('/deliverypartner/login', (req, res) => loginWithRole(req, res, 'del
 // the user is disabled, the password changes, or tokens are explicitly revoked.
 // Access (ID) tokens expire ~1h and must be rotated via this endpoint.
 // ---------------------------------------------------------------------------
-router.post('/refresh-token', async (req, res) => {
+router.post("/refresh-token", async (req, res) => {
   const refreshToken =
     req.body?.refreshToken ||
     req.body?.refresh_token ||
     // Allow clients that only send the refresh token as a bearer credential.
-    req.headers.authorization?.split('Bearer ')[1];
+    req.headers.authorization?.split("Bearer ")[1];
 
   if (!refreshToken) {
-    return res.status(400).json({ success: false, error: 'refreshToken is required' });
+    return res.status(400).json({success: false, error: "refreshToken is required"});
   }
 
   // Mock tokens used in local/demo mode never expire.
-  if (typeof refreshToken === 'string' && refreshToken.startsWith('mock-')) {
+  if (typeof refreshToken === "string" && refreshToken.startsWith("mock-")) {
     const mockUid =
-      MOCK_TOKEN_UIDS[refreshToken.replace('refresh', 'access')] ||
-      MOCK_TOKEN_UIDS['mock-access-token-user'];
-    const userDoc = await db.collection('users').doc(mockUid).get();
+      MOCK_TOKEN_UIDS[refreshToken.replace("refresh", "access")] ||
+      MOCK_TOKEN_UIDS["mock-access-token-user"];
+    const userDoc = await db.collection("users").doc(mockUid).get();
     return res.json({
-      user: userDoc.exists ? { id: mockUid, ...userDoc.data() } : { id: mockUid },
+      user: userDoc.exists ? {id: mockUid, ...userDoc.data()} : {id: mockUid},
       tokens: {
-        accessToken: refreshToken.replace('refresh', 'access'),
+        accessToken: refreshToken.replace("refresh", "access"),
         refreshToken,
         expiresIn: 3600,
       },
@@ -1056,35 +1056,35 @@ router.post('/refresh-token', async (req, res) => {
     const response = await fetch(
       `https://securetoken.googleapis.com/v1/token?key=${FIREBASE_API_KEY}`,
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ grant_type: 'refresh_token', refresh_token: refreshToken }),
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({grant_type: "refresh_token", refresh_token: refreshToken}),
       }
     );
 
     const data = await response.json() as any;
 
     if (!response.ok) {
-      const firebaseCode: string = data?.error?.message || data?.error || 'TOKEN_REFRESH_FAILED';
+      const firebaseCode: string = data?.error?.message || data?.error || "TOKEN_REFRESH_FAILED";
       // Invalid / revoked refresh tokens must force a re-login on the client.
       return res.status(401).json({
         success: false,
-        error: 'Session expired. Please sign in again.',
+        error: "Session expired. Please sign in again.",
         code: firebaseCode,
       });
     }
 
-    const userDoc = await db.collection('users').doc(data.user_id).get();
-    if (userDoc.exists && userDoc.data()?.status === 'suspended') {
+    const userDoc = await db.collection("users").doc(data.user_id).get();
+    if (userDoc.exists && userDoc.data()?.status === "suspended") {
       return res.status(403).json({
         success: false,
-        error: 'Your account has been suspended',
-        code: 'ACCOUNT_SUSPENDED',
+        error: "Your account has been suspended",
+        code: "ACCOUNT_SUSPENDED",
       });
     }
 
     return res.json({
-      user: userDoc.exists ? { id: data.user_id, ...userDoc.data() } : { id: data.user_id },
+      user: userDoc.exists ? {id: data.user_id, ...userDoc.data()} : {id: data.user_id},
       tokens: {
         accessToken: data.id_token,
         refreshToken: data.refresh_token || refreshToken,
@@ -1095,8 +1095,8 @@ router.post('/refresh-token', async (req, res) => {
     // Transient failures must not be treated as logout by the client.
     return res.status(503).json({
       success: false,
-      error: error.message || 'Token refresh temporarily unavailable',
-      code: 'REFRESH_UNAVAILABLE',
+      error: error.message || "Token refresh temporarily unavailable",
+      code: "REFRESH_UNAVAILABLE",
     });
   }
 });
@@ -1106,43 +1106,43 @@ router.post('/refresh-token', async (req, res) => {
 // We intentionally do NOT revoke Firebase refresh tokens here so other devices
 // stay signed in. Manual logout on this device is enforced client-side.
 // ---------------------------------------------------------------------------
-router.post('/logout', async (req, res) => {
+router.post("/logout", async (req, res) => {
   try {
-    const token = req.headers.authorization?.split('Bearer ')[1];
-    if (token && !(token in MOCK_TOKEN_UIDS) && !token.startsWith('mock-')) {
+    const token = req.headers.authorization?.split("Bearer ")[1];
+    if (token && !(token in MOCK_TOKEN_UIDS) && !token.startsWith("mock-")) {
       try {
         const decoded = await auth.verifyIdToken(token, false);
-        await db.collection('users').doc(decoded.uid).set(
+        await db.collection("users").doc(decoded.uid).set(
           {
             pushToken: admin.firestore.FieldValue.delete(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           },
-          { merge: true }
+          {merge: true}
         );
       } catch {
         // Access token may already be expired — local logout still succeeds.
       }
     }
-    return res.json({ success: true });
+    return res.json({success: true});
   } catch {
     // Never block the client from signing out.
-    return res.json({ success: true });
+    return res.json({success: true});
   }
 });
 
 // PUT /auth/push-token — store Expo push token for the authenticated user
-router.put('/push-token', async (req, res) => {
+router.put("/push-token", async (req, res) => {
   const uid = (req as any).user?.uid;
-  if (!uid) return res.status(401).json({ success: false, error: 'Unauthorized' });
-  const { pushToken } = req.body;
-  if (!pushToken || typeof pushToken !== 'string') {
-    return res.status(400).json({ success: false, error: 'pushToken is required' });
+  if (!uid) return res.status(401).json({success: false, error: "Unauthorized"});
+  const {pushToken} = req.body;
+  if (!pushToken || typeof pushToken !== "string") {
+    return res.status(400).json({success: false, error: "pushToken is required"});
   }
   try {
-    await admin.firestore().collection('users').doc(uid).set({ pushToken }, { merge: true });
-    return res.json({ success: true });
+    await admin.firestore().collection("users").doc(uid).set({pushToken}, {merge: true});
+    return res.json({success: true});
   } catch (error: any) {
-    return res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({success: false, error: error.message});
   }
 });
 

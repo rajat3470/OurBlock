@@ -1,12 +1,12 @@
-import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
-import { notifyUsersByExternalIds, sendExpoPushNotification } from '../utils/oneSignal';
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
+import {notifyUsersByExternalIds, sendExpoPushNotification} from "../utils/oneSignal";
 
 const db = admin.firestore();
 
 async function sendPushNotification(userId: string, title: string, body: string, data: Record<string, string>) {
   try {
-    const userDoc = await db.collection('users').doc(userId).get();
+    const userDoc = await db.collection("users").doc(userId).get();
     const userData = userDoc.data() ?? {};
     const fcmToken = userData.fcmToken;
     const pushToken = userData.pushToken;
@@ -15,10 +15,10 @@ async function sendPushNotification(userId: string, title: string, body: string,
     if (fcmToken) {
       await admin.messaging().send({
         token: fcmToken,
-        notification: { title, body },
+        notification: {title, body},
         data,
-        android: { priority: 'high', notification: { channelId: 'orders', sound: 'default' } },
-        apns: { payload: { aps: { sound: 'default', badge: 1 } } },
+        android: {priority: "high", notification: {channelId: "orders", sound: "default"}},
+        apns: {payload: {aps: {sound: "default", badge: 1}}},
       });
     }
 
@@ -26,22 +26,22 @@ async function sendPushNotification(userId: string, title: string, body: string,
       await sendExpoPushNotification(pushToken, title, body, data);
     }
   } catch (err) {
-    console.warn('FCM send failed for user', userId, err);
+    console.warn("FCM send failed for user", userId, err);
   }
 }
 
 const statusMessages: Record<string, string> = {
-  confirmed: 'Your order has been accepted by the store',
-  preparing: 'Your order is being processed',
-  ready: 'Your order is ready for collection/delivery',
-  outForDelivery: 'Your order is on its way',
-  delivered: 'Your order has been completed',
-  cancelled: 'Your order has been cancelled',
-  rejected: 'Your order has been rejected by the store',
+  confirmed: "Your order has been accepted by the store",
+  preparing: "Your order is being processed",
+  ready: "Your order is ready for collection/delivery",
+  outForDelivery: "Your order is on its way",
+  delivered: "Your order has been completed",
+  cancelled: "Your order has been cancelled",
+  rejected: "Your order has been rejected by the store",
 };
 
 export const onOrderUpdate = functions.firestore
-  .document('orders/{orderId}')
+  .document("orders/{orderId}")
   .onUpdate(async (change, context) => {
     try {
       const before = change.before.data();
@@ -52,25 +52,25 @@ export const onOrderUpdate = functions.firestore
       if (before.status !== after.status) {
         console.log(`Order ${orderId} status changed: ${before.status} -> ${after.status}`);
 
-        let message = statusMessages[after.status] || 'Order status updated';
+        let message = statusMessages[after.status] || "Order status updated";
 
-        if (after.status === 'rejected' && after.rejectionReason) {
+        if (after.status === "rejected" && after.rejectionReason) {
           message = `Your order was rejected: ${after.rejectionReason}`;
         }
 
-        const title = after.status === 'rejected' ? 'Order Rejected' : 'Order Update';
+        const title = after.status === "rejected" ? "Order Rejected" : "Order Update";
         const body = `Order #${orderRef}: ${message}`;
 
         // Firestore in-app notification
-        await db.collection('notifications').add({
+        await db.collection("notifications").add({
           userId: after.userId,
-          type: 'order',
+          type: "order",
           title,
           body,
           data: {
             orderId,
             status: after.status,
-            ...(after.rejectionReason ? { rejectionReason: after.rejectionReason } : {}),
+            ...(after.rejectionReason ? {rejectionReason: after.rejectionReason} : {}),
           },
           read: false,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -78,22 +78,22 @@ export const onOrderUpdate = functions.firestore
         });
 
         // FCM push to customer
-        const pushData: Record<string, string> = { orderId, status: after.status };
+        const pushData: Record<string, string> = {orderId, status: after.status};
         if (after.rejectionReason) pushData.rejectionReason = after.rejectionReason;
         await sendPushNotification(after.userId, title, body, pushData);
         // OneSignal push to customer (external_user_id)
         const oneSignalResult = await notifyUsersByExternalIds([after.userId], title, body, pushData);
         if (!oneSignalResult || oneSignalResult.ok === false) {
-          const customerDoc = await db.collection('users').doc(after.userId).get();
+          const customerDoc = await db.collection("users").doc(after.userId).get();
           const customerPushToken = customerDoc.data()?.pushToken;
           if (customerPushToken) {
             await sendExpoPushNotification(customerPushToken, title, body, pushData);
           }
         }
 
-        console.log('Order update notification sent');
+        console.log("Order update notification sent");
       }
     } catch (error) {
-      console.error('Error in onOrderUpdate trigger:', error);
+      console.error("Error in onOrderUpdate trigger:", error);
     }
   });
