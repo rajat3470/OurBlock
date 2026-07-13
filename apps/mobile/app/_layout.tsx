@@ -196,12 +196,22 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
           }
         } catch (error: any) {
           // Stay signed in on network/transient errors. Log out only when the
-          // refresh token is gone or the account is no longer allowed.
+          // refresh token is gone or the account is explicitly revoked (401).
+          // A 403 ACCOUNT_SUSPENDED must NOT log the user out — the dashboard
+          // needs to stay visible so the suspended banner can be shown.
           const status = error?.response?.status;
-          const refreshToken = await AsyncStorage.getItem("refreshToken");
-          if (!refreshToken || status === 403) {
-            await authStateService.clearAuth();
-            dispatch(logout());
+          const code = error?.response?.data?.code;
+          if (code === 'ACCOUNT_SUSPENDED') {
+            // Update local user status so the dashboard banner shows immediately
+            const updatedUser = { ...persisted.user, status: 'suspended' } as any;
+            await authStateService.updateUser(updatedUser);
+            dispatch(setAuth({ user: updatedUser, tokens: persisted.tokens }));
+          } else {
+            const refreshToken = await AsyncStorage.getItem("refreshToken");
+            if (!refreshToken || status === 401) {
+              await authStateService.clearAuth();
+              dispatch(logout());
+            }
           }
         }
       }

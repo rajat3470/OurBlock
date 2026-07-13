@@ -584,13 +584,6 @@ router.get('/me', async (req, res) => {
     }
 
     const userData = userDoc.data() as any;
-    if (userData?.status === 'suspended') {
-      return res.status(403).json({
-        success: false,
-        error: 'Your account has been suspended',
-        code: 'ACCOUNT_SUSPENDED',
-      });
-    }
 
     return res.json({
       success: true,
@@ -1065,13 +1058,6 @@ router.post('/refresh-token', async (req, res) => {
     }
 
     const userDoc = await db.collection('users').doc(data.user_id).get();
-    if (userDoc.exists && userDoc.data()?.status === 'suspended') {
-      return res.status(403).json({
-        success: false,
-        error: 'Your account has been suspended',
-        code: 'ACCOUNT_SUSPENDED',
-      });
-    }
 
     return res.json({
       user: userDoc.exists ? { id: data.user_id, ...userDoc.data() } : { id: data.user_id },

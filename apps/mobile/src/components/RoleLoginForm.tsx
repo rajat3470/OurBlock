@@ -40,9 +40,8 @@ export default function RoleLoginForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {}
-  );
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [isSuspended, setIsSuspended] = useState(false);
 
   const { login } = useAuth();
   const { isLoading } = useAppSelector((state) => state.auth);
@@ -74,14 +73,18 @@ export default function RoleLoginForm({
 
   const handleLogin = async () => {
     if (!validate()) return;
-
+    setIsSuspended(false);
     try {
       await login({ email: email.trim(), password }, role);
       router.replace(successRoute);
     } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Please check your credentials";
-      Alert.alert("Login Failed", message);
+      const message = err instanceof Error ? err.message : "Please check your credentials";
+      const lower = message.toLowerCase();
+      if (lower.includes('suspended') || lower.includes('blocked')) {
+        setIsSuspended(true);
+      } else {
+        Alert.alert("Login Failed", message);
+      }
     }
   };
 
@@ -105,82 +108,84 @@ export default function RoleLoginForm({
               <Text style={styles.subtitle}>{subtitle}</Text>
             </LinearGradient>
 
-            <View style={styles.form}>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Email Address</Text>
-              <TextInput
-                style={[styles.input, errors.email ? styles.inputError : null]}
-                placeholder={emailPlaceholder}
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  if (errors.email) {
-                    setErrors((e) => ({ ...e, email: undefined }));
-                  }
-                }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-                placeholderTextColor={colors.textMuted}
-              />
-              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Password</Text>
-              <View
-                style={[
-                  styles.passwordContainer,
-                  errors.password ? styles.passwordContainerError : null,
-                ]}
-              >
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    if (errors.password) {
-                      setErrors((e) => ({ ...e, password: undefined }));
-                    }
-                  }}
-                  secureTextEntry={!showPassword}
-                  editable={!isLoading}
-                  placeholderTextColor={colors.textMuted}
-                />
+            {isSuspended ? (
+              <View style={styles.suspendedCard}>
+                <Text style={styles.suspendedEmoji}>🚫</Text>
+                <Text style={styles.suspendedTitle}>Account Blocked</Text>
+                <Text style={styles.suspendedMsg}>
+                  Your account has been suspended due to excessive order rejections. Please contact the admin to restore access.
+                </Text>
                 <TouchableOpacity
-                  style={styles.eyeBtn}
-                  onPress={() => setShowPassword((v) => !v)}
+                  style={styles.retryBtn}
+                  onPress={() => setIsSuspended(false)}
                 >
-                  <Text style={styles.eyeIcon}>{showPassword ? "🙈" : "👁️"}</Text>
+                  <Text style={styles.retryBtnText}>Try Again</Text>
                 </TouchableOpacity>
               </View>
-              {errors.password ? (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              ) : null}
-            </View>
+            ) : (
+              <View style={styles.form}>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>Email Address</Text>
+                  <TextInput
+                    style={[styles.input, errors.email ? styles.inputError : null]}
+                    placeholder={emailPlaceholder}
+                    value={email}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      if (errors.email) setErrors((e) => ({ ...e, email: undefined }));
+                    }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                    placeholderTextColor={colors.textMuted}
+                  />
+                  {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+                </View>
 
-            <TouchableOpacity
-              style={[styles.loginBtn, isLoading ? styles.loginBtnDisabled : null]}
-              onPress={handleLogin}
-              disabled={isLoading}
-              activeOpacity={0.85}
-            >
-              <LinearGradient
-                colors={[...ctaGradient]}
-                style={styles.loginBtnGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.loginBtnText}>Sign In</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>Password</Text>
+                  <View style={[styles.passwordContainer, errors.password ? styles.passwordContainerError : null]}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChangeText={(text) => {
+                        setPassword(text);
+                        if (errors.password) setErrors((e) => ({ ...e, password: undefined }));
+                      }}
+                      secureTextEntry={!showPassword}
+                      editable={!isLoading}
+                      placeholderTextColor={colors.textMuted}
+                    />
+                    <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword((v) => !v)}>
+                      <Text style={styles.eyeIcon}>{showPassword ? "🙈" : "👁️"}</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.loginBtn, isLoading ? styles.loginBtnDisabled : null]}
+                  onPress={handleLogin}
+                  disabled={isLoading}
+                  activeOpacity={0.85}
+                >
+                  <LinearGradient
+                    colors={[...ctaGradient]}
+                    style={styles.loginBtnGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.loginBtnText}>Sign In</Text>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )}
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -320,5 +325,41 @@ const styles = StyleSheet.create({
     fontSize: typography.button.fontSize,
     fontWeight: typography.button.fontWeight,
     letterSpacing: 0.3,
+  },
+  suspendedCard: {
+    backgroundColor: "#FEF2F2",
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    padding: spacing.lg,
+    alignItems: "center",
+    gap: 10,
+  },
+  suspendedEmoji: { fontSize: 48 },
+  suspendedTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#991B1B",
+  },
+  suspendedMsg: {
+    fontSize: 13,
+    color: "#B91C1C",
+    textAlign: "center",
+    lineHeight: 20,
+    fontWeight: "500",
+  },
+  retryBtn: {
+    marginTop: 8,
+    backgroundColor: "#FEE2E2",
+    borderRadius: radius.lg,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  retryBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#991B1B",
   },
 });

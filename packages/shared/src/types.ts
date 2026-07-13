@@ -55,6 +55,15 @@ export interface BusinessOwner extends User {
   verificationStatus: "pending" | "verified" | "rejected";
   identificationNumber?: string;
   identificationImageUrl?: string;
+  rejectionHistory?: RejectionRecord[];
+  suspendedAt?: Date;
+  suspensionReason?: string;
+}
+
+export interface RejectionRecord {
+  userId?: string | null;
+  timestamp: Date;
+  orderId: string;
 }
 
 export interface AppUser extends User {

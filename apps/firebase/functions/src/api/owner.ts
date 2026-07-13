@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
 import { autoRejectIfExpired, isExpiredPending } from '../shared/orderExpiry';
+import { evaluateRejectionWindow } from '../shared/rejectionThreshold';
 
 const router = Router();
 const db = admin.firestore();
@@ -394,16 +395,81 @@ router.post('/orders/:orderId/reject', requireAuth, async (req, res) => {
       notes: `Order rejected by ${(business as any).name}: ${reason}`,
     };
 
-    await db.collection('orders').doc(req.params.orderId).update({
+    const ownerRef = db.collection('users').doc(uid);
+    const ownerDoc = await ownerRef.get();
+    const ownerData = ownerDoc.data() ?? {};
+    if (ownerData?.status === 'suspended') {
+      return res.status(403).json({ success: false, error: 'This owner account is suspended and cannot reject orders.' });
+    }
+
+    const historicalRejections = Array.isArray(ownerData?.rejectionHistory)
+      ? ownerData.rejectionHistory
+      : [];
+    const now = new Date();
+    const nextHistory = [
+      ...historicalRejections,
+      { timestamp: now, orderId: req.params.orderId, userId: orderData.userId },
+    ];
+
+    const evaluation = evaluateRejectionWindow(nextHistory, now, orderData.userId);
+
+    const updates: Record<string, any> = {
       status: 'rejected',
       rejectionReason: reason.trim(),
       rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
       trackingUpdates: admin.firestore.FieldValue.arrayUnion(trackingUpdate),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    };
+
+    let suspensionMessage: string | null = null;
+    if (evaluation.shouldBlock) {
+      try {
+        await auth.updateUser(uid, { disabled: true });
+      } catch (authError: any) {
+        console.warn(`Could not disable Firebase Auth user ${uid}:`, authError?.message ?? authError);
+      }
+
+      await ownerRef.set(
+        {
+          status: 'suspended',
+          rejectionHistory: nextHistory,
+          suspendedAt: admin.firestore.FieldValue.serverTimestamp(),
+          suspensionReason: 'Exceeded rejection threshold',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      await db.collection('businesses').doc((business as any).id).set(
+        {
+          status: 'suspended',
+          isTakingOrders: false,
+          suspendedAt: admin.firestore.FieldValue.serverTimestamp(),
+          suspensionReason: 'Exceeded rejection threshold',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+      suspensionMessage = 'This owner has been automatically suspended after 5 rejections within 1 hour.';
+    } else {
+      await ownerRef.update({
+        rejectionHistory: nextHistory,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    await db.collection('orders').doc(req.params.orderId).update(updates);
 
     const updatedDoc = await db.collection('orders').doc(req.params.orderId).get();
-    return res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
+    return res.json({
+      success: true,
+      data: {
+        id: updatedDoc.id,
+        ...updatedDoc.data(),
+        autoBlocked: Boolean(suspensionMessage),
+        autoBlockReason: suspensionMessage,
+        businessStatus: suspensionMessage ? 'suspended' : (business as any).status,
+      },
+    });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
   }

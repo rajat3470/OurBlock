@@ -4,6 +4,8 @@ import * as https from 'https';
 import { computeCouponDiscount } from './coupons';
 import { ORDER_FEES, ORDER_ACCEPTANCE_WINDOW_SECONDS } from '../shared/constants';
 import { autoRejectIfExpired, isExpiredPending } from '../shared/orderExpiry';
+import { getBusinessOrderEligibility } from '../shared/businessAvailability';
+import { evaluateRejectionWindow } from '../shared/rejectionThreshold';
 
 /**
  * Apply lazy auto-rejection to a page of order docs: any order still pending
@@ -132,7 +134,23 @@ router.get('/my', requireAuth, async (req, res) => {
     const all = await expirePendingDocs(snapshot.docs);
     const paginated = all.slice((page - 1) * limit, page * limit);
 
-    return res.json({ success: true, data: paginated, total: snapshot.size, page, limit });
+    // Attach live businessStatus to each order so the client can show
+    // "Not Available" without needing a separate businesses fetch.
+    const businessIds = [...new Set(paginated.map((o: any) => o.businessId).filter(Boolean))];
+    const bizStatusMap: Record<string, string> = {};
+    await Promise.all(
+      businessIds.map(async (bizId: any) => {
+        const bizDoc = await db.collection('businesses').doc(bizId).get();
+        if (bizDoc.exists) bizStatusMap[bizId] = bizDoc.data()?.status ?? 'active';
+      })
+    );
+
+    const enriched = paginated.map((o: any) => ({
+      ...o,
+      businessStatus: bizStatusMap[o.businessId] ?? null,
+    }));
+
+    return res.json({ success: true, data: enriched, total: snapshot.size, page, limit });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
@@ -213,9 +231,11 @@ router.post('/', requireAuth, async (req, res) => {
     if (!bizDoc.exists) return res.status(404).json({ success: false, error: 'Business not found' });
     const business = { id: bizDoc.id, ...bizDoc.data() } as any;
 
-    // Check business is accepting orders
-    if (business.isTakingOrders === false) {
-      return res.status(400).json({ success: false, error: `${business.name} is not accepting orders right now. Please try again later.` });
+    const ownerDoc = await db.collection('users').doc(business.ownerId).get();
+    const ownerData = ownerDoc.exists ? ownerDoc.data() : null;
+    const eligibility = getBusinessOrderEligibility(business, ownerData as any);
+    if (!eligibility.canPlaceOrder) {
+      return res.status(400).json({ success: false, error: eligibility.reason });
     }
 
     const validatedItems: any[] = [];
@@ -411,7 +431,81 @@ router.put('/:id/status', requireAuth, async (req, res) => {
     // Fire-and-forget push notification to the customer
     notifyOrderStatusChange(orderData.userId, status, orderData.businessName ?? undefined);
 
-    return res.json({ success: true, data: { id: updatedDoc.id, ...updatedDoc.data() } });
+    let autoBlocked = false;
+    let autoBlockReason: string | null = null;
+    let businessStatus: string | null = null;
+
+    // Track owner-side rejections/cancellations within a 1-hour window.
+    if (isOwner && (status === 'rejected' || status === 'cancelled')) {
+      const bizRef = db.collection('businesses').doc(orderData.businessId);
+      const ownerRef = db.collection('users').doc(uid);
+      const ownerDoc = await ownerRef.get();
+      const ownerData = ownerDoc.data() ?? {};
+      const historicalRejections = Array.isArray(ownerData.rejectionHistory)
+        ? ownerData.rejectionHistory
+        : [];
+      const now = new Date();
+      const nextHistory = [
+        ...historicalRejections,
+        { timestamp: now, orderId: req.params.id, userId: orderData.userId },
+      ];
+      const evaluation = evaluateRejectionWindow(nextHistory, now, orderData.userId);
+
+      if (evaluation.shouldBlock) {
+        try {
+          await auth.updateUser(uid, { disabled: true });
+        } catch (authError: any) {
+          console.warn(`Could not disable Firebase Auth user ${uid}:`, authError?.message ?? authError);
+        }
+
+        await ownerRef.set(
+          {
+            status: 'suspended',
+            rejectionHistory: nextHistory,
+            suspendedAt: admin.firestore.FieldValue.serverTimestamp(),
+            suspensionReason: 'Exceeded rejection threshold',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        await bizRef.set(
+          {
+            status: 'suspended',
+            isTakingOrders: false,
+            suspendedAt: admin.firestore.FieldValue.serverTimestamp(),
+            suspensionReason: 'Exceeded rejection threshold',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        autoBlocked = true;
+        autoBlockReason = 'This owner has been automatically suspended after 5 rejections within 1 hour.';
+        businessStatus = 'suspended';
+      } else {
+        await ownerRef.update({
+          rejectionHistory: nextHistory,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        const bizDoc = await bizRef.get();
+        businessStatus = bizDoc.data()?.status ?? null;
+      }
+    } else if (isOwner && status === 'confirmed') {
+      await db.collection('businesses').doc(orderData.businessId).update({
+        recentRejectionTimestamps: [],
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        id: updatedDoc.id,
+        ...updatedDoc.data(),
+        autoBlocked,
+        autoBlockReason,
+        businessStatus,
+      },
+    });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
   }

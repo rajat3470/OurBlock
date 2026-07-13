@@ -368,4 +368,42 @@ router.post('/fcm-token', requireAuth, async (req: any, res: any) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// POST /users/:id/unsuspend — restore a suspended business owner account
+// Resets: Firestore user status, Firestore business status, Firebase Auth
+// ---------------------------------------------------------------------------
+router.post('/:id/unsuspend', async (req, res) => {
+  try {
+    const uid = req.params.id;
+
+    // 1. Re-enable Firebase Auth account
+    await auth.updateUser(uid, { disabled: false });
+
+    // 2. Reset Firestore user status
+    await db.collection('users').doc(uid).update({
+      status: 'active',
+      rejectionHistory: [],
+      suspendedAt: admin.firestore.FieldValue.delete(),
+      suspensionReason: admin.firestore.FieldValue.delete(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    // 3. Reset the business owned by this user
+    const bizSnap = await db.collection('businesses').where('ownerId', '==', uid).limit(1).get();
+    if (!bizSnap.empty) {
+      await bizSnap.docs[0].ref.update({
+        status: 'active',
+        isTakingOrders: true,
+        suspendedAt: admin.firestore.FieldValue.delete(),
+        suspensionReason: admin.firestore.FieldValue.delete(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    return res.json({ success: true, message: 'Account restored successfully' });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 export default router;

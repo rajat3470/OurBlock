@@ -42,6 +42,14 @@ export default function BusinessOwnerDashboard() {
     timeAgo,
   } = useBusinessOwnerDashboard();
 
+  // Poll business profile every 10s to pick up suspension/unsuspension
+  useEffect(() => {
+    const timer = setInterval(() => {
+      loadBusinessProfile().catch(() => null);
+    }, 10_000);
+    return () => clearInterval(timer);
+  }, [loadBusinessProfile]);
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -635,4 +643,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   bottomPad: { height: 130 },
+
 });

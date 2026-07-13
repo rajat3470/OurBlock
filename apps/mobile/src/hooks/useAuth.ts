@@ -1,6 +1,7 @@
 import { authService } from "@services/authService";
 import { useAppDispatch } from "./useRedux";
 import { setAuth, setError, logout, setLoading } from "@store/slices/authSlice";
+import { clearBusinessOwnerState } from "@store/slices/businessOwnerSlice";
 import { clearUserAppState } from "@store/slices/userAppSlice";
 import { apiClient } from "@services/apiClient";
 import { authStateService } from "@services/authStateService";
@@ -185,6 +186,7 @@ export const useAuth = () => {
     socketService.disconnect();
     OneSignalService.logout();
     dispatch(logout());
+    dispatch(clearBusinessOwnerState());
     dispatch(clearUserAppState());
     try {
       // Still has tokens at this point so the backend can clear push registration.

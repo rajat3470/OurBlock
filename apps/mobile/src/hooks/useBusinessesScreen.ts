@@ -1,13 +1,47 @@
 import { useCallback, useMemo, useState } from "react";
-import { router } from "expo-router";
+import { router, useFocusEffect} from "expo-router";
 import { useUserApp } from "@hooks/useUserApp";
+ 
+import { Alert } from "react-native";
+import { useSocketEvent } from "./useSocket";
 
 /**
  * Encapsulates search + filtering logic for the customer shops list screen.
  */
 export const useBusinessesScreen = () => {
-  const { businesses, featuredProducts, favoriteBusinessIds, toggleFavorite } = useUserApp();
+  const { businesses, featuredProducts, favoriteBusinessIds, toggleFavorite, initializeHome } = useUserApp();
   const [searchQuery, setSearchQuery] = useState("");
+  // Refresh on every focus so suspended/unsuspended changes reflect immediately
+  useFocusEffect(
+    useCallback(() => {
+      initializeHome().catch(() => null);
+    }, [initializeHome])
+  );
+
+  // Listen for business suspension events via socket (if socket server is configured)
+  useSocketEvent<{ businessId: string; status: string; suspensionReason?: string }>(
+    "business:suspended",
+    (data) => {
+      // Refresh the businesses list to hide the suspended business immediately
+      initializeHome().catch(() => null);
+      
+      // Show alert to user if they were viewing this business
+      Alert.alert(
+        "Business Unavailable",
+        data.suspensionReason || "This business is currently unavailable.",
+        [{ text: "OK" }]
+      );
+    }
+  );
+
+  // Listen for business status changes (pause/resume)
+  useSocketEvent<{ businessId: string; isTakingOrders?: boolean; status?: string }>(
+    "business:status",
+    () => {
+      // Refresh to reflect status changes immediately
+      initializeHome().catch(() => null);
+    }
+  );
 
   const productMatchesByBusiness = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();

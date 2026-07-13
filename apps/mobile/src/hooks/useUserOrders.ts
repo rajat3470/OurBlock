@@ -53,6 +53,8 @@ export const useUserOrders = () => {
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityAtRef = useRef<number>(Date.now());
 
+  const businesses = useAppSelector((state) => state.userApp.businesses);
+
   const getFallbackDelayMs = useCallback(() => {
     const elapsed = Date.now() - lastActivityAtRef.current;
     if (elapsed < 30_000) return 3_000;
@@ -62,9 +64,7 @@ export const useUserOrders = () => {
 
   const refreshFallbackNow = useCallback(() => {
     lastActivityAtRef.current = Date.now();
-    if (!socketService.isConnected()) {
-      loadMyOrders({ silent: true }).catch(() => null);
-    }
+    loadMyOrders({ silent: true }).catch(() => null);
   }, [loadMyOrders]);
 
   const stopFallbackLoop = useCallback(() => {
@@ -78,9 +78,7 @@ export const useUserOrders = () => {
     stopFallbackLoop();
 
     const tick = () => {
-      if (!socketService.isConnected()) {
-        loadMyOrders({ silent: true }).catch(() => null);
-      }
+      loadMyOrders({ silent: true }).catch(() => null);
       fallbackTimerRef.current = setTimeout(tick, getFallbackDelayMs());
     };
 
@@ -91,6 +89,17 @@ export const useUserOrders = () => {
     (order: Order) => {
       const bizId = order.businessId;
       const bizName = (order as any).businessName ?? content.card.defaultShop;
+      const business = businesses.find((item) => item.id === bizId);
+      const businessStatus = (business?.status ?? (order as any).businessStatus ?? (order as any).business?.status) as string | undefined;
+
+    if (businessStatus && businessStatus !== "active") {
+      Alert.alert(
+        "Vendor unavailable",
+        "This vendor is no longer available or has been removed from the suggestions.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
 
       const doReorder = () => {
         dispatch(clearCart());

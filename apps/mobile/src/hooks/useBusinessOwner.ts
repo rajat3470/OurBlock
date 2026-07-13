@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "./useRedux";
+import { setAuth, setUser } from "@store/slices/authSlice";
 import {
   setLoading,
   setError,
@@ -16,7 +17,8 @@ import {
   setSelectedProductId,
 } from "@store/slices/businessOwnerSlice";
 import { businessOwnerService } from "@services/businessOwnerService";
-import { Business, Product, Order } from "@/types";
+import { authStateService } from "@services/authStateService";
+import { Business, Product, Order, User } from "@/types";
 
 /** Extract a human-readable message from any thrown value (including AxiosError). */
 function extractErrorMessage(err: unknown, fallback: string): string {
@@ -33,15 +35,34 @@ function extractErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
+function isSuspendedError(err: unknown): boolean {
+  const data = (err as any)?.response?.data;
+  const msg = `${data?.code ?? ""} ${data?.error ?? ""} ${data?.message ?? ""}`.toLowerCase();
+  return msg.includes("suspended") || msg.includes("blocked");
+}
+
 export const useBusinessOwner = () => {
   const dispatch = useAppDispatch();
   const state = useAppSelector((store) => store.businessOwner);
+  const auth = useAppSelector((store) => store.auth);
+
+  const markOwnerSuspended = useCallback(() => {
+    if (!auth.user || auth.user.role !== "businessOwner" || auth.user.status === "suspended") return;
+    const user = { ...auth.user, status: "suspended" } as User;
+    if (auth.tokens) {
+      dispatch(setAuth({ user, tokens: auth.tokens }));
+    } else {
+      dispatch(setUser(user));
+    }
+    authStateService.updateUser(user).catch(() => null);
+  }, [auth.tokens, auth.user, dispatch]);
 
   const loadBusinessProfile = useCallback(async () => {
     dispatch(setLoading(true));
     try {
       const business = await businessOwnerService.getMyBusiness();
       dispatch(setBusinessProfile(business));
+      if (business.status === "suspended") markOwnerSuspended();
     } catch (err: unknown) {
       const message = extractErrorMessage(err, "Failed to load business profile");
       dispatch(setError(message));
@@ -49,7 +70,7 @@ export const useBusinessOwner = () => {
     } finally {
       dispatch(setLoading(false));
     }
-  }, [dispatch]);
+  }, [dispatch, markOwnerSuspended]);
 
   const loadProducts = useCallback(async () => {
     dispatch(setLoading(true));
@@ -143,8 +164,10 @@ export const useBusinessOwner = () => {
       try {
         const order = await businessOwnerService.updateOrderStatus(orderId, status);
         dispatch(updateOrder(order));
+        if ((order as any).autoBlocked) markOwnerSuspended();
         return order;
       } catch (err: unknown) {
+        if (isSuspendedError(err)) markOwnerSuspended();
         const message = extractErrorMessage(err, "Failed to update order status");
         dispatch(setError(message));
         throw err;
@@ -152,7 +175,7 @@ export const useBusinessOwner = () => {
         dispatch(setLoading(false));
       }
     },
-    [dispatch]
+    [dispatch, markOwnerSuspended]
   );
 
   const rejectOrder = useCallback(
@@ -161,8 +184,10 @@ export const useBusinessOwner = () => {
       try {
         const order = await businessOwnerService.rejectOrder(orderId, reason);
         dispatch(updateOrder(order));
+        if ((order as any).autoBlocked) markOwnerSuspended();
         return order;
       } catch (err: unknown) {
+        if (isSuspendedError(err)) markOwnerSuspended();
         const message = extractErrorMessage(err, "Failed to reject order");
         dispatch(setError(message));
         throw err;
@@ -170,7 +195,7 @@ export const useBusinessOwner = () => {
         dispatch(setLoading(false));
       }
     },
-    [dispatch]
+    [dispatch, markOwnerSuspended]
   );
 
   const loadStats = useCallback(async () => {

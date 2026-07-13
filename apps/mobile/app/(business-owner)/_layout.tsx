@@ -1,18 +1,30 @@
 import { useEffect, useState } from "react";
-import { Tabs, useSegments } from "expo-router";
+import { Text, StyleSheet } from "react-native";
+import { Tabs, router, useSegments } from "expo-router";
 import RoleGate from "../../src/components/RoleGate";
 import AppTabIcon from "../../src/components/AppTabIcon";
 import PendingOrderBanner from "../../src/components/PendingOrderBanner";
-import { useAppSelector } from "../../src/hooks/useRedux";
+import { useAppDispatch, useAppSelector } from "../../src/hooks/useRedux";
 import { useBusinessOwner } from "../../src/hooks/useBusinessOwner";
+import { logout } from "../../src/store/slices/authSlice";
+import { clearBusinessOwnerState } from "../../src/store/slices/businessOwnerSlice";
+import { clearUserAppState } from "../../src/store/slices/userAppSlice";
 import { OrderStatus } from "../../src/types";
 import { isAcceptanceExpired } from "../../src/utils/orderAcceptance";
 import { useOrderNotifications } from "../../src/hooks/useOrderNotifications";
+import { apiClient } from "../../src/services/apiClient";
+import { authStateService } from "../../src/services/authStateService";
+import { OneSignalService } from "../../src/services/oneSignalService";
+import { socketService } from "../../src/services/socketService";
 
 export default function BusinessOwnerLayout() {
   const segments = useSegments();
+  const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.auth.user);
   const orders = useAppSelector((state) => state.businessOwner.orders);
   const { loadOrders } = useBusinessOwner();
+  const isSuspended = user?.status === "suspended";
+  const [logoutCountdown, setLogoutCountdown] = useState<number | null>(null);
 
   // Hide banner on orders screen
   const isOrdersScreen = segments.includes("orders");
@@ -52,8 +64,42 @@ export default function BusinessOwnerLayout() {
       !isAcceptanceExpired(o, now)
   ).length;
 
+  useEffect(() => {
+    if (!isSuspended) {
+      setLogoutCountdown(null);
+      return;
+    }
+    setLogoutCountdown(10);
+    const tick = setInterval(() => {
+      setLogoutCountdown((c) => (c !== null && c > 1 ? c - 1 : 0));
+    }, 1000);
+    const timer = setTimeout(() => {
+      clearInterval(tick);
+      socketService.disconnect();
+      OneSignalService.logout();
+      dispatch(logout());
+      dispatch(clearBusinessOwnerState());
+      dispatch(clearUserAppState());
+      apiClient.clearTokens().catch(() => null);
+      authStateService.clearAuth().catch(() => null);
+      setTimeout(() => router.replace("/(auth)/business-owner-login"), 50);
+    }, 10_000);
+    return () => {
+      clearInterval(tick);
+      clearTimeout(timer);
+    };
+  }, [dispatch, isSuspended]);
+
   return (
     <RoleGate allowedRole="businessOwner">
+      {isSuspended && (
+        <>
+          <Text style={styles.suspendedTitle}>Account Blocked</Text>
+          <Text style={styles.suspendedBody}>
+            Your account has been blocked due to excessive order rejections. You will be logged out in {logoutCountdown ?? 10}s.
+          </Text>
+        </>
+      )}
       {!isOrdersScreen && <PendingOrderBanner />}
       <Tabs
         screenOptions={{
@@ -140,3 +186,22 @@ export default function BusinessOwnerLayout() {
     </RoleGate>
   );
 }
+
+const styles = StyleSheet.create({
+  suspendedTitle: {
+    backgroundColor: "#FEF2F2",
+    color: "#991B1B",
+    fontSize: 16,
+    fontWeight: "800",
+    paddingHorizontal: 20,
+    paddingTop: 14,
+  },
+  suspendedBody: {
+    backgroundColor: "#FEF2F2",
+    color: "#B91C1C",
+    fontSize: 13,
+    fontWeight: "600",
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+  },
+});
