@@ -37,6 +37,7 @@ export default function UserOrders() {
     closeRefund,
     handleRatingSubmitted,
     handleRefundSubmitted,
+    suspendedBusinessIds,
   } = useUserOrders();
 
   return (
@@ -88,6 +89,7 @@ export default function UserOrders() {
               onReorder={handleReorder}
               onRate={setRatingOrder}
               onRefund={setRefundOrder}
+              isVendorSuspended={suspendedBusinessIds.has(item.businessId)}
             />
           )}
           contentContainerStyle={styles.listContent}

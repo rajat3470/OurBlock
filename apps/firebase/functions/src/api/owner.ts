@@ -352,6 +352,88 @@ router.patch("/orders/:orderId/status", requireAuth, async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Blacklist constants
+// ---------------------------------------------------------------------------
+const BLACKLIST_REJECTION_LIMIT = 5;
+const BLACKLIST_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+/**
+ * Returns timestamps in `timestamps` that fall within the last `windowMs`.
+ */
+function filterWithinWindow(timestamps: string[], windowMs: number): string[] {
+  const cutoff = Date.now() - windowMs;
+  return timestamps.filter((ts) => new Date(ts).getTime() >= cutoff);
+}
+
+/**
+ * Evaluates whether this rejection should trigger an owner suspension.
+ * Runs inside a Firestore transaction to prevent races.
+ *
+ * Returns: { shouldSuspend, updatedTimestamps }
+ */
+async function evaluateBlacklistRejection(
+  businessId: string,
+  customerId: string,
+  ownerUid: string
+): Promise<{ shouldSuspend: boolean; updatedTimestamps: string[] }> {
+  const businessRef = db.collection("businesses").doc(businessId);
+  const ownerUserRef = db.collection("users").doc(ownerUid);
+
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(businessRef);
+    const data = snap.data() ?? {};
+
+    // Already suspended — no need to re-evaluate
+    if (data.suspendedAt) {
+      return {shouldSuspend: false, updatedTimestamps: []};
+    }
+
+    const allRejections: Record<string, string[]> = data.recentRejections ?? {};
+    const userTimestamps: string[] = allRejections[customerId] ?? [];
+
+    // Prune stale entries outside the 1-hr window
+    const withinWindow = filterWithinWindow(userTimestamps, BLACKLIST_WINDOW_MS);
+
+    // Append current rejection timestamp
+    const nowIso = new Date().toISOString();
+    withinWindow.push(nowIso);
+
+    const updatedRejections = {...allRejections, [customerId]: withinWindow};
+
+    const shouldSuspend = withinWindow.length >= BLACKLIST_REJECTION_LIMIT;
+
+    if (shouldSuspend) {
+      const suspensionReason =
+        `Auto-suspended: rejected ${BLACKLIST_REJECTION_LIMIT} consecutive orders ` +
+        `from the same user within 1 hour. Contact admin to unblock your account.`;
+
+      // Suspend the business doc (controls real-time listener + UI)
+      tx.update(businessRef, {
+        recentRejections: updatedRejections,
+        status: "suspended",
+        suspendedAt: nowIso,
+        suspensionReason,
+        isTakingOrders: false,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Suspend the owner's user doc — this is what the login gate checks
+      tx.update(ownerUserRef, {
+        status: "suspended",
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    } else {
+      tx.update(businessRef, {
+        recentRejections: updatedRejections,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    return {shouldSuspend, updatedTimestamps: withinWindow};
+  });
+}
+
+// ---------------------------------------------------------------------------
 // POST /owner/orders/:orderId/reject — reject an order with reason
 // ---------------------------------------------------------------------------
 router.post("/orders/:orderId/reject", requireAuth, async (req, res) => {
@@ -366,6 +448,15 @@ router.post("/orders/:orderId/reject", requireAuth, async (req, res) => {
     const business = await getOwnerBusiness(uid);
     if (!business) {
       return res.status(404).json({success: false, error: "No business found for this owner"});
+    }
+
+    // Block rejected actions for already-suspended accounts
+    if ((business as any).suspendedAt) {
+      return res.status(403).json({
+        success: false,
+        error: "Your account is suspended. Please contact the admin to unblock your account.",
+        code: "ACCOUNT_SUSPENDED",
+      });
     }
 
     const orderDoc = await db.collection("orders").doc(req.params.orderId).get();
@@ -386,6 +477,16 @@ router.post("/orders/:orderId/reject", requireAuth, async (req, res) => {
       });
     }
 
+    const orderId = req.params.orderId;
+    const customerId = orderData?.userId as string;
+
+    // Evaluate blacklist — runs in a Firestore transaction
+    const {shouldSuspend} = await evaluateBlacklistRejection(
+      (business as any).id,
+      customerId,
+      uid
+    );
+
     const trackingUpdate = {
       status: "rejected",
       timestamp: new Date().toISOString(),
@@ -394,7 +495,7 @@ router.post("/orders/:orderId/reject", requireAuth, async (req, res) => {
       notes: `Order rejected by ${(business as any).name}: ${reason}`,
     };
 
-    await db.collection("orders").doc(req.params.orderId).update({
+    await db.collection("orders").doc(orderId).update({
       status: "rejected",
       rejectionReason: reason.trim(),
       rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -402,8 +503,20 @@ router.post("/orders/:orderId/reject", requireAuth, async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    const updatedDoc = await db.collection("orders").doc(req.params.orderId).get();
-    return res.json({success: true, data: {id: updatedDoc.id, ...updatedDoc.data()}});
+    const updatedDoc = await db.collection("orders").doc(orderId).get();
+
+    if (shouldSuspend) {
+      console.log(
+        `[blacklist] Business ${(business as any).id} suspended after ` +
+        `${BLACKLIST_REJECTION_LIMIT} rejections of user ${customerId} within 1 hr.`
+      );
+    }
+
+    return res.json({
+      success: true,
+      data: {id: updatedDoc.id, ...updatedDoc.data()},
+      ...(shouldSuspend ? {accountSuspended: true} : {}),
+    });
   } catch (error: any) {
     return res.status(400).json({success: false, error: error.message});
   }

@@ -21,6 +21,7 @@ export default function BusinessListCard({
   onPress,
   onToggleFavorite,
 }: BusinessListCardProps) {
+  const isSuspended = !!(business as any).suspendedAt;
   const bizStatus = getBusinessStatus(business);
   const matchedPreview = matchedItems.slice(0, 2).join(", ");
   const extraMatchedCount = Math.max(0, matchedItems.length - 2);
@@ -32,25 +33,39 @@ export default function BusinessListCard({
 
   return (
     <TouchableOpacity
-      style={styles.card}
-      onPress={() => onPress(business.id)}
-      activeOpacity={0.85}
+      style={[styles.card, isSuspended ? styles.cardSuspended : null]}
+      onPress={() => !isSuspended && onPress(business.id)}
+      activeOpacity={isSuspended ? 1 : 0.85}
     >
       <View style={styles.cardLeft}>
-        <View style={styles.iconWrap}>
-          <Ionicons name="storefront-outline" size={22} color="#0E9F6E" />
+        <View style={[styles.iconWrap, isSuspended ? styles.iconWrapSuspended : null]}>
+          <Ionicons
+            name={isSuspended ? "ban-outline" : "storefront-outline"}
+            size={22}
+            color={isSuspended ? "#9CA3AF" : "#0E9F6E"}
+          />
         </View>
         <View style={styles.cardBody}>
           <View style={styles.nameRow}>
-            <Text style={styles.name} numberOfLines={1}>{business.name}</Text>
-            {bizStatus === "open" && (
-              <View style={styles.badgeOpen}><Text style={styles.badgeOpenText}>{content.status.open}</Text></View>
-            )}
-            {bizStatus === "paused" && (
-              <View style={styles.badgePaused}><Text style={styles.badgePausedText}>{content.status.paused}</Text></View>
-            )}
-            {bizStatus === "closed" && (
-              <View style={styles.badgeClosed}><Text style={styles.badgeClosedText}>{content.status.closed}</Text></View>
+            <Text style={[styles.name, isSuspended ? styles.nameSuspended : null]} numberOfLines={1}>
+              {business.name}
+            </Text>
+            {isSuspended ? (
+              <View style={styles.badgeSuspended}>
+                <Text style={styles.badgeSuspendedText}>Vendor Unavailable</Text>
+              </View>
+            ) : (
+              <>
+                {bizStatus === "open" && (
+                  <View style={styles.badgeOpen}><Text style={styles.badgeOpenText}>{content.status.open}</Text></View>
+                )}
+                {bizStatus === "paused" && (
+                  <View style={styles.badgePaused}><Text style={styles.badgePausedText}>{content.status.paused}</Text></View>
+                )}
+                {bizStatus === "closed" && (
+                  <View style={styles.badgeClosed}><Text style={styles.badgeClosedText}>{content.status.closed}</Text></View>
+                )}
+              </>
             )}
           </View>
           <View style={styles.metaRow}>
@@ -180,5 +195,28 @@ const styles = StyleSheet.create({
   },
   favoriteBtnActive: {
     backgroundColor: "#0E9F6E",
+  },
+  cardSuspended: {
+    backgroundColor: "#F9FAFB",
+    opacity: 0.72,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  iconWrapSuspended: {
+    backgroundColor: "#F3F4F6",
+  },
+  nameSuspended: {
+    color: "#9CA3AF",
+  },
+  badgeSuspended: {
+    backgroundColor: "#FEE2E2",
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  badgeSuspendedText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#DC2626",
   },
 });

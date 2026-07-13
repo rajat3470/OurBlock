@@ -8,9 +8,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
+  Modal,
   ScrollView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -43,9 +44,8 @@ export default function RoleLoginForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {}
-  );
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [loginError, setLoginError] = useState<{ message: string; isSuspended: boolean } | null>(null);
 
   const { login } = useAuth();
   const { isLoading } = useAppSelector((state) => state.auth);
@@ -86,11 +86,63 @@ export default function RoleLoginForm({
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Please check your credentials";
-      Alert.alert("Login Failed", message);
+      const isSuspended =
+        message.toLowerCase().includes("blocked") ||
+        message.toLowerCase().includes("suspended") ||
+        message.toLowerCase().includes("contact the admin") ||
+        message.toLowerCase().includes("contact admin");
+      setLoginError({ message, isSuspended });
     }
   };
 
   return (
+    <>
+    <Modal
+      visible={loginError !== null}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={() => setLoginError(null)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalCard}>
+          {loginError?.isSuspended ? (
+            <>
+              <View style={styles.modalIconWrapRed}>
+                <Ionicons name="ban" size={36} color="#DC2626" />
+              </View>
+              <Text style={styles.modalTitleRed}>Account Blocked</Text>
+              <Text style={styles.modalBody}>{loginError.message}</Text>
+              <View style={styles.modalDivider} />
+              <View style={styles.modalAdminRow}>
+                <Ionicons name="shield-checkmark-outline" size={15} color="#6B7280" />
+                <Text style={styles.modalAdminHint}>Reach out to your society admin to restore access.</Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.modalIconWrapAmber}>
+                <Ionicons name="alert-circle" size={36} color="#D97706" />
+              </View>
+              <Text style={styles.modalTitleAmber}>Login Failed</Text>
+              <Text style={styles.modalBody}>{loginError?.message}</Text>
+            </>
+          )}
+          <TouchableOpacity
+            style={[
+              styles.modalBtn,
+              loginError?.isSuspended ? styles.modalBtnRed : styles.modalBtnAmber,
+            ]}
+            onPress={() => setLoginError(null)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.modalBtnText}>
+              {loginError?.isSuspended ? "Got it" : "Try Again"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
     <LinearGradient colors={[...gradients.authBackground]} style={styles.container}>
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView
@@ -192,6 +244,7 @@ export default function RoleLoginForm({
         </KeyboardAvoidingView>
       </SafeAreaView>
     </LinearGradient>
+    </>
   );
 }
 
@@ -330,5 +383,109 @@ const styles = StyleSheet.create({
   },
   footerSlot: {
     marginTop: spacing.lg,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15,23,42,0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 28,
+  },
+  modalCard: {
+    width: "100%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    paddingHorizontal: 28,
+    paddingTop: 32,
+    paddingBottom: 24,
+    alignItems: "center",
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.18,
+    shadowRadius: 40,
+    elevation: 20,
+  },
+  modalIconWrapRed: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "#FEF2F2",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: "#FECACA",
+  },
+  modalIconWrapAmber: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "#FFFBEB",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: "#FDE68A",
+  },
+  modalTitleRed: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#DC2626",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  modalTitleAmber: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#D97706",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  modalBody: {
+    fontSize: 14,
+    color: "#4B5563",
+    textAlign: "center",
+    lineHeight: 21,
+    marginBottom: 16,
+  },
+  modalDivider: {
+    width: "100%",
+    height: 1,
+    backgroundColor: "#F3F4F6",
+    marginBottom: 14,
+  },
+  modalAdminRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 20,
+  },
+  modalAdminHint: {
+    fontSize: 12,
+    color: "#6B7280",
+    flex: 1,
+    lineHeight: 17,
+  },
+  modalBtn: {
+    width: "100%",
+    paddingVertical: 15,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  modalBtnRed: {
+    backgroundColor: "#DC2626",
+  },
+  modalBtnAmber: {
+    backgroundColor: "#D97706",
+  },
+  modalBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: 0.3,
   },
 });
