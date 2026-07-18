@@ -352,12 +352,48 @@ router.post("/", requireAuth, async (req, res) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    const docRef = await db.collection("orders").add(orderData);
-    const newDoc = await docRef.get();
+    const quantitiesByProduct = new Map<string, number>();
+    validatedItems.forEach((item) => {
+      quantitiesByProduct.set(
+        item.productId,
+        (quantitiesByProduct.get(item.productId) ?? 0) + Number(item.quantity)
+      );
+    });
 
+    const docRef = db.collection("orders").doc();
+    await db.runTransaction(async (transaction) => {
+      for (const [productId, requestedQuantity] of quantitiesByProduct) {
+        const productRef = db.collection("products").doc(productId);
+        const productDoc = await transaction.get(productRef);
+        if (!productDoc.exists) {
+          const stockError: any = new Error(`Product ${productId} not found`);
+          stockError.statusCode = 404;
+          throw stockError;
+        }
+
+        const product = productDoc.data()!;
+        const availableStock = Number(product.stock ?? 0);
+        if (!Number.isFinite(availableStock) || availableStock < requestedQuantity) {
+          const stockError: any = new Error(
+            `Insufficient stock for "${product.name}". Available: ${Math.max(0, availableStock)}`
+          );
+          stockError.statusCode = 400;
+          throw stockError;
+        }
+
+        transaction.update(productRef, {
+          stock: availableStock - requestedQuantity,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      transaction.create(docRef, orderData);
+    });
+
+    const newDoc = await docRef.get();
     return res.status(201).json({success: true, data: {id: newDoc.id, ...newDoc.data()}});
   } catch (error: any) {
-    return res.status(500).json({success: false, error: error.message});
+    return res.status(error.statusCode ?? 500).json({success: false, error: error.message});
   }
 });
 

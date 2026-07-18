@@ -38,26 +38,25 @@ export const useProductDetail = () => {
   useEffect(() => {
     if (!productId) return;
 
+    let active = true;
     const localProduct = featuredProducts.find((p) => p.id === productId);
-
-    if (localProduct) {
-      setProduct(localProduct);
-      setIsLoading(false);
-      return;
-    }
+    if (localProduct) setProduct(localProduct);
 
     const fetchProduct = async () => {
       try {
         setIsLoading(true);
-        await Promise.all([userAppService.getFeaturedProducts("")]);
-        setIsLoading(false);
+        const latestProduct = await userAppService.getProductById(productId);
+        if (active) setProduct(latestProduct);
       } catch {
-        setIsLoading(false);
+        if (active && !localProduct) setProduct(null);
+      } finally {
+        if (active) setIsLoading(false);
       }
     };
 
     fetchProduct();
-  }, [productId, featuredProducts, businesses, paramBizId]);
+    return () => { active = false; };
+  }, [productId, featuredProducts]);
 
   const business = useMemo(
     () => businesses.find((b) => b.id === (product?.businessId ?? paramBizId)) ?? null,
@@ -77,6 +76,10 @@ export const useProductDetail = () => {
 
   const addCurrentProductToCart = useCallback(
     (targetProduct: Product) => {
+      if (maxCartSteps(targetProduct.stock, targetProduct.unit, targetProduct.unitStep) <= 0) {
+        toast.show(content.cart.outOfStock, { type: "warning" });
+        return;
+      }
       dispatch(
         addItem({
           productId: targetProduct.id,

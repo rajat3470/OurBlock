@@ -126,7 +126,7 @@ export const useBusinessOwnerDashboard = () => {
   const maxRevenue = analytics?.daily?.reduce((m, d) => Math.max(m, d.revenue), 0) ?? 1;
 
   const recentOrders = useMemo(() => [...orders].slice(0, 6), [orders]);
-  const loading = isLoading && !stats && orders.length === 0 && products.length === 0;
+  const loading = isLoading || !businessProfile;
 
   const greeting = useMemo(() => {
     const h = new Date().getHours();

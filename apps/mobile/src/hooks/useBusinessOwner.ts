@@ -18,6 +18,7 @@ import {
 import { businessOwnerService } from "@services/businessOwnerService";
 import { markPendingWrite, clearPendingWrite } from "@services/pendingWrites";
 import { Business, Product, Order } from "@/types";
+import { store } from "@store/index";
 
 /** Extract a human-readable message from any thrown value (including AxiosError). */
 function extractErrorMessage(err: unknown, fallback: string): string {
@@ -34,35 +35,43 @@ function extractErrorMessage(err: unknown, fallback: string): string {
   return fallback;
 }
 
+function isActiveSession(userId: string | undefined): boolean {
+  return Boolean(userId) && store.getState().auth.user?.id === userId;
+}
+
 export const useBusinessOwner = () => {
   const dispatch = useAppDispatch();
   const state = useAppSelector((store) => store.businessOwner);
 
   const loadBusinessProfile = useCallback(async () => {
+    const requestUserId = store.getState().auth.user?.id;
     dispatch(setLoading(true));
     try {
       const business = await businessOwnerService.getMyBusiness();
-      dispatch(setBusinessProfile(business));
+      if (isActiveSession(requestUserId)) dispatch(setBusinessProfile(business));
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, "Failed to load business profile");
-      dispatch(setError(message));
+      if (isActiveSession(requestUserId)) {
+        const message = extractErrorMessage(err, "Failed to load business profile");
+        dispatch(setError(message));
+      }
       throw err;
     } finally {
-      dispatch(setLoading(false));
+      if (isActiveSession(requestUserId)) dispatch(setLoading(false));
     }
   }, [dispatch]);
 
   const loadProducts = useCallback(async () => {
+    const requestUserId = store.getState().auth.user?.id;
     dispatch(setLoading(true));
     try {
       const response = await businessOwnerService.getMyProducts();
-      dispatch(setProducts(response.data));
+      if (isActiveSession(requestUserId)) dispatch(setProducts(response.data));
     } catch (err: unknown) {
       const message = extractErrorMessage(err, "Failed to load products");
-      dispatch(setError(message));
+      if (isActiveSession(requestUserId)) dispatch(setError(message));
       throw new Error(message);
     } finally {
-      dispatch(setLoading(false));
+      if (isActiveSession(requestUserId)) dispatch(setLoading(false));
     }
   }, [dispatch]);
 
@@ -120,19 +129,20 @@ export const useBusinessOwner = () => {
   );
 
   const loadOrders = useCallback(async (options?: { silent?: boolean }) => {
+    const requestUserId = store.getState().auth.user?.id;
     const silent = options?.silent === true;
     if (!silent) {
       dispatch(setLoading(true));
     }
     try {
       const response = await businessOwnerService.getMyOrders();
-      dispatch(setOrders(response.data));
+      if (isActiveSession(requestUserId)) dispatch(setOrders(response.data));
     } catch (err: unknown) {
       const message = extractErrorMessage(err, "Failed to load orders");
-      dispatch(setError(message));
+      if (isActiveSession(requestUserId)) dispatch(setError(message));
       throw new Error(message);
     } finally {
-      if (!silent) {
+      if (!silent && isActiveSession(requestUserId)) {
         dispatch(setLoading(false));
       }
     }
@@ -214,23 +224,27 @@ export const useBusinessOwner = () => {
   );
 
   const loadStats = useCallback(async () => {
+    const requestUserId = store.getState().auth.user?.id;
     dispatch(setLoading(true));
     try {
       const stats = await businessOwnerService.getMyStats();
-      dispatch(setStats(stats));
+      if (isActiveSession(requestUserId)) dispatch(setStats(stats));
     } catch (err: unknown) {
-      const message = extractErrorMessage(err, "Failed to load stats");
-      dispatch(setError(message));
+      if (isActiveSession(requestUserId)) {
+        const message = extractErrorMessage(err, "Failed to load stats");
+        dispatch(setError(message));
+      }
       throw err;
     } finally {
-      dispatch(setLoading(false));
+      if (isActiveSession(requestUserId)) dispatch(setLoading(false));
     }
   }, [dispatch]);
 
   const loadAnalytics = useCallback(async () => {
+    const requestUserId = store.getState().auth.user?.id;
     try {
       const data = await businessOwnerService.getAnalytics();
-      dispatch(setAnalytics(data));
+      if (isActiveSession(requestUserId)) dispatch(setAnalytics(data));
     } catch { /* non-blocking */ }
   }, [dispatch]);
 

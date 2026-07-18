@@ -47,6 +47,11 @@ export const userAppService = {
     return Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
   },
 
+  async getProductById(productId: string): Promise<Product> {
+    const res = await apiClient.get<{ success: boolean; data: Product }>(`/products/${productId}`);
+    return res.data;
+  },
+
   async getProductsByBusiness(businessId: string): Promise<Product[]> {
     const res = await apiClient.get<{ success: boolean; data: Product[] }>(`/products?businessId=${businessId}`);
     return res.data ?? [];

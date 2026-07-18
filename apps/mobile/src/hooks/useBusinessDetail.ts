@@ -187,6 +187,11 @@ export const useBusinessDetail = () => {
     if (!product) return;
     const imageUrl = getFirstImageUrl(product.imageUrls);
     const maxSteps = maxCartSteps(product.stock, product.unit, product.unitStep);
+    if (maxSteps <= 0) {
+      setCustomizeProduct(null);
+      toast.show(content.outOfStock, { type: "warning" });
+      return;
+    }
     const selectedAttributes = Object.entries(selectedOptions).map(([name, value]) => ({
       name,
       value,
@@ -229,6 +234,10 @@ export const useBusinessDetail = () => {
 
   const addProductToCart = useCallback(
     (product: Product) => {
+      if (maxCartSteps(product.stock, product.unit, product.unitStep) <= 0) {
+        toast.show(content.outOfStock, { type: "warning" });
+        return;
+      }
       dispatch(
         addItem({
           productId: product.id,

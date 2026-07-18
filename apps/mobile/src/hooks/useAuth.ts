@@ -2,6 +2,7 @@ import { authService } from "@services/authService";
 import { useAppDispatch } from "./useRedux";
 import { setAuth, setError, logout, setLoading } from "@store/slices/authSlice";
 import { clearUserAppState } from "@store/slices/userAppSlice";
+import { clearBusinessOwnerState } from "@store/slices/businessOwnerSlice";
 import { apiClient } from "@services/apiClient";
 import { authStateService } from "@services/authStateService";
 import { OneSignalService } from "@services/oneSignalService";
@@ -128,6 +129,7 @@ export const useAuth = () => {
     credentials: AuthCredentials,
     role: "superAdmin" | "businessOwner" | "user" | "deliveryPartner"
   ) => {
+    dispatch(clearBusinessOwnerState());
     dispatch(setLoading(true));
     try {
       // Try mock login first (remove once real backend is ready)
@@ -210,6 +212,7 @@ export const useAuth = () => {
     OneSignalService.logout();
     dispatch(logout());
     dispatch(clearUserAppState());
+    dispatch(clearBusinessOwnerState());
     try {
       // Still has tokens at this point so the backend can clear push registration.
       await authService.logout();

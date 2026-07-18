@@ -44,6 +44,14 @@ export default function BusinessOwnerDashboard() {
     timeAgo,
   } = useBusinessOwnerDashboard();
 
+  if (loading) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color="#16A34A" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView

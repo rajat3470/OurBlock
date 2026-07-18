@@ -139,7 +139,7 @@ export function buildInvoiceText(order: Order, brandName = "OurBlock"): string {
 export const useBusinessOwnerOrderDetail = () => {
   const insets = useSafeAreaInsets();
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
-  const { orders, changeOrderStatus, rejectOrder } = useBusinessOwner();
+  const { orders, changeOrderStatus } = useBusinessOwner();
   const [advancing, setAdvancing] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [partners, setPartners] = useState<PartnerOption[]>([]);

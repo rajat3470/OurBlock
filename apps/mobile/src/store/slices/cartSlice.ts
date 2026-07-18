@@ -30,6 +30,9 @@ const cartSlice = createSlice({
   reducers: {
     addItem(state, action: PayloadAction<CartItem>) {
       const item = action.payload;
+      if (item.maxQuantity <= 0) {
+        return;
+      }
       // Cart stays locked to one business; UI should confirm before clearing.
       if (state.businessId && state.businessId !== item.businessId) {
         return;

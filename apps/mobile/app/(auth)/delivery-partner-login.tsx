@@ -2,7 +2,6 @@ import { View, StyleSheet } from "react-native";
 import RoleLoginForm from "../../src/components/RoleLoginForm";
 import LoginRoleSwitcher from "../../src/components/LoginRoleSwitcher";
 import BackButton from "../../src/components/BackButton";
-import { colors } from "../../src/constants/theme";
 
 export default function DeliveryPartnerLoginScreen() {
   return (
