@@ -11,7 +11,7 @@ export const onUserCreate = functions.auth.user().onCreate(async (user) => {
     await db.collection("notifications").add({
       userId: user.uid,
       type: "system",
-      title: "Welcome to OurBlock!",
+      title: "Welcome to mohallaMitr!",
       body: "Thank you for joining our community. Start exploring local businesses in your society.",
       read: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),

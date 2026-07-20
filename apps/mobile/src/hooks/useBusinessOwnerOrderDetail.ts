@@ -80,7 +80,7 @@ export function formatDateTime(date: unknown): string {
   );
 }
 
-export function buildInvoiceText(order: Order, brandName = "OurBlock"): string {
+export function buildInvoiceText(order: Order, brandName = "mohallaMitr"): string {
   const id = `#${order.id.slice(0, 8).toUpperCase()}`;
   const createdMs = toMillis(order.createdAt as unknown);
   const date = (createdMs != null ? new Date(createdMs) : new Date()).toLocaleDateString("en-IN", {

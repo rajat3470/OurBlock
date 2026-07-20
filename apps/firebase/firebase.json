@@ -12,6 +12,18 @@
       "npm --prefix \"$RESOURCE_DIR\" run build"
     ]
   }],
+  "hosting": {
+    "public": "public",
+    "cleanUrls": true,
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "predeploy": [
+      "yarn --cwd ../web build && rm -rf public && cp -R ../web/out public"
+    ]
+  },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"

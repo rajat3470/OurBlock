@@ -4,7 +4,7 @@
 
 ### 1. Install Dependencies
 ```bash
-cd OurBlock
+cd <project-root>
 yarn install
 ```
 

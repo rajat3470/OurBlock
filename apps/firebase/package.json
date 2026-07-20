@@ -1,7 +1,7 @@
 {
-  "name": "@ourblock/firebase",
+  "name": "@mohallamitr/firebase",
   "version": "1.0.0",
-  "description": "OurBlock Firebase Backend (Cloud Functions & Configuration)",
+  "description": "mohallaMitr Firebase Backend (Cloud Functions & Configuration)",
   "private": true,
   "engines": {
     "node": ">=18"

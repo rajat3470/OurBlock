@@ -2,7 +2,6 @@
   "name": "@mohallamitr/mobile",
   "version": "1.0.0",
   "description": "mohallaMitr Mobile App (Customer & Business Owner)",
-  "packageManager": "npm@10.8.2",
   "main": "expo-router/entry",
   "private": true,
   "scripts": {

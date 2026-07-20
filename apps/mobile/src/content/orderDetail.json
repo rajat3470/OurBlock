@@ -1,7 +1,7 @@
 {
   "currency": "₹",
   "invoice": {
-    "title": "🧾 ORDER INVOICE — OurBlock",
+    "title": "🧾 ORDER INVOICE — mohallaMitr",
     "divider": "─",
     "order": "Order:",
     "date": "Date:",
@@ -15,7 +15,7 @@
     "payment": "Payment:",
     "status": "Status:",
     "deliveryAddress": "Delivery Address:",
-    "footer": "Powered by OurBlock 🏘️"
+    "footer": "Powered by mohallaMitr 🏘️"
   },
   "loading": "",
   "notFound": {
