@@ -28,7 +28,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>mohallamitr</string>
-				<string>com.ourblock.app</string>
+				<string>com.mohallamitr.app</string>
 			</array>
 		</dict>
 		<dict>

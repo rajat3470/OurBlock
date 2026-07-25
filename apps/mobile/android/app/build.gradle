@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.ourblock.app'
+    namespace 'com.mohallamitr.app'
     defaultConfig {
-        applicationId 'com.ourblock.app'
+        applicationId 'com.mohallamitr.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -182,18 +182,3 @@ dependencies {
 }
 
 apply plugin: 'com.google.gms.google-services'
-
-// Ensure library codegen JNI dirs exist before CMake configure.
-// Without this, New Architecture builds can fail with:
-//   add_subdirectory(.../codegen/jni/) which is not an existing directory
-// (seen with react-native-onesignal and other autolinked TurboModules).
-afterEvaluate {
-    tasks.matching { it.name.startsWith("configureCMake") }.configureEach { cmakeTask ->
-        rootProject.allprojects.each { project ->
-            def codegenTask = project.tasks.findByName("generateCodegenArtifactsFromSchema")
-            if (codegenTask != null) {
-                cmakeTask.dependsOn(codegenTask)
-            }
-        }
-    }
-}

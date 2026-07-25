@@ -5,7 +5,7 @@
   },
   "expo": {
     "name": "mohallaMitr",
-    "slug": "mohallamitr",
+    "slug": "mohalla-mitr",
     "scheme": "mohallamitr",
     "version": "1.0.0",
     "icon": "./assets/icon.png",
@@ -18,7 +18,7 @@
       "backgroundColor": "#0E9F6E"
     },
     "ios": {
-      "bundleIdentifier": "com.ourblock.app",
+      "bundleIdentifier": "com.mohallamitr.app",
       "googleServicesFile": "./GoogleService-Info.plist",
       "icon": "./assets/icon.png",
       "splash": {
@@ -28,7 +28,7 @@
       }
     },
     "android": {
-      "package": "com.ourblock.app",
+      "package": "com.mohallamitr.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0E9F6E"
@@ -83,10 +83,28 @@
               "appExtensions": [
                 {
                   "targetName": "OneSignalNotificationServiceExtension",
-                  "bundleIdentifier": "com.ourblock.app.OneSignalNotificationServiceExtension",
+                  "bundleIdentifier": "com.mohallamitr.app.OneSignalNotificationServiceExtension",
                   "entitlements": {
                     "com.apple.security.application-groups": [
-                      "group.com.ourblock.app.onesignal"
+                      "group.com.mohallamitr.app.onesignal"
+                    ]
+                  }
+                },
+                {
+                  "targetName": "OneSignalNotificationServiceExtension",
+                  "bundleIdentifier": "com.mohallamitr.app.OneSignalNotificationServiceExtension",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.mohallamitr.app.onesignal"
+                    ]
+                  }
+                },
+                {
+                  "targetName": "OneSignalNotificationServiceExtension",
+                  "bundleIdentifier": "com.mohallamitr.app.OneSignalNotificationServiceExtension",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.mohallamitr.app.onesignal"
                     ]
                   }
                 }
@@ -94,9 +112,9 @@
             }
           }
         },
-        "projectId": "3425f538-ae33-467e-893d-0c6abdf371c2"
+        "projectId": "f8433d7a-56ef-41a6-b44a-5979fe9b5b9e"
       }
     },
-    "owner": "mohallamitr"
+    "owner": "vrajat3470"
   }
 }

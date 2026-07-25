@@ -1,4 +1,4 @@
-package com.ourblock.app
+package com.mohallamitr.app
 
 import android.app.Application
 import android.content.res.Configuration

@@ -1,4 +1,4 @@
-package com.ourblock.app
+package com.mohallamitr.app
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
