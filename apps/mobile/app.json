@@ -25,7 +25,8 @@
         "image": "./assets/splash-icon.png",
         "resizeMode": "contain",
         "backgroundColor": "#0E9F6E"
-      }
+      },
+      "buildNumber": "2"
     },
     "android": {
       "package": "com.mohallamitr.app",
