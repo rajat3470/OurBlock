@@ -1,4 +1,4 @@
-import { View, ScrollView, Animated } from "react-native";
+import { View, ScrollView } from "react-native";
 import { useHomeScreen } from "@hooks/useHomeScreen";
 import { HomeHero } from "@components/user/home/HomeHero";
 import { CategoryTiles } from "@components/user/home/CategoryTiles";
@@ -18,7 +18,6 @@ export default function UserHome() {
     setSearchQuery,
     selectedCategory,
     setSelectedCategory,
-    entrance,
     scrollY,
     topRowH,
     setTopRowH,
@@ -68,11 +67,15 @@ export default function UserHome() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-          useNativeDriver: false,
-        })}
-        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingBottom: 24, flexGrow: 1 }}
+        onScroll={(event) => {
+          const offsetY = event.nativeEvent.contentOffset.y;
+          if (typeof scrollY.setValue === "function") {
+            scrollY.setValue(offsetY);
+          }
+        }}
+        scrollEventThrottle={8}
+        bounces={false}
       >
         {searchQuery.trim().length === 0 ? (
           <>
@@ -115,7 +118,6 @@ export default function UserHome() {
           filteredBusinesses={filteredBusinesses}
           productMatchesByBusiness={productMatchesByBusiness}
           searchQuery={searchQuery}
-          entrance={entrance}
           cartCount={cartCount}
           goToBusiness={goToBusiness}
           goToCart={goToCart}

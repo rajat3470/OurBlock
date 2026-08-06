@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -24,7 +25,7 @@ interface HomeHeroProps {
   collapseOpacity: Animated.AnimatedInterpolation<string | number>;
 }
 
-export function HomeHero({
+export const HomeHero = memo(function HomeHero({
   user,
   selectedSocietyName,
   safeBusinessesCount,
@@ -129,7 +130,7 @@ export function HomeHero({
       </Animated.View>
     </LinearGradient>
   );
-}
+});
 
 const styles = StyleSheet.create({
   heroWrap: {

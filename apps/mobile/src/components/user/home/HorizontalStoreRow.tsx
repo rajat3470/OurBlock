@@ -31,6 +31,8 @@ export function HorizontalStoreRow({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        scrollEventThrottle={16}
         contentContainerStyle={styles.hRow}
       >
         {list.map((biz) => {
@@ -76,16 +78,16 @@ export function HorizontalStoreRow({
                         status === "open"
                           ? styles.dotOpen
                           : status === "paused"
-                          ? styles.dotPaused
-                          : styles.dotClosed,
+                            ? styles.dotPaused
+                            : styles.dotClosed,
                       ]}
                     />
                     <Text style={styles.oaStatusText}>
                       {status === "open"
                         ? content.status.open
                         : status === "paused"
-                        ? content.status.paused
-                        : content.status.closed}
+                          ? content.status.paused
+                          : content.status.closed}
                     </Text>
                   </View>
                 </View>
