@@ -138,7 +138,10 @@ export const useAuth = () => {
         await apiClient.saveTokens(mock.tokens);
         await authStateService.saveAuth(mock);
         dispatch(setAuth(mock));
-        OneSignalService.login(mock.user.id);
+        OneSignalService.login(mock.user.id, {
+          role: mock.user.role,
+          businessId: (mock.user as any).businessId,
+        });
         if (mock.user.email) OneSignalService.setEmail(mock.user.email);
         return;
       }
@@ -163,7 +166,10 @@ export const useAuth = () => {
         await apiClient.saveTokens(response.tokens);
         await authStateService.saveAuth(response);
         dispatch(setAuth(response));
-        OneSignalService.login(response.user.id);
+        OneSignalService.login(response.user.id, {
+          role: response.user.role,
+          businessId: (response.user as any).businessId,
+        });
         if (response.user.email) OneSignalService.setEmail(response.user.email);
       }
     } catch (error: any) {
@@ -195,7 +201,10 @@ export const useAuth = () => {
         await apiClient.saveTokens(response.tokens);
         await authStateService.saveAuth(response);
         dispatch(setAuth(response));
-        OneSignalService.login(response.user.id);
+        OneSignalService.login(response.user.id, {
+          role: response.user.role,
+          businessId: (response.user as any).businessId,
+        });
         if (response.user.email) OneSignalService.setEmail(response.user.email);
       }
     } catch (error: any) {

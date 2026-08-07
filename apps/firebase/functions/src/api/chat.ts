@@ -1,6 +1,7 @@
 import {Router, Request, Response, NextFunction} from "express";
 import * as admin from "firebase-admin";
 import {FIREBASE_CONFIG} from "../shared/constants";
+import {notifyUser} from "../utils/oneSignal";
 
 const router = Router();
 const db = admin.firestore();
@@ -194,6 +195,24 @@ router.post("/sessions/:id/messages", async (req, res) => {
       lastMessageAt: now,
       updatedAt: now,
     });
+
+    if (receiverId) {
+      const preview = content.trim().slice(0, 120);
+      const senderDoc = await db.collection("users").doc(uid).get();
+      const senderName =
+        (senderDoc.data()?.firstName as string | undefined) ||
+        (senderDoc.data()?.displayName as string | undefined) ||
+        "Someone";
+      const receiverDoc = await db.collection("users").doc(receiverId).get();
+      const receiverPushToken = receiverDoc.data()?.pushToken as string | undefined;
+      void notifyUser(
+        receiverId,
+        "New message",
+        `${senderName}: ${preview}`,
+        {type: "chat", chatSessionId: sessionId, senderId: uid},
+        receiverPushToken
+      );
+    }
 
     const newDoc = await messageRef.get();
     return res.status(201).json({success: true, data: {id: newDoc.id, ...newDoc.data()}});

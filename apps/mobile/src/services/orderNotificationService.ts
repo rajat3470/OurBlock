@@ -184,6 +184,17 @@ export async function presentOwnerNewOrderNotification(
   body: string,
   data: Record<string, unknown>
 ): Promise<void> {
+  const { status: existing } = await Notifications.getPermissionsAsync();
+  let status = existing;
+  if (existing !== "granted") {
+    const requested = await Notifications.requestPermissionsAsync();
+    status = requested.status;
+  }
+  if (status !== "granted") {
+    console.warn("[Notifications] permission not granted — cannot present local order alert");
+    return;
+  }
+
   playNewOrderAlert();
 
   const payload = Object.fromEntries(

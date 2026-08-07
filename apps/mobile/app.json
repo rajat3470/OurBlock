@@ -45,6 +45,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "onesignal-expo-plugin",
+        {
+          "mode": "development",
+          "sounds": ["./assets/audio/new_order_alert.wav"]
+        }
+      ],
+      "expo-notifications",
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
       "expo-font",
@@ -61,12 +69,6 @@
       "./plugins/withFirebaseFrameworkModules",
       "./plugins/withNotificationSound",
       [
-        "onesignal-expo-plugin",
-        {
-          "mode": "development"
-        }
-      ],
-      [
         "expo-build-properties",
         {
           "ios": {
@@ -82,24 +84,6 @@
           "experimental": {
             "ios": {
               "appExtensions": [
-                {
-                  "targetName": "OneSignalNotificationServiceExtension",
-                  "bundleIdentifier": "com.mohallamitr.app.OneSignalNotificationServiceExtension",
-                  "entitlements": {
-                    "com.apple.security.application-groups": [
-                      "group.com.mohallamitr.app.onesignal"
-                    ]
-                  }
-                },
-                {
-                  "targetName": "OneSignalNotificationServiceExtension",
-                  "bundleIdentifier": "com.mohallamitr.app.OneSignalNotificationServiceExtension",
-                  "entitlements": {
-                    "com.apple.security.application-groups": [
-                      "group.com.mohallamitr.app.onesignal"
-                    ]
-                  }
-                },
                 {
                   "targetName": "OneSignalNotificationServiceExtension",
                   "bundleIdentifier": "com.mohallamitr.app.OneSignalNotificationServiceExtension",

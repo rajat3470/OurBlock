@@ -77,7 +77,8 @@ async function setupOrderNotificationChannels(): Promise<void> {
 }
 
 async function registerForPushNotificationsAsync(): Promise<string | null> {
-  if (!Device.isDevice) return null; // simulator — skip
+  // Always request OS permission — required for Expo local alerts AND so the
+  // Simulator can display notifications (other apps work; we were skipping this).
   const { status: existing } = await Notifications.getPermissionsAsync();
   let finalStatus = existing;
   if (existing !== "granted") {
@@ -85,6 +86,10 @@ async function registerForPushNotificationsAsync(): Promise<string | null> {
     finalStatus = status;
   }
   if (finalStatus !== "granted") return null;
+
+  // Expo push tokens are only available on physical devices.
+  if (!Device.isDevice) return null;
+
   const tokenData = await Notifications.getExpoPushTokenAsync();
   return tokenData.data;
 }

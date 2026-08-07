@@ -77,13 +77,17 @@ export const onOrderUpdate = functions.firestore
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        // FCM push to customer
         const pushData: Record<string, string> = {orderId, status: after.status};
         if (after.rejectionReason) pushData.rejectionReason = after.rejectionReason;
-        await sendPushNotification(after.userId, title, body, pushData);
-        // OneSignal push to customer (external_user_id)
+
+        // OneSignal primary — FCM/Expo only as fallback.
         const oneSignalResult = await notifyUsersByExternalIds([after.userId], title, body, pushData);
-        if (!oneSignalResult || oneSignalResult.ok === false) {
+        if (
+          !oneSignalResult ||
+          oneSignalResult.ok === false ||
+          Number(oneSignalResult.recipients ?? 0) === 0
+        ) {
+          await sendPushNotification(after.userId, title, body, pushData);
           const customerDoc = await db.collection("users").doc(after.userId).get();
           const customerPushToken = customerDoc.data()?.pushToken;
           if (customerPushToken) {

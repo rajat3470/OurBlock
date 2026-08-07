@@ -1,5 +1,6 @@
 import {Router, Request, Response, NextFunction} from "express";
 import * as admin from "firebase-admin";
+import {notifyUser} from "../utils/oneSignal";
 
 const router = Router();
 const db = admin.firestore();
@@ -119,6 +120,26 @@ router.post("/", requireAuth, async (req, res) => {
       refundRequested: true,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+
+    // Notify business owner about the refund request
+    try {
+      const businessDoc = await db.collection("businesses").doc(orderData.businessId).get();
+      const ownerId = businessDoc.data()?.ownerId as string | undefined;
+      if (ownerId) {
+        const ownerDoc = await db.collection("users").doc(ownerId).get();
+        const ownerPushToken = ownerDoc.data()?.pushToken as string | undefined;
+        const orderRef = String(orderId).substring(0, 8).toUpperCase();
+        void notifyUser(
+          ownerId,
+          "Refund requested",
+          `Customer requested a refund for order #${orderRef}`,
+          {type: "refund", orderId, refundId: docRef.id, status: "pending"},
+          ownerPushToken
+        );
+      }
+    } catch (notifyErr) {
+      console.warn("[refunds] owner notify failed", notifyErr);
+    }
 
     return res.status(201).json({success: true, data: {id: docRef.id, ...refundData}});
   } catch (error: any) {

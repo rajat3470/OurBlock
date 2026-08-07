@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
 import { randomUUID } from 'crypto';
 import { isPaymentOutstanding } from '../shared/constants';
+import { notifyUser } from '../utils/oneSignal';
 
 const router = Router();
 const db = admin.firestore();
@@ -126,32 +127,18 @@ async function getBusinessSummary(businessId?: string, partner?: any) {
   };
 }
 
-async function notifyCustomer(userId: string, title: string, body: string) {
+async function notifyCustomer(
+  userId: string,
+  title: string,
+  body: string,
+  data?: Record<string, string>
+) {
   try {
     const userDoc = await db.collection("users").doc(userId).get();
     const pushToken = userDoc.data()?.pushToken as string | undefined;
-    if (!pushToken?.startsWith("ExponentPushToken[")) return;
-    const https = await import("https");
-    const payload = JSON.stringify({to: pushToken, sound: "default", title, body, data: {}});
-    await new Promise<void>((resolve) => {
-      const req = https.request(
-        {
-          hostname: "exp.host",
-          path: "/--/api/v2/push/send",
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Content-Length": Buffer.byteLength(payload),
-          },
-        },
-        () => resolve()
-      );
-      req.on("error", () => resolve());
-      req.write(payload);
-      req.end();
-    });
+    await notifyUser(userId, title, body, data ?? {}, pushToken);
   } catch {
-    /* non-blocking */
+    /* non-blocking — onOrderUpdate also notifies on status change */
   }
 }
 

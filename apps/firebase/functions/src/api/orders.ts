@@ -1,6 +1,5 @@
 import {Router, Request, Response, NextFunction} from "express";
 import * as admin from "firebase-admin";
-import * as https from "https";
 import {computeCouponDiscount} from "./coupons";
 import {
   ORDER_FEES,
@@ -8,6 +7,7 @@ import {
   isPaymentOutstanding,
 } from "../shared/constants";
 import {autoRejectIfExpired, isExpiredPending} from "../shared/orderExpiry";
+import {notifyUser} from "../utils/oneSignal";
 
 /**
  * Apply lazy auto-rejection to a page of order docs: any order still pending
@@ -43,44 +43,18 @@ const STATUS_MESSAGES: Record<string, { title: string; body: (name?: string) => 
   cancelled: {title: "❌ Order Cancelled", body: (n) => `${n || "Your order"} has been cancelled.`},
 };
 
-async function sendPushNotification(pushToken: string, title: string, body: string): Promise<void> {
-  if (!pushToken.startsWith("ExponentPushToken[")) return;
-  const payload = JSON.stringify({
-    to: pushToken,
-    sound: "default",
-    title,
-    body,
-    data: {},
-  });
-  return new Promise((resolve) => {
-    const options = {
-      hostname: "exp.host",
-      path: "/--/api/v2/push/send",
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(payload),
-      },
-    };
-    const req = https.request(options, () => resolve());
-    req.on("error", () => resolve()); // non-blocking; ignore errors
-    req.write(payload);
-    req.end();
-  });
-}
-
 async function notifyOrderStatusChange(
   userId: string,
   status: string,
   orderNote?: string
 ): Promise<void> {
   try {
-    const userDoc = await db.collection("users").doc(userId).get();
-    const pushToken = userDoc.data()?.pushToken;
-    if (!pushToken) return;
     const msg = STATUS_MESSAGES[status];
     if (!msg) return;
-    await sendPushNotification(pushToken, msg.title, msg.body(orderNote));
+    const userDoc = await db.collection("users").doc(userId).get();
+    const pushToken = userDoc.data()?.pushToken as string | undefined;
+    // Primary path is Firestore onOrderUpdate → OneSignal; this is a safety net.
+    await notifyUser(userId, msg.title, msg.body(orderNote), {status}, pushToken);
   } catch {/* non-blocking */}
 }
 

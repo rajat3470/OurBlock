@@ -11,6 +11,7 @@ import { isAcceptanceExpired } from "../../src/utils/orderAcceptance";
 import { useOrderNotifications } from "../../src/hooks/useOrderNotifications";
 import { useBusinessOwnerRealtimeSync } from "../../src/hooks/useBusinessOwnerRealtimeSync";
 import { useBusinessOwnerSuspension } from "../../src/hooks/useBusinessOwnerSuspension";
+import { useOwnerLocalOrderAlerts } from "../../src/hooks/useOwnerLocalOrderAlerts";
 
 function AccountSuspendedOverlay({ secondsRemaining }: { secondsRemaining: number }) {
   return (
@@ -108,6 +109,7 @@ const overlayStyles = StyleSheet.create({
 export default function BusinessOwnerLayout() {
   useBusinessOwnerRealtimeSync();
   useOrderNotifications();
+  useOwnerLocalOrderAlerts();
   const { isSuspended, secondsRemaining } = useBusinessOwnerSuspension();
 
   const segments = useSegments();

@@ -107,11 +107,16 @@ export const onOrderCreate = functions.firestore
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
-      // FCM push to customer
-      await sendPushNotification(order.userId, customerTitle, customerBody, {orderId, status: "pending"});
-      // OneSignal push to customer (if mobile registered external_user_id)
-      const customerOneSignalResult = await notifyUsersByExternalIds([order.userId], customerTitle, customerBody, {orderId, status: "pending"});
-      if (!customerOneSignalResult || customerOneSignalResult.ok === false) {
+      // OneSignal is the primary push channel. Skip parallel FCM sends so iOS APNs
+      // tokens are not contested by multiple SDKs (common cause of silent delivery).
+      const customerOneSignalResult = await notifyUsersByExternalIds(
+        [order.userId],
+        customerTitle,
+        customerBody,
+        {orderId, status: "pending"}
+      );
+      if (!customerOneSignalResult || customerOneSignalResult.ok === false || Number(customerOneSignalResult.recipients ?? 0) === 0) {
+        await sendPushNotification(order.userId, customerTitle, customerBody, {orderId, status: "pending"});
         const customerDoc = await db.collection("users").doc(order.userId).get();
         const customerPushToken = customerDoc.data()?.pushToken;
         if (customerPushToken) {
@@ -144,15 +149,27 @@ export const onOrderCreate = functions.firestore
           action: "review",
         };
 
-        // FCM push to business owner — custom sound + iOS action category
-        await sendOwnerNewOrderPush(businessData.ownerId, ownerTitle, ownerBody, ownerData);
-        // OneSignal push to business owner — custom sound + accept/reject buttons
-        const ownerOneSignalResult = await notifyOwnerNewOrder([businessData.ownerId], ownerTitle, ownerBody, ownerData);
-        if (!ownerOneSignalResult || ownerOneSignalResult.ok === false) {
+        // OneSignal first (primary). FCM/Expo only if OneSignal did not reach a device.
+        const ownerOneSignalResult = await notifyOwnerNewOrder(
+          [businessData.ownerId],
+          ownerTitle,
+          ownerBody,
+          ownerData
+        );
+        if (
+          !ownerOneSignalResult ||
+          ownerOneSignalResult.ok === false ||
+          Number(ownerOneSignalResult.recipients ?? 0) === 0
+        ) {
+          await sendOwnerNewOrderPush(businessData.ownerId, ownerTitle, ownerBody, ownerData);
           const ownerDoc = await db.collection("users").doc(businessData.ownerId).get();
           const ownerPushToken = ownerDoc.data()?.pushToken;
           if (ownerPushToken) {
-            await sendExpoPushNotification(ownerPushToken, ownerTitle, ownerBody, {orderId, status: "pending", action: "review"});
+            await sendExpoPushNotification(ownerPushToken, ownerTitle, ownerBody, {
+              orderId,
+              status: "pending",
+              action: "review",
+            });
           }
         }
       }
