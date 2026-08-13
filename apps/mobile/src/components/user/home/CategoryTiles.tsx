@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
 import { categoryEmoji } from "@hooks/useHomeScreen";
 
@@ -7,7 +8,7 @@ interface CategoryTilesProps {
   setSelectedCategory: (category: string) => void;
 }
 
-export function CategoryTiles({
+export const CategoryTiles = memo(function CategoryTiles({
   categories,
   selectedCategory,
   setSelectedCategory,
@@ -44,7 +45,7 @@ export function CategoryTiles({
         })}
     </ScrollView>
   );
-}
+});
 
 const styles = StyleSheet.create({
   catTilesRow: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4, gap: 14 },

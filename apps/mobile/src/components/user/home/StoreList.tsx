@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, Animated, StyleSheet } from "react-native";
+import { memo, useMemo } from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,25 +15,146 @@ interface StoreListProps {
   filteredBusinesses: Business[];
   productMatchesByBusiness: Map<string, string[]>;
   searchQuery: string;
-  entrance: Animated.Value;
   cartCount: number;
   goToBusiness: (id: string) => void;
   goToCart: () => void;
 }
 
-export function StoreList({
+const StoreCardItem = memo(function StoreCardItem({
+  business,
+  matchedItems,
+  matchedPreview,
+  extraMatchedCount,
+  searchQuery,
+  goToBusiness,
+}: {
+  business: Business;
+  matchedItems: string[];
+  matchedPreview: string;
+  extraMatchedCount: number;
+  searchQuery: string;
+  goToBusiness: (id: string) => void;
+}) {
+  const status = getBusinessStatus(business);
+  const imageUrl = getFirstImage(business.bannerUrl ?? business.imageUrl);
+  const eta = business.estimatedDeliveryTime ?? content.store.defaultEta;
+
+  return (
+    <View style={styles.motionWrap}>
+      <TouchableOpacity
+        style={styles.storeCard}
+        activeOpacity={0.9}
+        onPress={() => goToBusiness(business.id)}
+      >
+        <View style={styles.storeImageWrap}>
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.storeImage} contentFit="cover" />
+          ) : (
+            <LinearGradient colors={["#D1FAE5", "#A7F3D0"]} style={styles.storeImageFallback}>
+              <Text style={styles.storeImageFallbackEmoji}>{categoryEmoji(business.category)}</Text>
+            </LinearGradient>
+          )}
+          <View
+            style={[
+              styles.storeStatusBadge,
+              status === "open"
+                ? styles.storeStatusOpen
+                : status === "paused"
+                  ? styles.storeStatusPaused
+                  : styles.storeStatusClosed,
+            ]}
+          >
+            <Text style={styles.storeStatusText}>
+              {status === "open"
+                ? content.status.open
+                : status === "paused"
+                  ? content.status.paused
+                  : content.status.closed}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.storeBody}>
+          <View style={styles.storeHeaderRow}>
+            <View style={styles.storeLogo}>
+              <Text style={styles.storeLogoEmoji}>{categoryEmoji(business.category)}</Text>
+            </View>
+            <View style={styles.storeHeaderInfo}>
+              <Text style={styles.storeName} numberOfLines={1}>
+                {business.name}
+              </Text>
+              <Text style={styles.storeMeta} numberOfLines={1}>
+                {business.category} • ⭐ {Number(business.rating || 0).toFixed(1)}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.storeCtaPill}
+              activeOpacity={0.85}
+              onPress={() => goToBusiness(business.id)}
+            >
+              <Text style={styles.storeCta}>{content.store.selectStore}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.storeInfoRow}>
+            <Ionicons name="location-outline" size={13} color="#94A3B8" />
+            <Text style={styles.storeAddress} numberOfLines={1}>
+              {business.address}
+            </Text>
+          </View>
+          <View style={styles.storeInfoRow}>
+            <Ionicons name="time-outline" size={13} color="#94A3B8" />
+            <Text style={styles.storeEta}>
+              {content.store.deliveryPrefix}
+              {eta}
+            </Text>
+          </View>
+          {searchQuery.trim().length > 0 && matchedItems.length > 0 ? (
+            <Text style={styles.matchedItemsText} numberOfLines={1}>
+              {content.store.itemsPrefix}
+              {matchedPreview}
+              {extraMatchedCount > 0 ? ` +${extraMatchedCount}${content.store.moreSuffix}` : ""}
+            </Text>
+          ) : null}
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+});
+
+export const StoreList = memo(function StoreList({
   isLoading,
   safeBusinesses,
   filteredBusinesses,
   productMatchesByBusiness,
   searchQuery,
-  entrance,
   cartCount,
   goToBusiness,
   goToCart,
 }: StoreListProps) {
   const title =
     searchQuery.trim().length > 0 ? content.sections.storesSearch : content.sections.storesNear;
+
+  const cards = useMemo(
+    () =>
+      filteredBusinesses.map((business) => {
+        const matchedItems = productMatchesByBusiness.get(business.id) ?? [];
+        const matchedPreview = matchedItems.slice(0, 2).join(", ");
+        const extraMatchedCount = Math.max(0, matchedItems.length - 2);
+
+        return (
+          <StoreCardItem
+            key={business.id}
+            business={business}
+            matchedItems={matchedItems}
+            matchedPreview={matchedPreview}
+            extraMatchedCount={extraMatchedCount}
+            searchQuery={searchQuery}
+            goToBusiness={goToBusiness}
+          />
+        );
+      }),
+    [filteredBusinesses, goToBusiness, productMatchesByBusiness, searchQuery]
+  );
 
   return (
     <>
@@ -54,125 +176,11 @@ export function StoreList({
           <Text style={styles.stateSubtitle}>{content.empty.subtitle}</Text>
         </View>
       ) : (
-        filteredBusinesses.map((business, index) => {
-          const status = getBusinessStatus(business);
-          const imageUrl = getFirstImage(business.bannerUrl ?? business.imageUrl);
-          const eta = business.estimatedDeliveryTime ?? content.store.defaultEta;
-          const matchedItems = productMatchesByBusiness.get(business.id) ?? [];
-          const matchedPreview = matchedItems.slice(0, 2).join(", ");
-          const extraMatchedCount = Math.max(0, matchedItems.length - 2);
-
-          return (
-            <Animated.View
-              key={business.id}
-              style={[
-                styles.motionWrap,
-                {
-                  opacity: entrance.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 1],
-                  }),
-                  transform: [
-                    {
-                      translateY: entrance.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [10 + Math.min(index * 2, 8), 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <TouchableOpacity
-                style={styles.storeCard}
-                activeOpacity={0.9}
-                onPress={() => goToBusiness(business.id)}
-              >
-                <View style={styles.storeImageWrap}>
-                  {imageUrl ? (
-                    <Image source={{ uri: imageUrl }} style={styles.storeImage} contentFit="cover" />
-                  ) : (
-                    <LinearGradient
-                      colors={["#D1FAE5", "#A7F3D0"]}
-                      style={styles.storeImageFallback}
-                    >
-                      <Text style={styles.storeImageFallbackEmoji}>
-                        {categoryEmoji(business.category)}
-                      </Text>
-                    </LinearGradient>
-                  )}
-                  <View
-                    style={[
-                      styles.storeStatusBadge,
-                      status === "open"
-                        ? styles.storeStatusOpen
-                        : status === "paused"
-                        ? styles.storeStatusPaused
-                        : styles.storeStatusClosed,
-                    ]}
-                  >
-                    <Text style={styles.storeStatusText}>
-                      {status === "open"
-                        ? content.status.open
-                        : status === "paused"
-                        ? content.status.paused
-                        : content.status.closed}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.storeBody}>
-                  <View style={styles.storeHeaderRow}>
-                    <View style={styles.storeLogo}>
-                      <Text style={styles.storeLogoEmoji}>{categoryEmoji(business.category)}</Text>
-                    </View>
-                    <View style={styles.storeHeaderInfo}>
-                      <Text style={styles.storeName} numberOfLines={1}>
-                        {business.name}
-                      </Text>
-                      <Text style={styles.storeMeta} numberOfLines={1}>
-                        {business.category} • ⭐ {Number(business.rating || 0).toFixed(1)}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.storeCtaPill}
-                      activeOpacity={0.85}
-                      onPress={() => goToBusiness(business.id)}
-                    >
-                      <Text style={styles.storeCta}>{content.store.selectStore}</Text>
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.storeInfoRow}>
-                    <Ionicons name="location-outline" size={13} color="#94A3B8" />
-                    <Text style={styles.storeAddress} numberOfLines={1}>
-                      {business.address}
-                    </Text>
-                  </View>
-                  <View style={styles.storeInfoRow}>
-                    <Ionicons name="time-outline" size={13} color="#94A3B8" />
-                    <Text style={styles.storeEta}>
-                      {content.store.deliveryPrefix}
-                      {eta}
-                    </Text>
-                  </View>
-                  {searchQuery.trim().length > 0 && matchedItems.length > 0 ? (
-                    <Text style={styles.matchedItemsText} numberOfLines={1}>
-                      {content.store.itemsPrefix}
-                      {matchedPreview}
-                      {extraMatchedCount > 0
-                        ? ` +${extraMatchedCount}${content.store.moreSuffix}`
-                        : ""}
-                    </Text>
-                  ) : null}
-                </View>
-              </TouchableOpacity>
-            </Animated.View>
-          );
-        })
+        cards
       )}
     </>
   );
-}
+});
 
 const styles = StyleSheet.create({
   motionWrap: { width: "100%" },
