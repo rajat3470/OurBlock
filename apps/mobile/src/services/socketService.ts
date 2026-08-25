@@ -33,6 +33,12 @@ interface EventCacheEntry {
   data: unknown;
 }
 
+/** Tracked room subscription for replay after reconnect. */
+interface RoomSubscription {
+  event: string;
+  data: unknown;
+}
+
 class SocketService {
   private socket: Socket | null = null;
   /** Listeners queued before the socket instance exists. */
@@ -47,11 +53,13 @@ class SocketService {
   private batchTimer: ReturnType<typeof setTimeout> | null = null;
   /** Batched updates to process */
   private batchedUpdates: Map<string, AnyHandler[]> = new Map();
+  /** Active room subscriptions, replayed on every reconnect. */
+  private roomSubscriptions = new Map<string, RoomSubscription>();
 
   private isSocketConfigured(): boolean {
     if (!ENABLE_SOCKET) return false;
     if (!SOCKET_URL) return false;
-    // Firebase Functions REST endpoint is not a Socket.IO server endpoint.
+    // Cloud Functions REST endpoint is not a Socket.IO server endpoint.
     if (SOCKET_URL.includes("cloudfunctions.net")) return false;
     return true;
   }
@@ -112,6 +120,10 @@ class SocketService {
 
     socket.on("connect", () => {
       this.warnedConnectError = false;
+      // Replay all active room subscriptions after every (re)connect
+      for (const sub of this.roomSubscriptions.values()) {
+        socket.emit(sub.event, sub.data);
+      }
     });
   }
 
@@ -122,6 +134,7 @@ class SocketService {
     this.buffer = [];
     this.eventCache.clear();
     this.batchedUpdates.clear();
+    this.roomSubscriptions.clear();
     if (this.batchTimer) {
       clearTimeout(this.batchTimer);
       this.batchTimer = null;
@@ -226,6 +239,39 @@ class SocketService {
         (b) => !(b.event === event && b.handler === deduplicatedHandler)
       );
     };
+  }
+
+  // ─── Emit ────────────────────────────────────────────────────────────────
+
+  /**
+   * Emit an event to the server. If the socket is not yet connected the call
+   * is silently ignored (fire-and-forget semantics).
+   */
+  emit(event: string, data?: unknown): void {
+    if (this.socket?.connected) {
+      this.socket.emit(event, data);
+    } else if (process.env.NODE_ENV === "development") {
+      console.warn(`[socket] emit ignored (not connected): ${event}`);
+    }
+  }
+
+  // ─── Room management ─────────────────────────────────────────────────────
+
+  /**
+   * Join a server room and track the subscription so it is replayed
+   * automatically after every reconnect.
+   */
+  joinRoom(key: string, event: string, data?: unknown): void {
+    this.roomSubscriptions.set(key, { event, data });
+    this.emit(event, data);
+  }
+
+  /**
+   * Leave a tracked room subscription. The server removes room membership
+   * on disconnect, so we only need to stop replaying the join.
+   */
+  leaveRoom(key: string): void {
+    this.roomSubscriptions.delete(key);
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────

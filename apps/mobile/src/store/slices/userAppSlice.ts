@@ -71,6 +71,29 @@ const userAppSlice = createSlice({
       }, {} as Record<string, Order>);
       state.error = null;
     },
+    /** Upsert a single order from a socket event (insert or update in place). */
+    upsertOrder(state, action: PayloadAction<Order>) {
+      const order = action.payload;
+      const existing = state.ordersMap[order.id];
+      if (existing) {
+        const idx = state.orders.findIndex((o) => o.id === order.id);
+        if (idx !== -1) state.orders[idx] = order;
+        state.ordersMap[order.id] = order;
+      } else {
+        state.orders.unshift(order);
+        state.ordersMap[order.id] = order;
+      }
+    },
+    /** Upsert a single business from a socket event (insert or update in place). */
+    upsertBusiness(state, action: PayloadAction<Business>) {
+      const business = action.payload;
+      const idx = state.businesses.findIndex((b) => b.id === business.id);
+      if (idx !== -1) {
+        state.businesses[idx] = business;
+      } else {
+        state.businesses.push(business);
+      }
+    },
     /** Patch a single business field from a socket `business:status` event. */
     patchBusiness(state, action: PayloadAction<{ id: string } & Partial<Business>>) {
       const idx = state.businesses.findIndex((b) => b.id === action.payload.id);
@@ -112,6 +135,8 @@ export const {
   setBanners,
   setFeaturedProducts,
   setOrders,
+  upsertOrder,
+  upsertBusiness,
   patchBusiness,
   setStats,
   toggleFavoriteBusiness,

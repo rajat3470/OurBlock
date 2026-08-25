@@ -1,7 +1,5 @@
-import { doc, onSnapshot } from "firebase/firestore";
 import { Business } from "@/types";
-import { serializeFirestoreValue } from "./firestoreSerialize";
-import { getFirestoreInstance } from "./firebase";
+import { socketService } from "./socketService";
 
 export type SuspensionCallback = (isSuspended: boolean, business: Business) => void;
 export type Unsubscribe = () => void;
@@ -17,50 +15,37 @@ export function subscribeToBusinessSuspension(
   businessId: string,
   onChange: SuspensionCallback
 ): Unsubscribe {
-  const db = getFirestoreInstance();
-  const ref = doc(db, "businesses", businessId);
+  socketService.emit("join:business", { businessId });
 
   let previousSuspendedAt: string | null | undefined = undefined;
 
-  return onSnapshot(
-    ref,
-    (snapshot) => {
-      if (!snapshot.exists()) return;
+  const unsubscribe = socketService.on<Business>("business:updated", (business) => {
+    if (business.id !== businessId) return;
 
-      const data = snapshot.data();
-      const business = {
-        id: snapshot.id,
-        ...(serializeFirestoreValue(data) as object),
-      } as Business;
+    const currentSuspendedAt = business.suspendedAt ?? null;
+    const isSuspended =
+      currentSuspendedAt !== null &&
+      currentSuspendedAt !== undefined &&
+      currentSuspendedAt !== "";
 
-      const currentSuspendedAt = business.suspendedAt ?? null;
-      const isSuspended =
-        currentSuspendedAt !== null &&
-        currentSuspendedAt !== undefined &&
-        currentSuspendedAt !== "";
-
-      if (process.env.NODE_ENV === "development") {
-        console.log(
-          "[blacklistSync] business update:",
-          businessId,
-          "suspended:",
-          isSuspended,
-          "suspendedAt:",
-          currentSuspendedAt
-        );
-      }
-
-      // Always fire on first snapshot (undefined → any value) and whenever
-      // suspendedAt actually changes. Unrelated doc updates are ignored.
-      if (previousSuspendedAt !== currentSuspendedAt) {
-        previousSuspendedAt = currentSuspendedAt;
-        onChange(isSuspended, business);
-      }
-    },
-    (error) => {
-      if (process.env.NODE_ENV === "development") {
-        console.warn("[blacklistSync] business suspension snapshot error:", error);
-      }
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "[blacklistSync] business update:",
+        businessId,
+        "suspended:",
+        isSuspended,
+        "suspendedAt:",
+        currentSuspendedAt
+      );
     }
-  );
+
+    // Always fire on first snapshot (undefined → any value) and whenever
+    // suspendedAt actually changes. Unrelated doc updates are ignored.
+    if (previousSuspendedAt !== currentSuspendedAt) {
+      previousSuspendedAt = currentSuspendedAt;
+      onChange(isSuspended, business);
+    }
+  });
+
+  return unsubscribe;
 }

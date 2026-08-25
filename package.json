@@ -16,8 +16,9 @@
     "mobile:ios": "yarn workspace @mohallamitr/mobile ios",
     "mobile:android": "yarn workspace @mohallamitr/mobile android",
     "web": "yarn workspace @mohallamitr/web dev",
-    "firebase:serve": "yarn workspace @mohallamitr/firebase serve",
-    "firebase:deploy": "yarn workspace @mohallamitr/firebase deploy",
+
+    "backend:dev": "yarn workspace @mohallamitr/backend dev",
+    "backend:build": "yarn workspace @mohallamitr/backend build",
     "lint": "yarn workspaces run lint",
     "type-check": "yarn workspaces run type-check",
     "clean": "yarn workspaces run clean && rm -rf node_modules"

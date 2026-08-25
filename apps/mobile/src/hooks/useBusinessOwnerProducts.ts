@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -125,11 +125,45 @@ export const useBusinessOwnerProducts = () => {
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const lastRefreshedAt = useRef<number>(0);
   const insets = useSafeAreaInsets();
 
+  const markRefreshed = useCallback(() => {
+    lastRefreshedAt.current = Date.now();
+  }, []);
+
+  const refreshIfStale = useCallback(
+    async (staleMs = 30000) => {
+      if (Date.now() - lastRefreshedAt.current > staleMs) {
+        try {
+          await loadProducts();
+          markRefreshed();
+        } catch {
+          /* error already handled in loadProducts */
+        }
+      }
+    },
+    [loadProducts, markRefreshed]
+  );
+
   useEffect(() => {
-    loadProducts().catch(() => null);
-  }, [loadProducts]);
+    loadProducts()
+      .then(markRefreshed)
+      .catch(() => null);
+  }, [loadProducts, markRefreshed]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadProducts();
+      markRefreshed();
+    } catch {
+      /* error already handled in loadProducts */
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadProducts, markRefreshed]);
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.toLowerCase();
@@ -327,7 +361,7 @@ export const useBusinessOwnerProducts = () => {
   }, []);
 
   const handleCreate = useCallback(async () => {
-    if (!form.imageUri) {
+    if (!form.imageUri && form.additionalImageUris.length === 0) {
       Alert.alert(content.alerts.missingImageTitle, content.alerts.missingImageMsg);
       return;
     }
@@ -368,7 +402,9 @@ export const useBusinessOwnerProducts = () => {
 
     setIsSubmitting(true);
     try {
-      const imageUrls = form.imageUri ? [form.imageUri, ...form.additionalImageUris] : [];
+      const imageUrls = form.imageUri
+        ? [form.imageUri, ...form.additionalImageUris]
+        : [...form.additionalImageUris];
       const totalImageChars = getTotalImageChars(imageUrls);
       if (totalImageChars > MAX_TOTAL_IMAGE_CHARS) {
         Alert.alert(content.alerts.imageTooLargeTitle, content.alerts.imageTooLargeMsg);
@@ -460,6 +496,10 @@ export const useBusinessOwnerProducts = () => {
     showCategoryDropdown,
     setShowCategoryDropdown,
     insets,
+    refreshing,
+    onRefresh,
+    refreshIfStale,
+    loadProducts,
     content,
     closeModal,
     resetForm,

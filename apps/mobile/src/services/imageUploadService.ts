@@ -1,5 +1,4 @@
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { getStorageInstance } from "./firebase";
+import { apiClient } from "./apiClient";
 
 export interface UploadProgress {
   bytesTransferred: number;
@@ -24,19 +23,30 @@ export const imageUploadService = {
    * @param userId - User ID
    * @returns Download URL of the uploaded image
    */
-  async uploadProfileImage(uri: string, userId: string): Promise<string> {
+  async uploadProfileImage(uri: string, _userId: string): Promise<string> {
     try {
-      const storage = getStorageInstance();
+      // Fetch the local file as a blob
       const response = await fetch(uri);
       const blob = await response.blob();
 
-      const timestamp = Date.now();
-      const filename = `profile_${userId}_${timestamp}.jpg`;
-      const storageRef = ref(storage, `users/${userId}/profile/${filename}`);
+      // Build multipart form data
+      const formData = new FormData();
+      formData.append("image", {
+        uri,
+        type: blob.type || "image/jpeg",
+        name: `profile.${blob.type?.includes("png") ? "png" : "jpg"}`,
+      } as any);
 
-      await uploadBytes(storageRef, blob);
-      const downloadURL = await getDownloadURL(storageRef);
-      return downloadURL;
+      // POST to the backend upload endpoint
+      const result = await apiClient.post<{ success: boolean; data: { url: string } }>(
+        "/upload/profile",
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+
+      return result.data.url;
     } catch (error) {
       console.error("Error uploading profile image:", error);
       throw new Error("Failed to upload profile image");
@@ -49,35 +59,10 @@ export const imageUploadService = {
    */
   async deleteProfileImage(imageUrl: string): Promise<void> {
     try {
-      const storage = getStorageInstance();
-      const path = this.getPathFromUrl(imageUrl);
-      if (!path) throw new Error("Invalid image URL");
-
-      const storageRef = ref(storage, path);
-      await deleteObject(storageRef);
+      await apiClient.post("/upload/delete", { url: imageUrl });
     } catch (error) {
       console.error("Error deleting profile image:", error);
       throw new Error("Failed to delete profile image");
-    }
-  },
-
-  /**
-   * Extract storage path from Firebase download URL
-   * @param url - Firebase download URL
-   * @returns Storage path or null
-   */
-  getPathFromUrl(url: string): string | null {
-    try {
-      const urlObj = new URL(url);
-      const pathname = urlObj.pathname;
-      // Extract path after /o/
-      const match = pathname.match(/\/o\/(.+)/);
-      if (match && match[1]) {
-        return decodeURIComponent(match[1].split("?")[0]);
-      }
-      return null;
-    } catch {
-      return null;
     }
   },
 

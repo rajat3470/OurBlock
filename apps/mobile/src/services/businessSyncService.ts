@@ -1,31 +1,8 @@
-import {
-  collection,
-  doc,
-  onSnapshot,
-  query,
-  where,
-  QuerySnapshot,
-  DocumentSnapshot,
-} from "firebase/firestore";
 import { Business } from "@/types";
-import { serializeFirestoreValue } from "./firestoreSerialize";
-import { getFirestoreInstance } from "./firebase";
+import { socketService } from "./socketService";
 
 export type BusinessSyncCallback = (business: Business) => void;
-export type BusinessesSyncCallback = (businesses: Business[]) => void;
 export type Unsubscribe = () => void;
-
-function mapDoc(snapshot: DocumentSnapshot): Business | null {
-  if (!snapshot.exists()) return null;
-  const data = snapshot.data();
-  return { id: snapshot.id, ...(serializeFirestoreValue(data) as object) } as Business;
-}
-
-function mapCollection(snapshot: QuerySnapshot): Business[] {
-  return snapshot.docs.map(
-    (d) => ({ id: d.id, ...(serializeFirestoreValue(d.data()) as object) }) as Business
-  );
-}
 
 /**
  * Subscribe to real-time updates for a single business document.
@@ -35,52 +12,41 @@ export function subscribeToBusiness(
   businessId: string,
   onChange: BusinessSyncCallback
 ): Unsubscribe {
-  const db = getFirestoreInstance();
-  const ref = doc(db, "businesses", businessId);
+  const roomKey = `business:${businessId}`;
+  socketService.joinRoom(roomKey, "join:business", { businessId });
 
-  return onSnapshot(
-    ref,
-    (snapshot) => {
-      const business = mapDoc(snapshot);
-      if (business) {
-        if (process.env.NODE_ENV === "development") {
-          console.log("[businessSync] single business update:", business.id, business.status, business.isTakingOrders);
-        }
-        onChange(business);
-      }
-    },
-    (error) => {
-      if (process.env.NODE_ENV === "development") {
-        console.warn("[businessSync] single business snapshot error:", error);
-      }
-    }
-  );
+  const unsubscribe = socketService.on<Business>("business:updated", (business) => {
+    if (business.id !== businessId) return;
+    onChange(business);
+  });
+
+  return () => {
+    unsubscribe();
+    socketService.leaveRoom(roomKey);
+  };
 }
 
 /**
- * Subscribe to real-time updates for all businesses in a society.
+ * Subscribe to real-time updates for businesses in a society.
+ * The server emits a single updated Business per event.
  * Returns an unsubscribe function.
  */
 export function subscribeToBusinessesBySociety(
   societyId: string,
-  onChange: BusinessesSyncCallback
+  onChange: BusinessSyncCallback
 ): Unsubscribe {
-  const db = getFirestoreInstance();
-  const q = query(collection(db, "businesses"), where("societyId", "==", societyId));
+  const roomKey = `society:${societyId}`;
+  socketService.joinRoom(roomKey, "join:society", { societyId });
 
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const businesses = mapCollection(snapshot);
-      if (process.env.NODE_ENV === "development") {
-        console.log("[businessSync] society businesses update:", societyId, businesses.length, businesses.map((b) => b.id));
-      }
-      onChange(businesses);
-    },
-    (error) => {
-      if (process.env.NODE_ENV === "development") {
-        console.warn("[businessSync] society businesses snapshot error:", error);
-      }
+  const unsubscribe = socketService.on<Business>("businesses:society:updated", (business) => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[businessSync] society business update:", societyId, business.id);
     }
-  );
+    onChange(business);
+  });
+
+  return () => {
+    unsubscribe();
+    socketService.leaveRoom(roomKey);
+  };
 }

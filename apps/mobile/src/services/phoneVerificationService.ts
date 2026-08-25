@@ -1,6 +1,4 @@
-import auth from '@react-native-firebase/auth';
-import type { FirebaseAuthTypes } from '@react-native-firebase/auth';
-import { userAppService } from './userAppService';
+import { apiClient } from './apiClient';
 
 export interface PhoneVerificationState {
   verificationId: string | null;
@@ -9,109 +7,63 @@ export interface PhoneVerificationState {
   error: string | null;
 }
 
+export interface ConfirmationResult {
+  phone: string;
+  confirm: (code: string) => Promise<boolean>;
+}
+
 export const phoneVerificationService = {
   /**
-   * Send OTP to phone number
+   * Send OTP to phone number via backend
    * @param phoneNumber - Phone number with country code (e.g., +911234567890)
-   * @returns ConfirmationResult
+   * @returns ConfirmationResult-like object for verifyCode compatibility
    */
-  async sendVerificationCode(
-    phoneNumber: string
-  ): Promise<FirebaseAuthTypes.ConfirmationResult> {
-    try {
-      return await auth().signInWithPhoneNumber(phoneNumber);
-    } catch (error: any) {
-      console.error('Error sending verification code:', error);
-      throw this.handleFirebaseError(error);
+  async sendVerificationCode(phoneNumber: string): Promise<ConfirmationResult> {
+    const formatted = this.formatPhoneNumber(phoneNumber);
+    const res = await apiClient.post('/otp/send', { phone: formatted });
+    if (!res.data?.success) {
+      throw new Error(res.data?.error || 'Failed to send OTP');
     }
+    return {
+      phone: formatted,
+      confirm: async (code: string) => {
+        return this.verifyCode({ phone: formatted } as any, code);
+      },
+    };
   },
 
   /**
-   * Verify OTP code
-   * @param confirmation - ConfirmationResult from sendVerificationCode
+   * Verify OTP code via backend
+   * @param confirmation - Object with phone property
    * @param code - 6-digit OTP code
    * @returns Success status
    */
-  async verifyCode(confirmation: FirebaseAuthTypes.ConfirmationResult, code: string): Promise<boolean> {
-    try {
-      await confirmation.confirm(code);
-      const verificationId = confirmation.verificationId ?? '';
-      await userAppService.verifyPhone(code, verificationId);
-      return true;
-    } catch (error: any) {
-      console.error('Error verifying code:', error);
-      throw this.handleFirebaseError(error);
+  async verifyCode(confirmation: { phone: string }, code: string): Promise<boolean> {
+    const res = await apiClient.post('/otp/verify', { phone: confirmation.phone, code });
+    if (!res.data?.success) {
+      throw new Error(res.data?.error || 'Verification failed');
     }
+    return true;
   },
 
   /**
    * Format phone number to E.164 format for India
-   * @param phone - 10-digit phone number
-   * @returns Formatted phone number with +91 prefix
    */
   formatPhoneNumber(phone: string): string {
-    // Remove all non-digit characters
     const cleaned = phone.replace(/\D/g, '');
-
-    // If it already has country code, return as is
     if (cleaned.startsWith('91') && cleaned.length === 12) {
       return `+${cleaned}`;
     }
-
-    // Add +91 for Indian numbers
     if (cleaned.length === 10) {
       return `+91${cleaned}`;
     }
-
     throw new Error('Invalid phone number. Please enter a 10-digit number.');
   },
 
   /**
    * Validate OTP code format
-   * @param code - OTP code
-   * @returns true if valid
    */
   validateOTP(code: string): boolean {
     return /^\d{6}$/.test(code);
-  },
-
-  /**
-   * Handle Firebase errors and return user-friendly messages
-   * @param error - Firebase error
-   * @returns Error with user-friendly message
-   */
-  handleFirebaseError(error: any): Error {
-    let message = 'An error occurred during phone verification';
-
-    switch (error.code) {
-      case 'auth/invalid-phone-number':
-        message = 'Invalid phone number format';
-        break;
-      case 'auth/missing-phone-number':
-        message = 'Phone number is required';
-        break;
-      case 'auth/quota-exceeded':
-        message = 'SMS quota exceeded. Please try again later.';
-        break;
-      case 'auth/invalid-verification-code':
-        message = 'Invalid verification code. Please try again.';
-        break;
-      case 'auth/code-expired':
-        message = 'Verification code has expired. Please request a new one.';
-        break;
-      case 'auth/missing-verification-code':
-        message = 'Verification code is required';
-        break;
-      case 'auth/credential-already-in-use':
-        message = 'This phone number is already in use by another account';
-        break;
-      case 'auth/too-many-requests':
-        message = 'Too many attempts. Please try again later.';
-        break;
-      default:
-        message = error.message || message;
-    }
-
-    return new Error(message);
   },
 };

@@ -19,7 +19,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.mohallamitr.app",
-      "googleServicesFile": "./GoogleService-Info.plist",
+
       "icon": "./assets/icon.png",
       "splash": {
         "image": "./assets/splash-icon.png",
@@ -34,7 +34,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0E9F6E"
       },
-      "googleServicesFile": "./google-services.json",
+
       "splash": {
         "image": "./assets/splash-icon.png",
         "resizeMode": "contain",
@@ -66,7 +66,7 @@
           "imageWidth": 200
         }
       ],
-      "./plugins/withFirebaseFrameworkModules",
+
       "./plugins/withNotificationSound",
       [
         "expo-build-properties",

@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import {
   View,
   Text,
@@ -6,8 +7,10 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from "expo-router";
 import { ProductCard } from "@/components/business-owner/products/ProductCard";
 import { ProductFormModal } from "@/components/business-owner/products/ProductFormModal";
 import { useBusinessOwnerProducts } from "@hooks/useBusinessOwnerProducts";
@@ -26,6 +29,9 @@ export default function BusinessOwnerProducts() {
     showCategoryDropdown,
     setShowCategoryDropdown,
     insets,
+    refreshing,
+    onRefresh,
+    refreshIfStale,
     closeModal,
     showImageOptions,
     showAdditionalImageOptions,
@@ -46,6 +52,12 @@ export default function BusinessOwnerProducts() {
     getCategoryLabel,
     getApprovalMeta,
   } = useBusinessOwnerProducts();
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshIfStale();
+    }, [refreshIfStale])
+  );
 
   return (
     <View style={styles.container}>
@@ -82,6 +94,9 @@ export default function BusinessOwnerProducts() {
           data={filteredProducts}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#16A34A" />
+          }
           renderItem={({ item }) => (
             <ProductCard
               product={item}

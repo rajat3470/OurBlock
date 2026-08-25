@@ -36,7 +36,7 @@ async function registerUser() {
 }
 
 /**
- * Login user (after Firebase Auth)
+ * Login user
  */
 async function loginUser(uid: string) {
   try {

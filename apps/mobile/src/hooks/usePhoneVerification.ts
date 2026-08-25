@@ -1,8 +1,7 @@
 import { useCallback, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
-import type { FirebaseAuthTypes } from "@react-native-firebase/auth";
-import { phoneVerificationService } from "@services/phoneVerificationService";
+import { phoneVerificationService, ConfirmationResult } from "@services/phoneVerificationService";
 import { authStateService } from "@services/authStateService";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
 import { setUser } from "@store/slices/authSlice";
@@ -22,7 +21,7 @@ export const usePhoneVerification = () => {
 
   const [phoneNumber, setPhoneNumber] = useState(user?.phone || "");
   const [confirmation, setConfirmation] =
-    useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
+    useState<ConfirmationResult | null>(null);
   const [code, setCode] = useState("");
   const [step, setStep] = useState<VerifyPhoneStep>("phone");
   const [loading, setLoading] = useState(false);

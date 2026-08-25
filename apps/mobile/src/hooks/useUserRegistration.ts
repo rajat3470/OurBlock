@@ -178,6 +178,7 @@ export function useUserRegistration() {
         params: { fromRegistration: "1" },
       });
     } catch (err: any) {
+      console.log('error ******* register ****** ', err)
       toast.show(
         err?.response?.data?.error ||
           err?.message ||

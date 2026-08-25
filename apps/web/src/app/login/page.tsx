@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { loginSuperAdmin } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,18 +16,14 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-
+      const result = await loginSuperAdmin(email, password);
+      if (!result.success) {
+        setError(result.error || 'Invalid email or password.');
+        return;
+      }
       router.push('/dashboard/societies');
     } catch (err: any) {
-      const code = err?.code;
-      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-        setError('Invalid email or password.');
-      } else if (code === 'auth/too-many-requests') {
-        setError('Too many failed attempts. Please try again later.');
-      } else {
-        setError(err?.message || 'Login failed. Please try again.');
-      }
+      setError(err?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }

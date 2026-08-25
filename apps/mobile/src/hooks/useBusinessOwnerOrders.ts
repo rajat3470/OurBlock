@@ -10,7 +10,7 @@ import {
 import { Order, OrderStatus } from "@/types";
 import content from "@/content/boOrders.json";
 import { businessOwnerService } from "@services/businessOwnerService";
-import { promptDeliveryPartnerSelection } from "@utils/promptDeliveryPartnerSelection";
+import type { PartnerOption } from "@components/business-owner/DeliveryPartnerPickerModal";
 
 export type FilterKey = "all" | "pending" | "active" | "done";
 
@@ -96,6 +96,16 @@ export const useBusinessOwnerOrders = () => {
   const [expiredIds, setExpiredIds] = useState<Set<string>>(new Set());
   const prevPendingCount = useRef<number>(0);
 
+  // ── Partner picker modal state ──────────────────────────────────────────
+  const [partnerPicker, setPartnerPicker] = useState<{
+    orderId: string;
+    preselectedId?: string | null;
+    /** "advance" = part of status flow; "assign" = repair missing assignment */
+    purpose: "advance" | "assign";
+  } | null>(null);
+  const [partnerOptions, setPartnerOptions] = useState<PartnerOption[]>([]);
+  const [partnerPickerLoading, setPartnerPickerLoading] = useState(false);
+
   // Local ticker so pending order countdown updates every second
   const hasPending = useMemo(
     () => orders.some((o) => o.status === OrderStatus.PENDING),
@@ -151,37 +161,45 @@ export const useBusinessOwnerOrders = () => {
     { key: "done", label: content.filters.done, count: counts.done },
   ];
 
-  const handleAdvance = useCallback(
-    async (order: Order) => {
-      const next = NEXT_STATUS[order.status];
-      if (!next) return;
-
-      let deliveryPartnerId: string | undefined;
-      if (next === OrderStatus.OUT_FOR_DELIVERY) {
-        try {
-          const partners = (await businessOwnerService.getDeliveryPartners()).filter(
-            (p) => p.status === "active"
-          );
-          const picked = await promptDeliveryPartnerSelection(partners, {
-            preselectedId: order.assignedDeliveryPartnerId,
-            title: content.alerts.partnerRequiredTitle,
-            message: content.alerts.partnerRequiredMsg,
-          });
-          if (!picked) return;
-          deliveryPartnerId = picked;
-        } catch {
-          Alert.alert(content.alerts.errorTitle, content.alerts.advanceFail);
-          return;
-        }
-      }
-
-      setAdvancing(order.id);
+  /** Open the partner picker modal, fetching partners from the API. */
+  const openPartnerPicker = useCallback(
+    async (orderId: string, purpose: "advance" | "assign", preselectedId?: string | null) => {
+      setPartnerPickerLoading(true);
+      setPartnerPicker({ orderId, preselectedId, purpose });
       try {
-        await changeOrderStatus(
-          order.id,
-          next,
-          deliveryPartnerId ? { deliveryPartnerId } : undefined
-        );
+        const all = await businessOwnerService.getDeliveryPartners();
+        setPartnerOptions(all.filter((p) => p.status === "active"));
+      } catch {
+        Alert.alert(content.alerts.errorTitle, content.alerts.advanceFail);
+        setPartnerPicker(null);
+      } finally {
+        setPartnerPickerLoading(false);
+      }
+    },
+    []
+  );
+
+  const closePartnerPicker = useCallback(() => {
+    setPartnerPicker(null);
+    setPartnerOptions([]);
+  }, []);
+
+  /** Called when a partner is tapped in the picker modal. */
+  const handlePartnerSelected = useCallback(
+    async (partnerId: string) => {
+      if (!partnerPicker) return;
+      const { orderId, purpose } = partnerPicker;
+      closePartnerPicker();
+
+      setAdvancing(orderId);
+      try {
+        if (purpose === "advance") {
+          await changeOrderStatus(orderId, OrderStatus.OUT_FOR_DELIVERY, {
+            deliveryPartnerId: partnerId,
+          });
+        } else {
+          await assignDeliveryPartner(orderId, partnerId);
+        }
       } catch (err: any) {
         if (err?.response?.data?.code === "DELIVERY_PARTNER_REQUIRED") {
           Alert.alert(content.alerts.partnerRequiredTitle, content.alerts.partnerRequiredMsg);
@@ -192,31 +210,43 @@ export const useBusinessOwnerOrders = () => {
         setAdvancing(null);
       }
     },
-    [changeOrderStatus]
+    [partnerPicker, closePartnerPicker, changeOrderStatus, assignDeliveryPartner]
   );
 
-  /** Repair orders that were sent out without an assignment (older API). */
-  const handleAssignMissingPartner = useCallback(
+  const handleAdvance = useCallback(
     async (order: Order) => {
-      if (order.assignedDeliveryPartnerId) return;
+      const next = NEXT_STATUS[order.status];
+      if (!next) return;
+
+      // When advancing to outForDelivery, open the partner picker modal
+      if (next === OrderStatus.OUT_FOR_DELIVERY) {
+        openPartnerPicker(order.id, "advance", order.assignedDeliveryPartnerId);
+        return;
+      }
+
+      setAdvancing(order.id);
       try {
-        const partners = (await businessOwnerService.getDeliveryPartners()).filter(
-          (p) => p.status === "active"
-        );
-        const picked = await promptDeliveryPartnerSelection(partners, {
-          title: content.alerts.partnerRequiredTitle,
-          message: content.alerts.partnerRequiredMsg,
-        });
-        if (!picked) return;
-        setAdvancing(order.id);
-        await assignDeliveryPartner(order.id, picked);
-      } catch {
-        Alert.alert(content.alerts.errorTitle, content.alerts.advanceFail);
+        await changeOrderStatus(order.id, next);
+      } catch (err: any) {
+        if (err?.response?.data?.code === "DELIVERY_PARTNER_REQUIRED") {
+          Alert.alert(content.alerts.partnerRequiredTitle, content.alerts.partnerRequiredMsg);
+        } else {
+          Alert.alert(content.alerts.errorTitle, content.alerts.advanceFail);
+        }
       } finally {
         setAdvancing(null);
       }
     },
-    [assignDeliveryPartner]
+    [changeOrderStatus, openPartnerPicker]
+  );
+
+  /** Repair orders that were sent out without an assignment (older API). */
+  const handleAssignMissingPartner = useCallback(
+    (order: Order) => {
+      if (order.assignedDeliveryPartnerId) return;
+      openPartnerPicker(order.id, "assign");
+    },
+    [openPartnerPicker]
   );
 
   const markExpired = useCallback((orderId: string) => {
@@ -319,5 +349,11 @@ export const useBusinessOwnerOrders = () => {
     getNextStatus,
     getNextStatusLabel,
     timeAgo,
+    // Partner picker modal
+    partnerPicker,
+    partnerOptions,
+    partnerPickerLoading,
+    handlePartnerSelected,
+    closePartnerPicker,
   };
 };

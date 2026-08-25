@@ -107,10 +107,8 @@ export default function BusinessesPage() {
   const [selectedSocietyId, setSelectedSocietyId] = useState('');
   const [form, setForm] = useState(emptyDetails);
   const [ownerForm, setOwnerForm] = useState(emptyOwner);
-  const [skipOwner, setSkipOwner] = useState(false);
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [createdBizId, setCreatedBizId] = useState('');
   const [ownerResult, setOwnerResult] = useState<OwnerResult | null>(null);
   const [copied, setCopied] = useState<'email' | 'password' | ''>('');
 
@@ -289,37 +287,30 @@ export default function BusinessesPage() {
   const handleOwnerFormChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setOwnerForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
-  // Step 2 → save business, then go to step 3
-  const handleCreateBusiness = async (e: React.FormEvent) => {
-    e.preventDefault(); setFormError(''); setSubmitting(true);
-    const payload: any = { ...form, societyId: selectedSocietyId };
-    if (!payload.email) delete payload.email;
-    if (!payload.description) delete payload.description;
-    const res = await api.post('/businesses', payload);
-    if (res.success) {
-      setCreatedBizId(res.data.id);
-      setStep('owner');
-    } else {
-      setFormError(res.error || 'Failed to create business');
-    }
-    setSubmitting(false);
+  // Step 2 → validate business details, then go to step 3
+  const handleCreateBusiness = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError('');
+    setStep('owner');
   };
 
   // Step 3 → create owner account and link to business
   const handleCreateOwner = async (e: React.FormEvent) => {
     e.preventDefault(); setFormError(''); setSubmitting(true);
-    const res = await api.post('/admin/business-owners', {
-      ...ownerForm,
+    const business: any = { ...form };
+    if (!business.email) delete business.email;
+    if (!business.description) delete business.description;
+    const res = await api.post('/admin/businesses', {
+      business,
+      owner: ownerForm,
       societyId: selectedSocietyId,
     });
     if (res.success) {
-      // Link the owner to the business
-      await api.put(`/businesses/${createdBizId}`, { ownerId: res.data.uid });
       setOwnerResult({ email: res.data.email, temporaryPassword: res.data.temporaryPassword });
       setStep('done');
       await loadBusinesses();
     } else {
-      setFormError(res.error || 'Failed to create owner account');
+      setFormError(res.error || 'Failed to create business and owner account');
     }
     setSubmitting(false);
   };
@@ -345,9 +336,7 @@ export default function BusinessesPage() {
     setSelectedSocietyId('');
     setForm(emptyDetails);
     setOwnerForm(emptyOwner);
-    setSkipOwner(false);
     setFormError('');
-    setCreatedBizId('');
     setOwnerResult(null);
     setCopied('');
     setShowModal(true);
@@ -961,7 +950,7 @@ export default function BusinessesPage() {
                   <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">{formError}</div>
                 )}
                 <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 text-sm text-indigo-800">
-                  ✅ Business created. Now create login credentials for the business owner.
+                  Enter the business owner details to create the business and owner account together.
                 </div>
                 <form onSubmit={handleCreateOwner} className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
@@ -987,10 +976,9 @@ export default function BusinessesPage() {
                       placeholder="10-digit mobile number" maxLength={10} className="field" />
                   </div>
                   <div className="flex justify-between gap-3 pt-2">
-                    <button type="button"
-                      onClick={async () => { setSkipOwner(true); closeModal(); await loadBusinesses(); }}
-                      className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 underline transition">
-                      Skip for now
+                    <button type="button" onClick={() => setStep('details')}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                      ← Back
                     </button>
                     <button type="submit" disabled={submitting}
                       className="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition">

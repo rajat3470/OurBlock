@@ -1,158 +1,98 @@
-import {
-  collection,
-  doc,
-  onSnapshot,
-  query,
-  where,
-  QuerySnapshot,
-  DocumentSnapshot,
-} from "firebase/firestore";
 import { Order } from "@/types";
-import { serializeFirestoreValue } from "./firestoreSerialize";
-import { getFirestoreInstance } from "./firebase";
+import { socketService } from "./socketService";
 
 export type OrderSyncCallback = (order: Order) => void;
-export type OrdersSyncCallback = (orders: Order[]) => void;
 export type Unsubscribe = () => void;
-
-function mapDoc(snapshot: DocumentSnapshot): Order | null {
-  if (!snapshot.exists()) return null;
-  const data = snapshot.data();
-  return { id: snapshot.id, ...(serializeFirestoreValue(data) as object) } as Order;
-}
-
-function mapCollection(snapshot: QuerySnapshot): Order[] {
-  return snapshot.docs.map(
-    (d) => ({ id: d.id, ...(serializeFirestoreValue(d.data()) as object) }) as Order
-  );
-}
-
-function sortByCreatedAtDesc(orders: Order[]): Order[] {
-  return [...orders].sort((a, b) => {
-    const aMs = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-    const bMs = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-    return bMs - aMs;
-  });
-}
 
 /**
  * Subscribe to real-time updates for a single order document.
  * Returns an unsubscribe function.
  */
 export function subscribeToOrder(orderId: string, onChange: OrderSyncCallback): Unsubscribe {
-  const db = getFirestoreInstance();
-  const ref = doc(db, "orders", orderId);
+  const roomKey = `order:${orderId}`;
+  socketService.joinRoom(roomKey, "join:order", { orderId });
 
-  return onSnapshot(
-    ref,
-    (snapshot) => {
-      const order = mapDoc(snapshot);
-      if (order) {
-        if (process.env.NODE_ENV === "development") {
-          console.log("[orderSync] single order update:", order.id, order.status);
-        }
-        onChange(order);
-      }
-    },
-    (error) => {
-      if (process.env.NODE_ENV === "development") {
-        console.warn("[orderSync] single order snapshot error:", error);
-      }
-    }
-  );
+  const unsubscribe = socketService.on<Order>("order:updated", (order) => {
+    if (order.id !== orderId) return;
+    onChange(order);
+  });
+
+  return () => {
+    unsubscribe();
+    socketService.leaveRoom(roomKey);
+  };
 }
 
 /**
- * Subscribe to real-time updates for all orders placed by a user.
+ * Subscribe to real-time updates for orders placed by a user.
+ * The server emits a single updated Order per event.
  * Returns an unsubscribe function.
  */
 export function subscribeToOrdersByUser(
   userId: string,
-  onChange: OrdersSyncCallback
+  onChange: OrderSyncCallback
 ): Unsubscribe {
-  const db = getFirestoreInstance();
-  const q = query(collection(db, "orders"), where("userId", "==", userId));
+  const roomKey = `user-orders:${userId}`;
+  socketService.joinRoom(roomKey, "join:user-orders", { userId });
 
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const orders = sortByCreatedAtDesc(mapCollection(snapshot));
-      if (process.env.NODE_ENV === "development") {
-        console.log("[orderSync] user orders update:", userId, orders.length, orders.map((o) => o.id));
-      }
-      onChange(orders);
-    },
-    (error) => {
-      if (process.env.NODE_ENV === "development") {
-        console.warn("[orderSync] user orders snapshot error:", error);
-      }
+  const unsubscribe = socketService.on<Order>("orders:user:updated", (order) => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[orderSync] user order update:", userId, order.id, order.status);
     }
-  );
+    onChange(order);
+  });
+
+  return () => {
+    unsubscribe();
+    socketService.leaveRoom(roomKey);
+  };
 }
 
 /**
- * Subscribe to real-time updates for all orders placed against a business.
+ * Subscribe to real-time updates for orders placed against a business.
+ * The server emits a single updated Order per event.
  * Returns an unsubscribe function.
  */
 export function subscribeToOrdersByBusiness(
   businessId: string,
-  onChange: OrdersSyncCallback
+  onChange: OrderSyncCallback
 ): Unsubscribe {
-  const db = getFirestoreInstance();
-  const q = query(collection(db, "orders"), where("businessId", "==", businessId));
+  const roomKey = `business-orders:${businessId}`;
+  socketService.joinRoom(roomKey, "join:business-orders", { businessId });
 
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const orders = sortByCreatedAtDesc(mapCollection(snapshot));
-      if (process.env.NODE_ENV === "development") {
-        console.log("[orderSync] business orders update:", businessId, orders.length, orders.map((o) => o.id));
-      }
-      onChange(orders);
-    },
-    (error) => {
-      if (process.env.NODE_ENV === "development") {
-        console.warn("[orderSync] business orders snapshot error:", error);
-      }
+  const unsubscribe = socketService.on<Order>("orders:business:updated", (order) => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[orderSync] business order update:", businessId, order.id, order.status);
     }
-  );
+    onChange(order);
+  });
+
+  return () => {
+    unsubscribe();
+    socketService.leaveRoom(roomKey);
+  };
 }
 
 /**
  * Subscribe to orders assigned to a delivery partner (realtime).
- * Prefer subscribeToOrdersByBusiness + client filter in the partner hook —
- * that receives assignment updates on existing shop orders more reliably.
+ * The server emits a single updated Order per event.
  */
 export function subscribeToOrdersByDeliveryPartner(
   partnerId: string,
-  onChange: OrdersSyncCallback,
-  onError?: (error: Error) => void
+  onChange: OrderSyncCallback
 ): Unsubscribe {
-  const db = getFirestoreInstance();
-  const q = query(
-    collection(db, "orders"),
-    where("assignedDeliveryPartnerId", "==", partnerId)
-  );
+  const roomKey = `delivery-orders:${partnerId}`;
+  socketService.joinRoom(roomKey, "join:delivery-orders", { partnerId });
 
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const orders = sortByCreatedAtDesc(mapCollection(snapshot));
-      if (process.env.NODE_ENV === "development") {
-        console.log(
-          "[orderSync] delivery partner orders update:",
-          partnerId,
-          orders.length,
-          orders.map((o) => o.id)
-        );
-      }
-      onChange(orders);
-    },
-    (error) => {
-      if (process.env.NODE_ENV === "development") {
-        console.warn("[orderSync] delivery partner snapshot error:", error);
-      }
-      onError?.(error);
+  const unsubscribe = socketService.on<Order>("orders:delivery:updated", (order) => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[orderSync] delivery partner order update:", partnerId, order.id, order.status);
     }
-  );
+    onChange(order);
+  });
+
+  return () => {
+    unsubscribe();
+    socketService.leaveRoom(roomKey);
+  };
 }

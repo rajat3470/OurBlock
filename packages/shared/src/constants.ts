@@ -5,8 +5,8 @@ export const API_CONFIG = {
   RETRY_ATTEMPTS: 3,
 };
 
-// Firebase Configuration
-export const FIREBASE_CONFIG = {
+// Database Collection / Storage Path Names
+export const DB_CONFIG = {
   COLLECTIONS: {
     USERS: 'users',
     SOCIETIES: 'societies',

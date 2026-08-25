@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppState, AppStateStatus } from "react-native";
+import { useFocusEffect } from "expo-router";
 import { useAppSelector } from "@hooks/useRedux";
-import { subscribeToOrdersByBusiness } from "@services/orderSyncService";
+import { subscribeToOrdersByDeliveryPartner } from "@services/orderSyncService";
 import {
   deliveryPartnerService,
   DeliveryBusiness,
 } from "@services/deliveryPartnerService";
+import { hasPendingWrite } from "@services/pendingWrites";
 import { Order, OrderStatus } from "@/types";
 
 const QUEUE_STATUSES = new Set<OrderStatus | string>([
@@ -21,13 +23,11 @@ const ACTIONABLE_STATUSES = new Set<OrderStatus | string>([
 ]);
 
 /**
- * Realtime delivery queue for the signed-in partner.
+ * Delivery queue for the signed-in partner.
  *
- * Listens to the linked shop's orders (same pattern as the business-owner
- * sync) and filters client-side to this partner. That way an assignment
- * write on an existing order triggers an immediate snapshot — more reliable
- * on React Native than waiting for a document to newly match
- * `assignedDeliveryPartnerId == partnerId`.
+ * Seeds orders via HTTP on mount and re-fetches on tab focus, so the UI is
+ * never blank regardless of socket state. Socket events provide incremental
+ * updates between full loads.
  */
 export function useDeliveryPartnerOrders() {
   const user = useAppSelector((s) => s.auth.user);
@@ -35,90 +35,93 @@ export function useDeliveryPartnerOrders() {
 
   const [allAssigned, setAllAssigned] = useState<Order[]>([]);
   const [business, setBusiness] = useState<DeliveryBusiness | null>(null);
-  const [businessId, setBusinessId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const applyPartnerQueue = useCallback(
-    (shopOrders: Order[]) => {
-      if (!partnerId) {
-        setAllAssigned([]);
-        return;
-      }
-      setAllAssigned(
-        shopOrders.filter((o) => o.assignedDeliveryPartnerId === partnerId)
-      );
-    },
-    [partnerId]
-  );
 
   const loadProfile = useCallback(async () => {
     try {
       const res = await deliveryPartnerService.getMe();
       const biz = res.data?.business ?? null;
       setBusiness(biz);
-      setBusinessId(biz?.id ?? res.data?.businessId ?? null);
       return biz?.id ?? res.data?.businessId ?? null;
     } catch {
       setBusiness(null);
-      setBusinessId(null);
       return null;
     }
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!partnerId) {
-        if (!cancelled) {
-          setBusiness(null);
-          setBusinessId(null);
-          setAllAssigned([]);
-          setLoading(false);
-        }
-        return;
+  /** Fetch orders from the HTTP API. Always resolves loading state. */
+  const loadOrders = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!options?.silent) setLoading(true);
+      setError(null);
+      try {
+        const res = await deliveryPartnerService.getPendingOrders();
+        setAllAssigned(res.data ?? []);
+        if (res.business) setBusiness(res.business);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Failed to load deliveries";
+        setError(msg);
+      } finally {
+        setLoading(false);
       }
-      await loadProfile();
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [partnerId, loadProfile]);
+    },
+    []
+  );
 
+  // Initial load: fetch profile + orders via HTTP
   useEffect(() => {
-    if (!partnerId || !businessId) {
-      if (partnerId && !businessId) {
-        // Profile still loading — keep spinner until businessId resolves or fails.
-        return;
-      }
+    if (!partnerId) {
+      setBusiness(null);
       setAllAssigned([]);
       setLoading(false);
       return;
     }
+    Promise.all([loadProfile(), loadOrders()]).catch(() => {});
+  }, [partnerId, loadProfile, loadOrders]);
 
-    setLoading(true);
-    setError(null);
+  // Silently refresh orders when the tab gains focus
+  useFocusEffect(
+    useCallback(() => {
+      if (partnerId) loadOrders({ silent: true }).catch(() => {});
+    }, [partnerId, loadOrders])
+  );
 
-    const unsubscribe = subscribeToOrdersByBusiness(businessId, (shopOrders) => {
-      applyPartnerQueue(shopOrders);
-      setLoading(false);
-      setError(null);
+  // Subscribe to real-time incremental updates via socket
+  useEffect(() => {
+    if (!partnerId) return;
+
+    const unsubscribe = subscribeToOrdersByDeliveryPartner(partnerId, (order) => {
+      if (hasPendingWrite(order.id)) return;
+      setAllAssigned((prev) => {
+        // Upsert if still assigned to this partner, otherwise remove
+        if (order.assignedDeliveryPartnerId === partnerId) {
+          const idx = prev.findIndex((o) => o.id === order.id);
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = order;
+            return next;
+          }
+          return [order, ...prev];
+        }
+        return prev.filter((o) => o.id !== order.id);
+      });
     });
 
     return unsubscribe;
-  }, [partnerId, businessId, applyPartnerQueue]);
+  }, [partnerId]);
 
-  // Safety net: when the app returns to foreground, re-bind profile in case
-  // the long-polling listener stalled (common RN Firestore quirk).
+  // Refresh profile + orders when app returns to foreground
   useEffect(() => {
     const onChange = (state: AppStateStatus) => {
       if (state === "active" && partnerId) {
-        void loadProfile();
+        loadProfile().catch(() => {});
+        loadOrders({ silent: true }).catch(() => {});
       }
     };
     const sub = AppState.addEventListener("change", onChange);
     return () => sub.remove();
-  }, [partnerId, loadProfile]);
+  }, [partnerId, loadProfile, loadOrders]);
 
   const orders = useMemo(
     () => allAssigned.filter((o) => QUEUE_STATUSES.has(o.status)),

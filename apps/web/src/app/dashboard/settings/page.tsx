@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { auth } from '@/lib/firebase';
-import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { getStoredUser } from '@/lib/api';
+import api from '@/lib/api';
 
 export default function SettingsPage() {
-  const [user, setUser] = useState<{ email: string | null; uid: string } | null>(null);
-  const [currentPassword, setCurrentPassword] = useState('');
+  const [user, setUser] = useState<{ email: string | null; id: string } | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [pwError, setPwError] = useState('');
@@ -14,28 +13,26 @@ export default function SettingsPage() {
   const [pwLoading, setPwLoading] = useState(false);
 
   useEffect(() => {
-    const u = auth.currentUser;
-    if (u) setUser({ email: u.email, uid: u.uid });
+    const u = getStoredUser();
+    if (u) setUser({ email: u.email, id: u.id });
   }, []);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPwError(''); setPwSuccess('');
     if (newPassword !== confirmPassword) { setPwError('Passwords do not match'); return; }
-    if (newPassword.length < 6) { setPwError('Password must be at least 6 characters'); return; }
-    if (!auth.currentUser?.email) { setPwError('No authenticated user'); return; }
+    if (newPassword.length < 8) { setPwError('Password must be at least 8 characters'); return; }
     setPwLoading(true);
     try {
-      const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
-      await reauthenticateWithCredential(auth.currentUser, credential);
-      await updatePassword(auth.currentUser, newPassword);
-      setPwSuccess('Password updated successfully');
-      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+      const res = await api.post('/auth/change-password', { newPassword });
+      if (res.success) {
+        setPwSuccess('Password updated successfully');
+        setNewPassword(''); setConfirmPassword('');
+      } else {
+        setPwError(res.error || 'Failed to update password');
+      }
     } catch (err: any) {
-      const code = err?.code ?? '';
-      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') setPwError('Current password is incorrect');
-      else if (code === 'auth/weak-password') setPwError('New password is too weak');
-      else setPwError(err?.message ?? 'Failed to update password');
+      setPwError(err?.message ?? 'Failed to update password');
     }
     setPwLoading(false);
   };
@@ -64,7 +61,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">User ID</label>
-            <p className="text-xs text-gray-400 font-mono break-all bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">{user?.uid || '—'}</p>
+            <p className="text-xs text-gray-400 font-mono break-all bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">{user?.id || '—'}</p>
           </div>
         </div>
       </div>
@@ -73,7 +70,7 @@ export default function SettingsPage() {
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-900">Change Password</h2>
-          <p className="text-xs text-gray-500 mt-0.5">You will need to re-authenticate before making changes</p>
+          <p className="text-xs text-gray-500 mt-0.5">Update your admin account password</p>
         </div>
         <form onSubmit={handleChangePassword} className="px-6 py-5 space-y-4">
           {pwError && (
@@ -87,17 +84,6 @@ export default function SettingsPage() {
               {pwSuccess}
             </div>
           )}
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Current Password</label>
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              required
-              placeholder="Enter current password"
-              className="field"
-            />
-          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">New Password</label>

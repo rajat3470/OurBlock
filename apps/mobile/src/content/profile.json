@@ -14,7 +14,7 @@
     "confirm": "Sign Out"
   },
   "toasts": {
-    "flagsRefreshed": "Feature flags refreshed from Firebase.",
+    "flagsRefreshed": "Feature flags refreshed.",
     "flagsRefreshError": "Failed to refresh feature flags",
     "photoPermission": "Please allow photo library access.",
     "photoReadError": "Could not read selected image.",
@@ -27,7 +27,7 @@
     "fetchStatusLabel": "Fetch status:",
     "lastFetchLabel": "Last fetch:",
     "never": "never",
-    "refresh": "Refresh From Firebase",
+    "refresh": "Refresh Flags",
     "minRsLabel": "ads.rewarded.minRs:",
     "maxRsLabel": "ads.rewarded.maxRs:",
     "densityLabel": "ads.density.everyNthCard:",

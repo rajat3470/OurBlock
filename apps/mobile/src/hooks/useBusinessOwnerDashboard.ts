@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useAppSelector } from "@hooks/useRedux";
 import { useBusinessOwner } from "@hooks/useBusinessOwner";
 import { getBusinessStatus } from "@utils/businessStatus";
@@ -54,6 +55,7 @@ export const useBusinessOwnerDashboard = () => {
     loadBusinessProfile,
     loadStats,
     loadProducts,
+    loadOrders,
     loadAnalytics,
     toggleTakingOrders,
   } = useBusinessOwner();
@@ -67,24 +69,34 @@ export const useBusinessOwnerDashboard = () => {
   const canToggleOrders = businessProfile?.status === "active";
   const isTakingOrders = canToggleOrders && businessProfile?.isTakingOrders !== false;
 
-  // Orders are kept fresh by the Firestore listener in useBusinessOwnerRealtimeSync.
-  // loadAll only fetches profile/stats/products/analytics on mount and manual refresh.
+  // Fetch everything — including orders — on mount and manual refresh.
+  // Socket-based realtime sync provides incremental updates between full loads.
   const loadAll = useCallback(async () => {
     try {
       await Promise.all([
         loadBusinessProfile(),
         loadStats(),
         loadProducts(),
+        loadOrders({ silent: true }),
         loadAnalytics(),
       ]);
     } catch {
       /* handled in Redux slice */
     }
-  }, [loadBusinessProfile, loadStats, loadProducts, loadAnalytics]);
+  }, [loadBusinessProfile, loadStats, loadProducts, loadOrders, loadAnalytics]);
 
   useEffect(() => {
     loadAll();
   }, [loadAll]);
+
+  // Silently reload orders each time the dashboard tab gains focus so
+  // the counts and recent-orders section stay current even if the socket
+  // was temporarily disconnected.
+  useFocusEffect(
+    useCallback(() => {
+      loadOrders({ silent: true }).catch(() => {});
+    }, [loadOrders])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

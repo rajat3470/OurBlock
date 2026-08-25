@@ -102,6 +102,19 @@ const businessOwnerSlice = createSlice({
         }
       }
     },
+    /** Upsert a single order from a socket event (insert or update in place). */
+    upsertOrder(state, action: PayloadAction<Order>) {
+      const order = action.payload;
+      const existing = state.ordersMap[order.id];
+      if (existing) {
+        state.ordersMap[order.id] = order;
+        const idx = state.orders.findIndex((o) => o.id === order.id);
+        if (idx !== -1) state.orders[idx] = order;
+      } else {
+        state.orders.unshift(order);
+        state.ordersMap[order.id] = order;
+      }
+    },
     setStats(state, action: PayloadAction<BusinessOwnerStats>) {
       state.stats = action.payload;
       state.error = null;
@@ -138,6 +151,7 @@ export const {
   removeProduct,
   setOrders,
   updateOrder,
+  upsertOrder,
   setStats,
   setAnalytics,
   setSelectedOrderId,

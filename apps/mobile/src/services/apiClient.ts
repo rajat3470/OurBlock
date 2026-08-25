@@ -7,8 +7,9 @@ import axios, {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AuthToken } from "@/types";
 
-// Production API URL - deployed Firebase Functions
-const BASE_URL = "https://us-central1-our-block-app.cloudfunctions.net/api";
+// Backend API base URL
+const BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:5001";
 
 /** Refresh a few minutes before the access token actually expires. */
 const REFRESH_SKEW_MS = 5 * 60 * 1000;

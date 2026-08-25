@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Order, OrderStatus } from "@/types";
 import AcceptanceCountdown from "@components/AcceptanceCountdown";
+import { DeliveryPartnerPickerModal } from "@components/business-owner/DeliveryPartnerPickerModal";
 import { useBusinessOwnerOrders } from "@hooks/useBusinessOwnerOrders";
 import content from "@/content/boOrders.json";
 
@@ -47,6 +48,11 @@ export default function BusinessOwnerOrders() {
     getNextStatus,
     getNextStatusLabel,
     timeAgo,
+    partnerPicker,
+    partnerOptions,
+    partnerPickerLoading,
+    handlePartnerSelected,
+    closePartnerPicker,
   } = useBusinessOwnerOrders();
 
   const renderItem = ({ item }: { item: Order }) => {
@@ -364,6 +370,16 @@ export default function BusinessOwnerOrders() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Delivery Partner Picker */}
+      <DeliveryPartnerPickerModal
+        visible={!!partnerPicker}
+        partners={partnerOptions}
+        loading={partnerPickerLoading}
+        preselectedId={partnerPicker?.preselectedId}
+        onSelect={handlePartnerSelected}
+        onClose={closePartnerPicker}
+      />
     </View>
   );
 }

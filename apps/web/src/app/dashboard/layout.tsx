@@ -3,8 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { isAuthenticated, getStoredUser, logoutAdmin } from '@/lib/api';
 
 const primaryNav = [
   { name: 'Dashboard', href: '/dashboard', icon: '📊' },
@@ -32,19 +31,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        router.replace('/login');
-      } else {
-        setUserEmail(user.email || '');
-        setAuthChecked(true);
-      }
-    });
-    return unsubscribe;
+    if (!isAuthenticated()) {
+      router.replace('/login');
+    } else {
+      const user = getStoredUser();
+      setUserEmail(user?.email || '');
+      setAuthChecked(true);
+    }
   }, [router]);
 
-  const handleLogout = async () => {
-    await signOut(auth);
+  const handleLogout = () => {
+    logoutAdmin();
     router.replace('/login');
   };
 

@@ -90,7 +90,7 @@ export default function UserRegisterScreen() {
               <Text style={styles.label}>First Name *</Text>
               <TextInput
                 style={[styles.input, errors.firstName ? styles.inputError : null]}
-                placeholder="e.g. Priya"
+                placeholder="First Name"
                 value={form.firstName}
                 onChangeText={(v) => setField("firstName", v)}
                 autoCapitalize="words"
@@ -103,7 +103,7 @@ export default function UserRegisterScreen() {
               <Text style={styles.label}>Last Name *</Text>
               <TextInput
                 style={[styles.input, errors.lastName ? styles.inputError : null]}
-                placeholder="e.g. Sharma"
+                placeholder="Last Name"
                 value={form.lastName}
                 onChangeText={(v) => setField("lastName", v)}
                 autoCapitalize="words"

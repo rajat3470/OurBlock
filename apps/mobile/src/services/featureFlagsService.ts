@@ -1,34 +1,5 @@
-import Constants from "expo-constants";
-import {
-  DEFAULT_FEATURE_FLAGS,
-  FEATURE_FLAG_KEYS,
-  FeatureFlags,
-  REMOTE_CONFIG_DEFAULTS,
-} from "@/constants/featureFlags";
-
-// Lazily resolve the native Remote Config module so that
-// importing this service never throws in Expo Go or bare
-// environments where the native module has not been linked.
-type RCModule = ReturnType<typeof import("@react-native-firebase/remote-config").default>;
-
-const IS_EXPO_GO = Constants.executionEnvironment === "storeClient";
-
-let _rcModule: RCModule | null = null;
-
-const getRC = (): RCModule | null => {
-  if (IS_EXPO_GO) return null;
-  if (_rcModule !== null) return _rcModule;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mod = require("@react-native-firebase/remote-config").default;
-    _rcModule = mod();
-    return _rcModule;
-  } catch {
-    return null;
-  }
-};
-
-const DEFAULT_FETCH_INTERVAL_MS = __DEV__ ? 30 * 1000 : 5 * 60 * 1000;
+import { DEFAULT_FEATURE_FLAGS, FeatureFlags } from "@/constants/featureFlags";
+import { apiClient } from "./apiClient";
 
 export type FeatureFlagsSnapshot = {
   values: FeatureFlags;
@@ -38,7 +9,7 @@ export type FeatureFlagsSnapshot = {
 
 const defaultSnapshot = (): FeatureFlagsSnapshot => ({
   values: { ...DEFAULT_FEATURE_FLAGS },
-  lastFetchStatus: "native-module-unavailable",
+  lastFetchStatus: "not-fetched",
   lastFetchTime: null,
 });
 
@@ -48,91 +19,41 @@ const asPositiveInt = (value: number, fallback: number) => {
   return rounded > 0 ? rounded : fallback;
 };
 
-const buildSnapshot = (rc: RCModule): FeatureFlagsSnapshot => {
-  const values: FeatureFlags = {
-    adsEnabled: rc.getValue(FEATURE_FLAG_KEYS.ADS_ENABLED).asBoolean(),
-    adsNativeFeedEnabled: rc.getValue(FEATURE_FLAG_KEYS.ADS_NATIVE_FEED_ENABLED).asBoolean(),
-    adsNativeListingEnabled: rc.getValue(FEATURE_FLAG_KEYS.ADS_NATIVE_LISTING_ENABLED).asBoolean(),
-    adsRewardedEnabled: rc.getValue(FEATURE_FLAG_KEYS.ADS_REWARDED_ENABLED).asBoolean(),
-    adsRewardedMinRs: asPositiveInt(
-      rc.getValue(FEATURE_FLAG_KEYS.ADS_REWARDED_MIN_RS).asNumber(),
-      DEFAULT_FEATURE_FLAGS.adsRewardedMinRs
-    ),
-    adsRewardedMaxRs: asPositiveInt(
-      rc.getValue(FEATURE_FLAG_KEYS.ADS_REWARDED_MAX_RS).asNumber(),
-      DEFAULT_FEATURE_FLAGS.adsRewardedMaxRs
-    ),
-    adsDensityEveryNthCard: asPositiveInt(
-      rc.getValue(FEATURE_FLAG_KEYS.ADS_DENSITY_EVERY_NTH_CARD).asNumber(),
-      DEFAULT_FEATURE_FLAGS.adsDensityEveryNthCard
-    ),
-    adsRewardedMaxClaimsPerDay: asPositiveInt(
-      rc.getValue(FEATURE_FLAG_KEYS.ADS_REWARDED_MAX_CLAIMS_PER_DAY).asNumber(),
-      DEFAULT_FEATURE_FLAGS.adsRewardedMaxClaimsPerDay
-    ),
-  };
-
-  if (values.adsRewardedMaxRs < values.adsRewardedMinRs) {
-    values.adsRewardedMaxRs = values.adsRewardedMinRs;
-  }
-
-  return {
-    values,
-    lastFetchStatus: String(rc.lastFetchStatus ?? "no-fetch-yet"),
-    lastFetchTime: Number.isFinite(rc.fetchTimeMillis) ? rc.fetchTimeMillis : null,
-  };
-};
-
 class FeatureFlagsService {
-  private hasInitialized = false;
+  private cachedSnapshot: FeatureFlagsSnapshot = defaultSnapshot();
 
   async initialize(): Promise<FeatureFlagsSnapshot> {
-    const rc = getRC();
-    if (!rc) return defaultSnapshot();
-
-    try {
-      if (!this.hasInitialized) {
-        await rc.setDefaults(REMOTE_CONFIG_DEFAULTS);
-        await rc.setConfigSettings({ minimumFetchIntervalMillis: DEFAULT_FETCH_INTERVAL_MS });
-        this.hasInitialized = true;
-      }
-      await rc.fetchAndActivate();
-    } catch {
-      // Use cached / default values on fetch failure.
-    }
-
-    try {
-      return buildSnapshot(rc);
-    } catch {
-      return defaultSnapshot();
-    }
+    return this.refresh();
   }
 
   async refresh(): Promise<FeatureFlagsSnapshot> {
-    const rc = getRC();
-    if (!rc) return defaultSnapshot();
-
     try {
-      await rc.fetchAndActivate();
+      const res = await apiClient.get("/feature-flags");
+      if (res.data?.success && res.data?.data) {
+        const raw = res.data.data as Partial<FeatureFlags>;
+        const values: FeatureFlags = {
+          adsEnabled: raw.adsEnabled ?? DEFAULT_FEATURE_FLAGS.adsEnabled,
+          adsNativeFeedEnabled: raw.adsNativeFeedEnabled ?? DEFAULT_FEATURE_FLAGS.adsNativeFeedEnabled,
+          adsNativeListingEnabled: raw.adsNativeListingEnabled ?? DEFAULT_FEATURE_FLAGS.adsNativeListingEnabled,
+          adsRewardedEnabled: raw.adsRewardedEnabled ?? DEFAULT_FEATURE_FLAGS.adsRewardedEnabled,
+          adsRewardedMinRs: asPositiveInt(raw.adsRewardedMinRs ?? 0, DEFAULT_FEATURE_FLAGS.adsRewardedMinRs),
+          adsRewardedMaxRs: asPositiveInt(raw.adsRewardedMaxRs ?? 0, DEFAULT_FEATURE_FLAGS.adsRewardedMaxRs),
+          adsDensityEveryNthCard: asPositiveInt(raw.adsDensityEveryNthCard ?? 0, DEFAULT_FEATURE_FLAGS.adsDensityEveryNthCard),
+          adsRewardedMaxClaimsPerDay: asPositiveInt(raw.adsRewardedMaxClaimsPerDay ?? 0, DEFAULT_FEATURE_FLAGS.adsRewardedMaxClaimsPerDay),
+        };
+        if (values.adsRewardedMaxRs < values.adsRewardedMinRs) {
+          values.adsRewardedMaxRs = values.adsRewardedMinRs;
+        }
+        this.cachedSnapshot = { values, lastFetchStatus: "success", lastFetchTime: Date.now() };
+      }
     } catch {
       // Use cached / default values on fetch failure.
     }
-
-    try {
-      return buildSnapshot(rc);
-    } catch {
-      return defaultSnapshot();
-    }
+    return this.cachedSnapshot;
   }
 
   getSnapshot(): FeatureFlagsSnapshot {
-    const rc = getRC();
-    if (!rc) return defaultSnapshot();
-    try {
-      return buildSnapshot(rc);
-    } catch {
-      return defaultSnapshot();
-    }
+    return this.cachedSnapshot;
   }
 }
 
