@@ -2,6 +2,35 @@ import mongoose from "mongoose";
 import { models } from "../models";
 
 type PrismaWhere = Record<string, any>;
+
+/**
+ * Flatten Prisma-style nested `create` operators into the raw subdocument/array
+ * form Mongoose expects. This keeps callers using standard Prisma syntax
+ * (e.g. `items: { create: [...] }`) without leaking the proxy implementation.
+ */
+function isPlainObject(value: unknown): value is Record<string, any> {
+  if (value == null || typeof value !== "object") return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+function normalizePrismaData(data: any): any {
+  if (data == null || typeof data !== "object") return data;
+  if (Array.isArray(data)) return data.map(normalizePrismaData);
+  // Preserve Date, ObjectId, Buffer, and other non-plain objects as-is.
+  if (!isPlainObject(data)) return data;
+
+  const result: any = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (isPlainObject(value) && "create" in value) {
+      // Prisma nested create: unwrap the payload, recursively normalize it.
+      result[key] = normalizePrismaData(value.create);
+    } else {
+      result[key] = normalizePrismaData(value);
+    }
+  }
+  return result;
+}
 type PrismaArgs = {
   where?: PrismaWhere;
   data?: any;
@@ -80,7 +109,17 @@ export function translateWhere(where: PrismaWhere | undefined): any {
         result.$nor = [value];
       }
     } else if (key === "id") {
-      result._id = value;
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        const operatorKeys = Object.keys(value);
+        if (operatorKeys.some((op) => ["in", "notIn", "equals", "not", "gt", "gte", "lt", "lte"].includes(op))) {
+          const op = operatorKeys[0];
+          result._id = translateOperator(op, value[op]);
+        } else {
+          result._id = value;
+        }
+      } else {
+        result._id = value;
+      }
     } else if (value && typeof value === "object" && !Array.isArray(value)) {
       const operatorKeys = Object.keys(value);
       if (operatorKeys.some((op) => ["in", "notIn", "equals", "not", "gt", "gte", "lt", "lte", "contains", "startsWith", "endsWith"].includes(op))) {
@@ -182,7 +221,8 @@ function createModelProxy(Model: mongoose.Model<any>, session?: mongoose.ClientS
     },
 
     async create(args: PrismaArgs): Promise<any> {
-      const created = new Model(args.data);
+      const normalizedData = normalizePrismaData(args.data);
+      const created = new Model(normalizedData);
       if (session) {
         const saved = await created.save({ session });
         return saved.toObject({ virtuals: true });
@@ -192,12 +232,13 @@ function createModelProxy(Model: mongoose.Model<any>, session?: mongoose.ClientS
     },
 
     async update(args: PrismaArgs): Promise<any | null> {
+      const normalizedData = normalizePrismaData(args.data);
       const keys = Object.keys(args.where || {});
       let updateQuery;
       if (keys.length === 1 && keys[0] === "id") {
-        updateQuery = Model.findByIdAndUpdate(args.where!.id, args.data, { new: true, runValidators: true });
+        updateQuery = Model.findByIdAndUpdate(args.where!.id, normalizedData, { new: true, runValidators: true });
       } else {
-        updateQuery = Model.findOneAndUpdate(translateWhere(args.where), args.data, { new: true, runValidators: true });
+        updateQuery = Model.findOneAndUpdate(translateWhere(args.where), normalizedData, { new: true, runValidators: true });
       }
       if (session) updateQuery = updateQuery.session(session);
       return leanOne(await updateQuery.lean().exec());
@@ -246,6 +287,117 @@ function createModelProxy(Model: mongoose.Model<any>, session?: mongoose.ClientS
   };
 }
 
+// ---------------------------------------------------------------------------
+// Address subdocument proxy — addresses live as an embedded array on User.
+// This proxy provides prisma-style CRUD semantics over User.addresses[].
+// ---------------------------------------------------------------------------
+function createAddressProxy(session?: mongoose.ClientSession) {
+  const User = models.User as mongoose.Model<any>;
+
+  return {
+    async findMany(args: PrismaArgs): Promise<any[]> {
+      const where = args.where || {};
+      const user = await User.findById(where.userId).session(session ?? null).lean().exec();
+      if (!user) return [];
+      let addresses: any[] = (user.addresses || []).map((a: any) => ({
+        ...a,
+        id: a._id?.toString(),
+        userId: user._id.toString(),
+      }));
+      // Sort by isDefault desc, createdAt desc by default
+      addresses.sort((a: any, b: any) => {
+        if (a.isDefault && !b.isDefault) return -1;
+        if (!a.isDefault && b.isDefault) return 1;
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      });
+      return addresses;
+    },
+
+    async findFirst(args: PrismaArgs): Promise<any | null> {
+      const where = args.where || {};
+      const userId = where.userId;
+      const addressId = where.id;
+      if (!userId) return null;
+      const user = await User.findById(userId).session(session ?? null).lean().exec();
+      if (!user) return null;
+      const match = (user.addresses || []).find(
+        (a: any) => a._id?.toString() === addressId
+      );
+      if (!match) return null;
+      return { ...match, id: match._id?.toString(), userId: user._id.toString() };
+    },
+
+    async findUnique(args: PrismaArgs): Promise<any | null> {
+      return this.findFirst(args);
+    },
+
+    async create(args: PrismaArgs): Promise<any> {
+      const data = args.data || {};
+      const userId = data.userId;
+      const userDoc = await User.findById(userId).session(session ?? null).exec();
+      if (!userDoc) throw new Error("User not found");
+      const { userId: _u, ...addrData } = data;
+      userDoc.addresses.push(addrData);
+      await userDoc.save({ session: session ?? undefined });
+      const created = userDoc.addresses[userDoc.addresses.length - 1];
+      return { ...created.toObject(), id: created._id.toString(), userId };
+    },
+
+    async update(args: PrismaArgs): Promise<any | null> {
+      const where = args.where || {};
+      const addressId = where.id;
+      const updateData = args.data || {};
+      // Need to find which user owns this address
+      const user = await User.findOne({ "addresses._id": addressId }).session(session ?? null).exec();
+      if (!user) return null;
+      const addr = user.addresses.id(addressId);
+      if (!addr) return null;
+      Object.assign(addr, updateData);
+      await user.save({ session: session ?? undefined });
+      return { ...addr.toObject(), id: addr._id.toString(), userId: user._id.toString() };
+    },
+
+    async updateMany(args: PrismaArgs): Promise<{ count: number }> {
+      const where = args.where || {};
+      const userId = where.userId;
+      const updateData = args.data || {};
+      const excludeId = where.id?.not ?? where.id?.$ne;
+      if (!userId) return { count: 0 };
+      const user = await User.findById(userId).session(session ?? null).exec();
+      if (!user) return { count: 0 };
+      let count = 0;
+      for (const addr of user.addresses) {
+        if (excludeId && addr._id.toString() === excludeId) continue;
+        Object.assign(addr, updateData);
+        count++;
+      }
+      if (count > 0) await user.save({ session: session ?? undefined });
+      return { count };
+    },
+
+    async delete(args: PrismaArgs): Promise<any | null> {
+      const where = args.where || {};
+      const addressId = where.id;
+      const user = await User.findOne({ "addresses._id": addressId }).session(session ?? null).exec();
+      if (!user) return null;
+      const addr = user.addresses.id(addressId);
+      if (!addr) return null;
+      const result = { ...addr.toObject(), id: addr._id.toString(), userId: user._id.toString() };
+      addr.deleteOne();
+      await user.save({ session: session ?? undefined });
+      return result;
+    },
+
+    async count(args: PrismaArgs = {}): Promise<number> {
+      const where = args.where || {};
+      const userId = where.userId;
+      if (!userId) return 0;
+      const user = await User.findById(userId).session(session ?? null).lean().exec();
+      return user?.addresses?.length || 0;
+    },
+  };
+}
+
 function createPrismaProxy(session?: mongoose.ClientSession): any {
   return new Proxy({} as any, {
     get(_target, prop: string) {
@@ -274,6 +426,10 @@ function createPrismaProxy(session?: mongoose.ClientSession): any {
             mongooseSession.endSession();
           }
         };
+      }
+
+      if (prop === "address") {
+        return createAddressProxy(session);
       }
 
       const modelName = modelNameMap[prop];
