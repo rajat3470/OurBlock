@@ -86,9 +86,9 @@ Or run it via the GitHub raw URL (if your repo is public):
 
 ```bash
 export REPO_URL=https://github.com/rajat3470/OurBlock.git
-export DOMAIN=mohallamitr.yourdomain.com
-export EMAIL=you@example.com
-curl -fsSL https://raw.githubusercontent.com/YOUR_ORG/OurBlock/main/apps/backend/deployment/ec2/setup.sh | sudo -E bash
+export DOMAIN=mohallamitr.in
+export EMAIL=rajat.verma@mohallamitr.in
+curl -fsSL https://raw.githubusercontent.com/rajat3470/OurBlock/main/apps/backend/deployment/ec2/setup.sh | sudo -E bash
 ```
 
 The script will:

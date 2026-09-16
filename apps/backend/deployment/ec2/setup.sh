@@ -41,7 +41,13 @@ log "Detected OS: $OS"
 # -----------------------------------------------------------------------------
 if [[ "$OS" == "amzn" || "$OS" == "rhel" || "$OS" == "centos" ]]; then
     yum update -y
-    yum install -y git curl wget jq nginx cronie
+    # Amazon Linux 2023 ships curl-minimal, which conflicts with the full curl package.
+    # Only install curl if the command is not already present.
+    CURL_PKG=""
+    if ! command -v curl &>/dev/null; then
+        CURL_PKG="curl"
+    fi
+    yum install -y git $CURL_PKG wget jq nginx cronie
 elif [[ "$OS" == "ubuntu" || "$OS" == "debian" ]]; then
     apt-get update
     apt-get install -y git curl wget jq nginx cron
