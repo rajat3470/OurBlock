@@ -1,0 +1,40 @@
+name: EC2 Full Stack Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/backend/**"
+      - "apps/web/**"
+      - "packages/shared/**"
+      - "apps/backend/deployment/ec2/**"
+      - ".github/workflows/ec2-deploy.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.EC2_HOST }}
+          SSH_USER: ${{ secrets.EC2_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+          cat >> ~/.ssh/known_hosts << EOF
+          $SSH_HOST $(ssh-keyscan -H $SSH_HOST 2>/dev/null | cut -d' ' -f2-)
+          EOF
+
+      - name: Deploy to EC2
+        env:
+          SSH_HOST: ${{ secrets.EC2_HOST }}
+          SSH_USER: ${{ secrets.EC2_USER }}
+        run: |
+          ssh -i ~/.ssh/ec2_key.pem "$SSH_USER@$SSH_HOST" \
+            'set -e; cd /var/www/mohallamitr; ./apps/backend/deployment/ec2/deploy.sh'

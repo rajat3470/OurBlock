@@ -1,0 +1,53 @@
+# Self-contained infrastructure for mohallaMitr EC2 deployment.
+# Runs MongoDB and MinIO on the EC2 host; the Node backend and web admin are
+# managed by PM2 (see ecosystem.config.cjs).
+#
+# Usage:
+#   docker compose -f docker-compose.infra.yml up -d
+#   docker compose -f docker-compose.infra.yml logs -f
+#
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: mohallamitr-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo
+      MONGO_INITDB_DATABASE: mohallamitr
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: ["--auth"]
+
+  minio:
+    image: minio/minio:latest
+    container_name: mohallamitr-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: CHANGE_ME_MINIO_ROOT_PASSWORD
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: server /data --console-address ":9001"
+
+volumes:
+  mongo_data:
+  minio_data:
