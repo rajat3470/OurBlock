@@ -21,6 +21,21 @@ WEB_ENV="$APP_DIR/apps/web/.env.local"
 
 log() { echo "[deploy] $*"; }
 
+ensure_swap() {
+    if swapon --show | grep -q '/swapfile'; then
+        return
+    fi
+
+    log "Creating 2 GB swap file for the production build..."
+    sudo fallocate -l 2G /swapfile
+    sudo chmod 600 /swapfile
+    sudo mkswap /swapfile >/dev/null
+    sudo swapon /swapfile
+    if ! sudo grep -q '^/swapfile ' /etc/fstab; then
+        echo '/swapfile swap swap defaults 0 0' | sudo tee -a /etc/fstab >/dev/null
+    fi
+}
+
 log "Deploying mohallaMitr from branch: $BRANCH"
 cd "$APP_DIR"
 
@@ -34,6 +49,9 @@ git reset --hard "origin/$BRANCH"
 # -----------------------------------------------------------------------------
 # Install dependencies
 # -----------------------------------------------------------------------------
+ensure_swap
+free -h
+
 log "Installing dependencies..."
 yarn install --frozen-lockfile --ignore-engines
 
@@ -55,7 +73,7 @@ timeout 300s env \
     NEXT_IGNORE_INCORRECT_LOCKFILE=1 \
     NEXT_SKIP_BUILD_CHECKS=1 \
     NEXT_TELEMETRY_DISABLED=1 \
-    NODE_OPTIONS=--max-old-space-size=1024 \
+    NODE_OPTIONS=--max-old-space-size=512 \
     yarn build
 
 cd "$APP_DIR"

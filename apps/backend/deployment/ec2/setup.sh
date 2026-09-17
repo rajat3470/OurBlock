@@ -23,6 +23,24 @@ INSTALL_YARN="${INSTALL_YARN:-true}"
 
 log() { echo "[setup] $*"; }
 
+ensure_swap() {
+    if swapon --show | grep -q '/swapfile'; then
+        return
+    fi
+
+    log "Creating 2 GB swap file for the production build..."
+    fallocate -l 2G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile >/dev/null
+    swapon /swapfile
+    if ! grep -q '^/swapfile ' /etc/fstab; then
+        echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
+    fi
+}
+
+ensure_swap
+free -h
+
 # -----------------------------------------------------------------------------
 # Detect OS
 # -----------------------------------------------------------------------------
@@ -159,7 +177,7 @@ timeout 300s env \
     NEXT_IGNORE_INCORRECT_LOCKFILE=1 \
     NEXT_SKIP_BUILD_CHECKS=1 \
     NEXT_TELEMETRY_DISABLED=1 \
-    NODE_OPTIONS=--max-old-space-size=1024 \
+    NODE_OPTIONS=--max-old-space-size=512 \
     yarn build
 
 cd "$APP_DIR"
