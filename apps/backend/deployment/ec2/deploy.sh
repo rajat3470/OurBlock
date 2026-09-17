@@ -134,6 +134,7 @@ fi
 # -----------------------------------------------------------------------------
 log "Restarting PM2 apps..."
 sudo mkdir -p /var/log/pm2
+sudo chown -R "$(id -u):$(id -g)" /var/log/pm2
 if pm2 describe mohallamitr-backend &>/dev/null; then
     pm2 reload "$INFRA_DIR/ecosystem.config.cjs" --env production
 else
