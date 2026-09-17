@@ -122,7 +122,12 @@ cd "$APP_DIR"
 # Reload Nginx config
 # -----------------------------------------------------------------------------
 log "Reloading Nginx..."
-sudo nginx -t && sudo systemctl reload nginx || sudo service nginx reload
+sudo nginx -t
+if sudo systemctl is-active --quiet nginx; then
+    sudo systemctl reload nginx
+else
+    sudo systemctl start nginx
+fi
 
 # -----------------------------------------------------------------------------
 # Restart PM2 apps
