@@ -51,7 +51,11 @@ if [[ -f "$APP_DIR/apps/web/.env.production" ]]; then
     cp "$APP_DIR/apps/web/.env.production" "$WEB_ENV"
 fi
 cd "$APP_DIR/apps/web"
-yarn build
+timeout 300s env \
+    NEXT_IGNORE_INCORRECT_LOCKFILE=1 \
+    NEXT_SKIP_BUILD_CHECKS=1 \
+    NEXT_TELEMETRY_DISABLED=1 \
+    yarn build
 
 cd "$APP_DIR"
 

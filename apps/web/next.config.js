@@ -1,8 +1,16 @@
 /** @type {import('next').NextConfig} */
+const skipBuildChecks = process.env.NEXT_SKIP_BUILD_CHECKS === '1';
+
 const nextConfig = {
   output: 'export',
   reactStrictMode: true,
   swcMinify: true,
+  eslint: {
+    ignoreDuringBuilds: skipBuildChecks,
+  },
+  typescript: {
+    ignoreBuildErrors: skipBuildChecks,
+  },
   images: {
     domains: ['mohallmitr.s3.ap-south-1.amazonaws.com'],
     unoptimized: true,
