@@ -19,6 +19,12 @@ INFRA_DIR="$APP_DIR/apps/backend/deployment/ec2"
 BACKEND_ENV="$APP_DIR/apps/backend/.env"
 WEB_ENV="$APP_DIR/apps/web/.env.local"
 
+exec 9>"$APP_DIR/.deploy.lock"
+if ! flock -n 9; then
+    echo "[deploy] Another deployment is already running. Exiting."
+    exit 1
+fi
+
 log() { echo "[deploy] $*"; }
 
 ensure_swap() {
@@ -69,7 +75,7 @@ if [[ -f "$APP_DIR/apps/web/.env.production" ]]; then
     cp "$APP_DIR/apps/web/.env.production" "$WEB_ENV"
 fi
 cd "$APP_DIR/apps/web"
-timeout 300s env \
+timeout --kill-after=10s 300s env \
     NEXT_IGNORE_INCORRECT_LOCKFILE=1 \
     NEXT_SKIP_BUILD_CHECKS=1 \
     NEXT_TELEMETRY_DISABLED=1 \
