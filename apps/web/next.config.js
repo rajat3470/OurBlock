@@ -11,6 +11,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: skipBuildChecks,
   },
+  experimental: skipBuildChecks ? { cpus: 1 } : undefined,
   images: {
     domains: ['mohallmitr.s3.ap-south-1.amazonaws.com'],
     unoptimized: true,
