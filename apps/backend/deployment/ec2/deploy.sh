@@ -27,6 +27,11 @@ fi
 
 log() { echo "[deploy] $*"; }
 
+if ! docker compose version &>/dev/null && ! command -v docker-compose &>/dev/null; then
+    echo "[deploy] Docker Compose is not installed. Run setup.sh or install the Docker Compose plugin."
+    exit 1
+fi
+
 ensure_swap() {
     if swapon --show | grep -q '/swapfile'; then
         return
@@ -75,12 +80,14 @@ if [[ -f "$APP_DIR/apps/web/.env.production" ]]; then
     cp "$APP_DIR/apps/web/.env.production" "$WEB_ENV"
 fi
 cd "$APP_DIR/apps/web"
+log "Starting constrained Next.js build..."
 timeout --kill-after=10s 300s env \
     NEXT_IGNORE_INCORRECT_LOCKFILE=1 \
     NEXT_SKIP_BUILD_CHECKS=1 \
     NEXT_TELEMETRY_DISABLED=1 \
     NODE_OPTIONS=--max-old-space-size=512 \
     yarn build
+log "Web admin build completed."
 
 cd "$APP_DIR"
 

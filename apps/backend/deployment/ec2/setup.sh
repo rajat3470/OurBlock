@@ -23,6 +23,24 @@ INSTALL_YARN="${INSTALL_YARN:-true}"
 
 log() { echo "[setup] $*"; }
 
+install_compose() {
+    if docker compose version &>/dev/null || command -v docker-compose &>/dev/null; then
+        return
+    fi
+
+    log "Installing Docker Compose plugin..."
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64) compose_arch="x86_64" ;;
+        aarch64) compose_arch="aarch64" ;;
+        *) log "Unsupported CPU architecture for Docker Compose: $arch"; exit 1 ;;
+    esac
+    mkdir -p /usr/local/lib/docker/cli-plugins
+    curl -fsSL "https://github.com/docker/compose/releases/download/v2.27.0/docker-compose-linux-$compose_arch" \
+        -o /usr/local/lib/docker/cli-plugins/docker-compose
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+}
+
 ensure_swap() {
     if swapon --show | grep -q '/swapfile'; then
         return
@@ -138,6 +156,7 @@ fi
 # Ensure docker daemon is running
 systemctl enable docker || true
 systemctl start docker || service docker start || true
+install_compose
 log "Docker: $(docker --version)"
 log "Docker Compose: $(docker compose version || docker-compose version)"
 
