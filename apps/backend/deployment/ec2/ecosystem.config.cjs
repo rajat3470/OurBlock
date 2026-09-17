@@ -4,7 +4,7 @@
 
 const path = require("path");
 
-const backendRoot = path.resolve(__dirname, "../../..");
+const backendRoot = path.resolve(__dirname, "../..");
 const webRoot = path.resolve(__dirname, "../../../web");
 
 module.exports = {
