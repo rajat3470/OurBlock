@@ -82,5 +82,25 @@ end
 
 target 'OneSignalNotificationServiceExtension' do
   use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
-  pod 'OneSignalXCFramework', '5.5.3'
+  pod 'OneSignalXCFramework', '5.2.15'
+end
+
+# Fix build cycle: CocoaPods adds $(BUILT_PRODUCTS_DIR)/$(INFOPLIST_PATH) as
+# an input to the [RNGoogleMobileAds] Configuration script phase, which
+# creates a dependency cycle with the OneSignal extension embed step.
+# post_integrate runs AFTER CocoaPods writes the user project, so our
+# changes won't be overwritten.
+post_integrate do |installer|
+  user_project_path = File.join(__dir__, 'mohallaMitr.xcodeproj')
+  user_project = Xcodeproj::Project.open(user_project_path)
+  user_project.targets.each do |target|
+    next unless target.name == 'mohallaMitr'
+    target.shell_script_build_phases.each do |phase|
+      if phase.name&.include?('RNGoogleMobileAds')
+        phase.input_paths = []
+        phase.always_out_of_date = '1'
+      end
+    end
+  end
+  user_project.save
 end
