@@ -28,9 +28,9 @@ class FeatureFlagsService {
 
   async refresh(): Promise<FeatureFlagsSnapshot> {
     try {
-      const res = await apiClient.get("/feature-flags");
-      if (res.data?.success && res.data?.data) {
-        const raw = res.data.data as Partial<FeatureFlags>;
+      const res = await apiClient.get<{ success: boolean; data: Partial<FeatureFlags> }>("/feature-flags");
+      if (res.success && res.data) {
+        const raw = res.data;
         const values: FeatureFlags = {
           adsEnabled: raw.adsEnabled ?? DEFAULT_FEATURE_FLAGS.adsEnabled,
           adsNativeFeedEnabled: raw.adsNativeFeedEnabled ?? DEFAULT_FEATURE_FLAGS.adsNativeFeedEnabled,

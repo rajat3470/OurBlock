@@ -98,6 +98,7 @@ post_integrate do |installer|
     target.shell_script_build_phases.each do |phase|
       if phase.name&.include?('RNGoogleMobileAds')
         phase.input_paths = []
+        phase.shell_script = 'true'
         phase.always_out_of_date = '1'
       end
     end

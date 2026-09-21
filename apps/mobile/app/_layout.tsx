@@ -1,3 +1,4 @@
+import "../src/reactotron";
 import { useEffect, useRef } from "react";
 import { ActivityIndicator, View, StyleSheet, Text, TextInput, AppState, Platform } from "react-native";
 import { Stack } from "expo-router";

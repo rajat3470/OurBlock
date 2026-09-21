@@ -42,6 +42,9 @@ class ApiClient {
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
+        if (__DEV__) {
+          console.log(`[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+        }
         return config;
       },
       (error) => Promise.reject(error)
@@ -49,8 +52,17 @@ class ApiClient {
 
     // Response Interceptor — recover from expired access tokens via refresh.
     this.axiosInstance.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        if (__DEV__) {
+          console.log(`[API] ${response.status} ${response.config.method?.toUpperCase()} ${response.config.baseURL}${response.config.url}`);
+        }
+        return response;
+      },
       async (error: AxiosError) => {
+        if (__DEV__) {
+          const config = error.config;
+          console.log(`[API] ${error.response?.status ?? error.code ?? "NETWORK_ERROR"} ${config?.method?.toUpperCase()} ${config?.baseURL}${config?.url}`, error.message);
+        }
         if (error.response?.status === 401 && error.config) {
           const originalConfig = error.config as AxiosRequestConfig & {
             _retry?: boolean;
