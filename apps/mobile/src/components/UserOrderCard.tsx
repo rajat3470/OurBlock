@@ -9,11 +9,11 @@ import content from "@/content/orders.json";
 
 const STATUS_COLOR: Record<string, { bg: string; border: string; text: string }> = {
   pending: { bg: "#FFF7ED", border: "#FED7AA", text: "#9A3412" },
-  confirmed: { bg: "#ECFDF5", border: "#A7F3D0", text: "#065F46" },
+  confirmed: { bg: "#E4F3EA", border: "#A7F3D0", text: "#065F46" },
   preparing: { bg: "#EFF6FF", border: "#BFDBFE", text: "#1E40AF" },
   ready: { bg: "#F0FDF4", border: "#86EFAC", text: "#15803D" },
   outForDelivery: { bg: "#FDF4FF", border: "#E9D5FF", text: "#6B21A8" },
-  delivered: { bg: "#ECFDF5", border: "#6EE7B7", text: "#065F46" },
+  delivered: { bg: "#E4F3EA", border: "#6EE7B7", text: "#065F46" },
   cancelled: { bg: "#FEF2F2", border: "#FECACA", text: "#991B1B" },
   rejected: { bg: "#FEF2F2", border: "#FECACA", text: "#991B1B" },
 };
@@ -139,7 +139,7 @@ export default function UserOrderCard({
           ) : null}
           {showReorder ? (
             <TouchableOpacity style={styles.reorderBtn} onPress={() => onReorder(order)}>
-              <Ionicons name="refresh" size={12} color="#0E9F6E" />
+              <Ionicons name="refresh" size={12} color="#084C3D" />
               <Text style={styles.reorderBtnText}>{content.card.reorder}</Text>
             </TouchableOpacity>
           ) : null}
@@ -151,7 +151,7 @@ export default function UserOrderCard({
           ) : null}
           {showRate ? (
             <TouchableOpacity style={styles.rateBtn} onPress={() => onRate(order)}>
-              <Ionicons name="star-outline" size={12} color="#D97706" />
+              <Ionicons name="star-outline" size={12} color="#E0A030" />
               <Text style={styles.rateBtnText}>{content.card.rate}</Text>
             </TouchableOpacity>
           ) : null}
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   orderId: { fontSize: 14, fontWeight: "800", color: "#111827" },
   businessName: { fontSize: 12, color: "#6B7280", fontWeight: "600", marginTop: 2 },
   rightCol: { alignItems: "flex-end" },
-  amount: { fontSize: 16, fontWeight: "800", color: "#0E9F6E" },
+  amount: { fontSize: 16, fontWeight: "800", color: "#084C3D" },
   orderMeta: { fontSize: 11, color: "#9CA3AF", marginTop: 2 },
   itemRow: {
     flexDirection: "row",
@@ -259,14 +259,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1,
     borderColor: "#A7F3D0",
   },
-  reorderBtnText: { fontSize: 11, fontWeight: "700", color: "#0E9F6E" },
+  reorderBtnText: { fontSize: 11, fontWeight: "700", color: "#084C3D" },
   rateBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#FDE68A",
   },
-  rateBtnText: { fontSize: 11, fontWeight: "700", color: "#D97706" },
+  rateBtnText: { fontSize: 11, fontWeight: "700", color: "#E0A030" },
   refundBtn: {
     flexDirection: "row",
     alignItems: "center",

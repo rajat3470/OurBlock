@@ -61,7 +61,7 @@ export function DeliveryPartnerPickerModal({
           {loading ? (
             <ActivityIndicator
               size="large"
-              color="#16A34A"
+              color="#084C3D"
               style={styles.loader}
             />
           ) : partners.length === 0 ? (
@@ -197,8 +197,8 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
   },
   rowSelected: {
-    backgroundColor: "#ECFDF5",
-    borderColor: "#16A34A",
+    backgroundColor: "#E4F3EA",
+    borderColor: "#084C3D",
   },
   avatar: {
     width: 42,
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   avatarSelected: {
-    backgroundColor: "#DCFCE7",
+    backgroundColor: "#E4F3EA",
   },
   avatarText: {
     fontSize: 16,
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     color: "#0F172A",
   },
   nameSelected: {
-    color: "#166534",
+    color: "#0B2E22",
   },
   phone: {
     fontSize: 12,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   check: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#16A34A",
+    color: "#084C3D",
   },
   empty: {
     alignItems: "center",

@@ -2,43 +2,45 @@ import { useState, type ReactNode } from "react";
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Modal,
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useAuth } from "@hooks/useAuth";
 import { useAppSelector } from "@hooks/useRedux";
 import { validateEmail } from "@utils/helpers";
 import { UserRole } from "@/types";
-import { colors, spacing, radius, typography, gradients, roleTheme } from "../constants/theme";
+import { colors, fonts } from "../constants/theme";
+import MmScreen from "./ui/MmScreen";
+import MmInput from "./ui/MmInput";
+import MmButton from "./ui/MmButton";
 
 interface RoleLoginFormProps {
   role: UserRole;
-  icon: string;
+  badge: string;
   title: string;
   subtitle: string;
   emailPlaceholder: string;
   successRoute: string;
-  /** Extra content rendered below the form inside the scroll view */
+  registerRoute?: string;
+  registerLabel?: string;
   footer?: ReactNode;
 }
 
 export default function RoleLoginForm({
   role,
-  icon,
+  badge,
   title,
   subtitle,
   emailPlaceholder,
   successRoute,
+  registerRoute,
+  registerLabel,
   footer,
 }: RoleLoginFormProps) {
   const [email, setEmail] = useState("");
@@ -49,15 +51,6 @@ export default function RoleLoginForm({
 
   const { login } = useAuth();
   const { isLoading } = useAppSelector((state) => state.auth);
-  const roleStyle = roleTheme[role];
-  const ctaGradient =
-    role === "superAdmin"
-      ? gradients.ctaBlue
-      : role === "businessOwner"
-      ? gradients.ctaGreen
-      : role === "deliveryPartner"
-      ? gradients.ctaTeal
-      : gradients.ctaAmber;
 
   const validate = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
@@ -113,26 +106,18 @@ export default function RoleLoginForm({
               </View>
               <Text style={styles.modalTitleRed}>Account Blocked</Text>
               <Text style={styles.modalBody}>{loginError.message}</Text>
-              <View style={styles.modalDivider} />
-              <View style={styles.modalAdminRow}>
-                <Ionicons name="shield-checkmark-outline" size={15} color="#6B7280" />
-                <Text style={styles.modalAdminHint}>Reach out to your society admin to restore access.</Text>
-              </View>
             </>
           ) : (
             <>
               <View style={styles.modalIconWrapAmber}>
-                <Ionicons name="alert-circle" size={36} color="#D97706" />
+                <Ionicons name="alert-circle" size={36} color="#E0A030" />
               </View>
               <Text style={styles.modalTitleAmber}>Login Failed</Text>
               <Text style={styles.modalBody}>{loginError?.message}</Text>
             </>
           )}
           <TouchableOpacity
-            style={[
-              styles.modalBtn,
-              loginError?.isSuspended ? styles.modalBtnRed : styles.modalBtnAmber,
-            ]}
+            style={styles.modalBtn}
             onPress={() => setLoginError(null)}
             activeOpacity={0.85}
           >
@@ -143,250 +128,139 @@ export default function RoleLoginForm({
         </View>
       </View>
     </Modal>
-    <LinearGradient colors={[...gradients.authBackground]} style={styles.container}>
-      <SafeAreaView style={styles.container}>
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <MmScreen showBack>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <LinearGradient colors={[...roleStyle.gradient]} style={styles.header}>
-              <View style={styles.iconContainer}>
-                <Text style={styles.headerIcon}>{icon}</Text>
-              </View>
-              <Text style={styles.title}>{title}</Text>
-              <Text style={styles.subtitle}>{subtitle}</Text>
-            </LinearGradient>
-
-            <View style={styles.form}>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Email Address</Text>
-              <TextInput
-                style={[styles.input, errors.email ? styles.inputError : null]}
-                placeholder={emailPlaceholder}
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  if (errors.email) {
-                    setErrors((e) => ({ ...e, email: undefined }));
-                  }
-                }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-                placeholderTextColor={colors.textMuted}
-              />
-              {errors.email ? <Text style={styles.errorText}>{errors.email}</Text> : null}
+          <View style={styles.header}>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{badge}</Text>
             </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Password</Text>
-              <View
-                style={[
-                  styles.passwordContainer,
-                  errors.password ? styles.passwordContainerError : null,
-                ]}
-              >
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    if (errors.password) {
-                      setErrors((e) => ({ ...e, password: undefined }));
-                    }
-                  }}
-                  secureTextEntry={!showPassword}
-                  editable={!isLoading}
-                  placeholderTextColor={colors.textMuted}
-                />
-                <TouchableOpacity
-                  style={styles.eyeBtn}
-                  onPress={() => setShowPassword((v) => !v)}
-                >
-                  <Text style={styles.eyeIcon}>{showPassword ? "🙈" : "👁️"}</Text>
-                </TouchableOpacity>
-              </View>
-              {errors.password ? (
-                <Text style={styles.errorText}>{errors.password}</Text>
-              ) : null}
-            </View>
-
-            <TouchableOpacity
-              style={[styles.loginBtn, isLoading ? styles.loginBtnDisabled : null]}
-              onPress={handleLogin}
-              disabled={isLoading}
-              activeOpacity={0.85}
-            >
-              <LinearGradient
-                colors={[...ctaGradient]}
-                style={styles.loginBtnGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.loginBtnText}>Sign In</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.subtitle}>{subtitle}</Text>
           </View>
 
+          <View style={styles.form}>
+            <MmInput
+              label="EMAIL"
+              placeholder={emailPlaceholder}
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (errors.email) setErrors((e) => ({ ...e, email: undefined }));
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!isLoading}
+              error={errors.email}
+            />
+            <MmInput
+              label="PASSWORD"
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (errors.password) setErrors((e) => ({ ...e, password: undefined }));
+              }}
+              secureTextEntry={!showPassword}
+              editable={!isLoading}
+              error={errors.password}
+            />
+            <TouchableOpacity onPress={() => setShowPassword((v) => !v)} style={styles.showPass}>
+              <Text style={styles.showPassText}>{showPassword ? "Hide password" : "Show password"}</Text>
+            </TouchableOpacity>
+
+            <MmButton label="Sign In" onPress={handleLogin} loading={isLoading} />
+          </View>
+
+          {registerRoute ? (
+            <TouchableOpacity
+              onPress={() => router.push(registerRoute as never)}
+              style={styles.registerLink}
+            >
+              <Text style={styles.registerText}>{registerLabel}</Text>
+            </TouchableOpacity>
+          ) : null}
+
           {footer ? <View style={styles.footerSlot}>{footer}</View> : null}
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </LinearGradient>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </MmScreen>
     </>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: {
-    flex: 1,
-  },
   scrollContent: {
-    paddingHorizontal: spacing.xxl,
+    paddingTop: 12,
     paddingBottom: 40,
+    gap: 40,
   },
   header: {
-    alignItems: "center",
-    paddingVertical: 30,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.xl,
-    marginTop: spacing.md,
-    marginBottom: spacing.lg,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 14,
-    elevation: 8,
+    gap: 16,
   },
-  iconContainer: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 18,
+  badge: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(11,46,34,0.06)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.45)",
+    borderColor: "rgba(11,46,34,0.25)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
-  headerIcon: {
-    fontSize: 40,
+  badgeText: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: colors.forest[700],
   },
   title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    marginBottom: 6,
+    fontFamily: fonts.serif,
+    fontSize: 32,
+    lineHeight: 40,
+    color: colors.textPrimary,
   },
   subtitle: {
-    fontSize: 15,
-    color: "rgba(255,255,255,0.86)",
-    textAlign: "center",
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    letterSpacing: -0.14,
+    color: colors.textSecondary,
+    maxWidth: 289,
   },
   form: {
-    backgroundColor: "rgba(255,255,255,0.92)",
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: "rgba(148,163,184,0.25)",
-    padding: spacing.lg,
+    gap: 16,
   },
-  fieldGroup: {
-    marginBottom: 20,
+  showPass: {
+    marginTop: -8,
   },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: colors.textPrimary,
-  },
-  inputError: {
-    borderColor: colors.red[500],
-  },
-  passwordContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
-  },
-  passwordContainerError: {
-    borderColor: colors.red[500],
-  },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 14,
-    fontSize: 15,
-    color: colors.textPrimary,
-  },
-  eyeBtn: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 14,
-  },
-  eyeIcon: {
-    fontSize: 18,
-  },
-  errorText: {
+  showPassText: {
+    fontFamily: fonts.regular,
     fontSize: 12,
-    color: colors.red[500],
-    marginTop: 6,
-    marginLeft: 4,
+    color: colors.textSecondary,
   },
-  loginBtn: {
-    borderRadius: radius.lg,
-    marginTop: 10,
-    shadowColor: "#1D4ED8",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-    overflow: "hidden",
+  registerLink: {
+    marginTop: -24,
   },
-  loginBtnGradient: {
-    paddingVertical: 17,
-    alignItems: "center",
-    borderRadius: radius.lg,
-  },
-  loginBtnDisabled: {
-    shadowOpacity: 0,
-    elevation: 0,
-    opacity: 0.7,
-  },
-  loginBtnText: {
-    color: colors.surface,
-    fontSize: typography.button.fontSize,
-    fontWeight: typography.button.fontWeight,
-    letterSpacing: 0.3,
+  registerText: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    letterSpacing: -0.24,
+    color: colors.textSecondary,
   },
   footerSlot: {
-    marginTop: spacing.lg,
+    marginTop: 8,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(15,23,42,0.55)",
+    backgroundColor: "rgba(11,46,34,0.55)",
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 28,
@@ -399,11 +273,6 @@ const styles = StyleSheet.create({
     paddingTop: 32,
     paddingBottom: 24,
     alignItems: "center",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.18,
-    shadowRadius: 40,
-    elevation: 20,
   },
   modalIconWrapRed: {
     width: 76,
@@ -413,79 +282,49 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: "#FECACA",
   },
   modalIconWrapAmber: {
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: "#FFFBEB",
+    backgroundColor: "#F8EEE0",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: "#FDE68A",
   },
   modalTitleRed: {
-    fontSize: 20,
-    fontWeight: "800",
+    fontFamily: fonts.serif,
+    fontSize: 22,
     color: "#DC2626",
     marginBottom: 10,
     textAlign: "center",
   },
   modalTitleAmber: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#D97706",
+    fontFamily: fonts.serif,
+    fontSize: 22,
+    color: "#E0A030",
     marginBottom: 10,
     textAlign: "center",
   },
   modalBody: {
+    fontFamily: fonts.regular,
     fontSize: 14,
-    color: "#4B5563",
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 21,
     marginBottom: 16,
   },
-  modalDivider: {
-    width: "100%",
-    height: 1,
-    backgroundColor: "#F3F4F6",
-    marginBottom: 14,
-  },
-  modalAdminRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#F9FAFB",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    marginBottom: 20,
-  },
-  modalAdminHint: {
-    fontSize: 12,
-    color: "#6B7280",
-    flex: 1,
-    lineHeight: 17,
-  },
   modalBtn: {
     width: "100%",
-    paddingVertical: 15,
-    borderRadius: 14,
+    height: 48,
+    borderRadius: 12,
     alignItems: "center",
-  },
-  modalBtnRed: {
-    backgroundColor: "#DC2626",
-  },
-  modalBtnAmber: {
-    backgroundColor: "#D97706",
+    justifyContent: "center",
+    backgroundColor: "#F6B853",
   },
   modalBtnText: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontFamily: fonts.semiBold,
+    fontSize: 16,
     color: "#FFFFFF",
-    letterSpacing: 0.3,
   },
 });

@@ -47,13 +47,13 @@ export function DishList({ dishes, businessNameById, onPressDish }: DishListProp
                     <View
                       style={[
                         styles.dietMark,
-                        { borderColor: dish.isVeg ? "#16A34A" : "#DC2626" },
+                        { borderColor: dish.isVeg ? "#084C3D" : "#DC2626" },
                       ]}
                     >
                       <View
                         style={[
                           styles.dietDot,
-                          { backgroundColor: dish.isVeg ? "#16A34A" : "#DC2626" },
+                          { backgroundColor: dish.isVeg ? "#084C3D" : "#DC2626" },
                         ]}
                       />
                     </View>
@@ -127,5 +127,5 @@ const styles = StyleSheet.create({
   dietDot: { width: 6, height: 6, borderRadius: 3 },
   dishName: { flex: 1, fontSize: 14.5, fontWeight: "700", color: "#111827" },
   dishStore: { fontSize: 12, color: "#6B7280", marginTop: 2 },
-  dishPrice: { fontSize: 13.5, fontWeight: "800", color: "#0E9F6E", marginTop: 3 },
+  dishPrice: { fontSize: 13.5, fontWeight: "800", color: "#084C3D", marginTop: 3 },
 });

@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { brand } from "@/constants/theme";
+import { brand, colors, fonts } from "@/constants/theme";
 
 interface EmptyStateProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -15,14 +15,14 @@ export default function EmptyState({
   icon,
   title,
   subtitle,
-  iconColor = "#FFFFFF",
-  iconBackgroundColor = brand.primary,
+  iconColor = brand.accentDark,
+  iconBackgroundColor = brand.primaryDark,
   style,
 }: EmptyStateProps) {
   return (
     <View style={[styles.container, style]}>
       <View style={[styles.iconWrap, { backgroundColor: iconBackgroundColor }]}>
-        <Ionicons name={icon} size={40} color={iconColor} />
+        <Ionicons name={icon} size={32} color={iconColor} />
       </View>
       <Text style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
@@ -36,21 +36,23 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   iconWrap: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 64,
+    height: 64,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
   },
   title: {
     fontSize: 18,
-    fontWeight: "600",
-    color: "#111827",
+    fontFamily: fonts.serif,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: "#6B7280",
+    fontFamily: fonts.regular,
+    color: colors.textSecondary,
+    textAlign: "center",
   },
 });

@@ -100,13 +100,13 @@ export default function BusinessDetailScreen() {
               <View
                 style={[
                   styles.dietMark,
-                  { borderColor: product.isVeg ? "#16A34A" : "#DC2626" },
+                  { borderColor: product.isVeg ? "#084C3D" : "#DC2626" },
                 ]}
               >
                 <View
                   style={[
                     styles.dietDot,
-                    { backgroundColor: product.isVeg ? "#16A34A" : "#DC2626" },
+                    { backgroundColor: product.isVeg ? "#084C3D" : "#DC2626" },
                   ]}
                 />
               </View>
@@ -217,7 +217,7 @@ export default function BusinessDetailScreen() {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={["#0E9F6E", "#0891B2"]}
+        colors={["#084C3D", "#084C3D"]}
         style={[styles.header, { paddingTop: insets.top + 12 }]}
       >
         <View style={styles.headerRow}>
@@ -514,7 +514,7 @@ export default function BusinessDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7F8FA" },
+  container: { flex: 1, backgroundColor: "#FBF6EC" },
   header: { paddingHorizontal: 16, paddingBottom: 14 },
   headerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   backBtn: {
@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
   orderNoticeBanner: {
     backgroundColor: "#FEF3C7",
     borderLeftWidth: 4,
-    borderLeftColor: "#F59E0B",
+    borderLeftColor: "#F6B853",
     paddingVertical: 10,
     paddingHorizontal: 16,
   },
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
   stateText: { fontSize: 14, color: "#6B7280", marginTop: 8 },
   errorText: { fontSize: 15, color: "#DC2626", textAlign: "center" },
   retryBtn: {
-    backgroundColor: "#0E9F6E",
+    backgroundColor: "#084C3D",
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 10,
@@ -613,15 +613,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
-  filterChipActive: { backgroundColor: "#ECFDF5", borderColor: "#0E9F6E" },
+  filterChipActive: { backgroundColor: "#E4F3EA", borderColor: "#084C3D" },
   filterChipText: { fontSize: 12.5, fontWeight: "700", color: "#374151" },
-  filterChipTextActive: { color: "#0E9F6E" },
+  filterChipTextActive: { color: "#084C3D" },
 
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: "#FBF6EC",
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
@@ -651,9 +651,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   menuItemHighlighted: {
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     borderLeftWidth: 3,
-    borderLeftColor: "#0E9F6E",
+    borderLeftColor: "#084C3D",
   },
   menuItemLeft: { flex: 1, paddingRight: 4 },
   menuItemTagRow: {
@@ -687,7 +687,7 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     textDecorationLine: "line-through",
   },
-  menuItemDiscount: { fontSize: 11.5, fontWeight: "800", color: "#16A34A" },
+  menuItemDiscount: { fontSize: 11.5, fontWeight: "800", color: "#084C3D" },
   menuItemDesc: { marginTop: 6, fontSize: 12.5, color: "#6B7280", lineHeight: 18 },
 
   menuItemRight: { width: 116, alignItems: "center" },
@@ -723,7 +723,7 @@ const styles = StyleSheet.create({
     minWidth: 100,
     backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
-    borderColor: "#0E9F6E",
+    borderColor: "#084C3D",
     borderRadius: 10,
     paddingVertical: 8,
     paddingHorizontal: 14,
@@ -733,8 +733,8 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  menuAddBtnText: { fontSize: 14, fontWeight: "800", color: "#0E9F6E", letterSpacing: 0.5 },
-  menuAddPlus: { fontSize: 14, fontWeight: "800", color: "#0E9F6E" },
+  menuAddBtnText: { fontSize: 14, fontWeight: "800", color: "#084C3D", letterSpacing: 0.5 },
+  menuAddPlus: { fontSize: 14, fontWeight: "800", color: "#084C3D" },
   menuQtyRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -742,7 +742,7 @@ const styles = StyleSheet.create({
     minWidth: 100,
     backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
-    borderColor: "#0E9F6E",
+    borderColor: "#084C3D",
     borderRadius: 10,
     overflow: "hidden",
     shadowColor: "#000",
@@ -751,8 +751,8 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
-  menuQtyBtn: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#ECFDF5" },
-  menuQtyBtnText: { fontSize: 16, fontWeight: "800", color: "#0E9F6E" },
+  menuQtyBtn: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#E4F3EA" },
+  menuQtyBtnText: { fontSize: 16, fontWeight: "800", color: "#084C3D" },
   menuQtyCount: {
     flex: 1,
     textAlign: "center",
@@ -802,7 +802,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#F6B853",
     borderRadius: 12,
     paddingHorizontal: 18,
     paddingVertical: 12,
@@ -837,20 +837,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
-  optionChipActive: { backgroundColor: "#ECFDF5", borderColor: "#0E9F6E" },
+  optionChipActive: { backgroundColor: "#E4F3EA", borderColor: "#084C3D" },
   optionChipText: { fontSize: 13, fontWeight: "700", color: "#374151" },
-  optionChipTextActive: { color: "#0E9F6E" },
+  optionChipTextActive: { color: "#084C3D" },
   modalFooter: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 18 },
   modalQtyRow: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "#0E9F6E",
+    borderColor: "#084C3D",
     borderRadius: 12,
     overflow: "hidden",
   },
-  modalQtyBtn: { paddingHorizontal: 14, paddingVertical: 11, backgroundColor: "#ECFDF5" },
-  modalQtyBtnText: { fontSize: 17, fontWeight: "800", color: "#0E9F6E" },
+  modalQtyBtn: { paddingHorizontal: 14, paddingVertical: 11, backgroundColor: "#E4F3EA" },
+  modalQtyBtnText: { fontSize: 17, fontWeight: "800", color: "#084C3D" },
   modalQtyCount: {
     minWidth: 36,
     textAlign: "center",
@@ -860,7 +860,7 @@ const styles = StyleSheet.create({
   },
   modalAddBtn: {
     flex: 1,
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#F6B853",
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",

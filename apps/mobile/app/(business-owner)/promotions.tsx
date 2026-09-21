@@ -46,8 +46,8 @@ export default function OwnerPromotions() {
           <View style={styles.couponLeft}>
             <View style={styles.couponCodeWrap}>
               <Text style={styles.couponCode}>{item.code}</Text>
-              <View style={[styles.statusPill, { backgroundColor: isActive ? "#DCFCE7" : "#F1F5F9" }]}>
-                <Text style={[styles.statusPillText, { color: isActive ? "#16A34A" : "#94A3B8" }]}>
+              <View style={[styles.statusPill, { backgroundColor: isActive ? "#E4F3EA" : "#F1F5F9" }]}>
+                <Text style={[styles.statusPillText, { color: isActive ? "#084C3D" : "#94A3B8" }]}>
                   {isActive ? content.card.active : content.card.inactive}
                 </Text>
               </View>
@@ -107,7 +107,7 @@ export default function OwnerPromotions() {
             onPress={openModal}
             activeOpacity={0.8}
           >
-            <Ionicons name="add" size={20} color="#16A34A" />
+            <Ionicons name="add" size={20} color="#084C3D" />
             <Text style={styles.addBtnText}>{content.header.newBtn}</Text>
           </TouchableOpacity>
         </View>
@@ -123,7 +123,7 @@ export default function OwnerPromotions() {
         ListEmptyComponent={
           loading ? (
             <View style={styles.centerWrap}>
-              <ActivityIndicator size="large" color="#16A34A" />
+              <ActivityIndicator size="large" color="#084C3D" />
             </View>
           ) : (
             <View style={styles.centerWrap}>
@@ -303,7 +303,7 @@ export default function OwnerPromotions() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7F8FA" },
+  container: { flex: 1, backgroundColor: "#FBF6EC" },
   header: {
     paddingHorizontal: 20,
     paddingBottom: 24,
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  addBtnText: { fontSize: 13, fontWeight: "700", color: "#16A34A" },
+  addBtnText: { fontSize: 13, fontWeight: "700", color: "#084C3D" },
 
   list: { padding: 16, paddingBottom: 130 },
 
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
   statusPillText: { fontSize: 10, fontWeight: "700" },
   couponDesc: { fontSize: 12, color: "#64748B", fontWeight: "500" },
   couponValueWrap: { alignItems: "flex-end", gap: 2 },
-  couponValue: { fontSize: 22, fontWeight: "800", color: "#16A34A" },
+  couponValue: { fontSize: 22, fontWeight: "800", color: "#084C3D" },
   couponValueLabel: { fontSize: 10, color: "#64748B", fontWeight: "600" },
 
   couponMeta: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   emptySub: { fontSize: 13, color: "#94A3B8", textAlign: "center", paddingHorizontal: 40 },
   emptyCreateBtn: {
     marginTop: 12,
-    backgroundColor: "#16A34A",
+    backgroundColor: "#084C3D",
     borderRadius: 14,
     paddingHorizontal: 24,
     paddingVertical: 12,
@@ -428,12 +428,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#F8FAFC",
   },
-  typeChipActive: { backgroundColor: "#DCFCE7", borderColor: "#16A34A" },
+  typeChipActive: { backgroundColor: "#E4F3EA", borderColor: "#084C3D" },
   typeChipText: { fontSize: 13, fontWeight: "600", color: "#64748B" },
-  typeChipTextActive: { color: "#166534", fontWeight: "700" },
+  typeChipTextActive: { color: "#0B2E22", fontWeight: "700" },
 
   createBtn: {
-    backgroundColor: "#16A34A",
+    backgroundColor: "#084C3D",
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: "center",
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 8,
     marginBottom: 8,
-    shadowColor: "#16A34A",
+    shadowColor: "#084C3D",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,

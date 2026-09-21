@@ -26,12 +26,12 @@ const DONE_STATUSES: OrderStatus[] = [OrderStatus.DELIVERED, OrderStatus.CANCELL
 type StatusStyle = { color: string; bg: string; emoji: string; border: string; labelKey: keyof typeof content.statusLabels };
 
 const STATUS_STYLE: Record<string, StatusStyle> = {
-  [OrderStatus.PENDING]: { color: "#D97706", bg: "#FFFBEB", emoji: "🔔", border: "#FDE68A", labelKey: "pending" },
-  [OrderStatus.CONFIRMED]: { color: "#2563EB", bg: "#EFF6FF", emoji: "✅", border: "#BFDBFE", labelKey: "confirmed" },
+  [OrderStatus.PENDING]: { color: "#E0A030", bg: "#FFFBEB", emoji: "🔔", border: "#FDE68A", labelKey: "pending" },
+  [OrderStatus.CONFIRMED]: { color: "#084C3D", bg: "#EFF6FF", emoji: "✅", border: "#BFDBFE", labelKey: "confirmed" },
   [OrderStatus.PREPARING]: { color: "#7C3AED", bg: "#F5F3FF", emoji: "⚙️", border: "#DDD6FE", labelKey: "preparing" },
-  [OrderStatus.READY]: { color: "#059669", bg: "#ECFDF5", emoji: "📦", border: "#A7F3D0", labelKey: "ready" },
+  [OrderStatus.READY]: { color: "#084C3D", bg: "#E4F3EA", emoji: "📦", border: "#A7F3D0", labelKey: "ready" },
   [OrderStatus.OUT_FOR_DELIVERY]: { color: "#0284C7", bg: "#F0F9FF", emoji: "🚚", border: "#BAE6FD", labelKey: "outForDelivery" },
-  [OrderStatus.DELIVERED]: { color: "#16A34A", bg: "#DCFCE7", emoji: "🎉", border: "#86EFAC", labelKey: "delivered" },
+  [OrderStatus.DELIVERED]: { color: "#084C3D", bg: "#E4F3EA", emoji: "🎉", border: "#86EFAC", labelKey: "delivered" },
   [OrderStatus.CANCELLED]: { color: "#DC2626", bg: "#FEF2F2", emoji: "✗", border: "#FECACA", labelKey: "cancelled" },
   [OrderStatus.REJECTED]: { color: "#991B1B", bg: "#FEF2F2", emoji: "🚫", border: "#FECACA", labelKey: "rejected" },
 };

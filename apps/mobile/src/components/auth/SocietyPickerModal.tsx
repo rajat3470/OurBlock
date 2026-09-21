@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   societyItemNameSelected: {
-    color: "#2563EB",
+    color: "#084C3D",
   },
   societyItemMeta: {
     fontSize: 12,
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     fontSize: 16,
-    color: "#3B82F6",
+    color: "#F6B853",
     fontWeight: "700",
   },
   emptyModal: {

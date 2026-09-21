@@ -14,7 +14,7 @@ import { router } from "expo-router";
 import { useUserRegistration } from "../../src/hooks/useUserRegistration";
 import { ProfileImagePicker } from "../../src/components/auth/ProfileImagePicker";
 import { SocietyPickerModal } from "../../src/components/auth/SocietyPickerModal";
-import { colors } from "../../src/constants/theme";
+import { colors, fonts } from "../../src/constants/theme";
 import BackButton from "../../src/components/BackButton";
 
 export default function UserRegisterScreen() {
@@ -56,7 +56,7 @@ export default function UserRegisterScreen() {
         >
           <View style={styles.headerSection}>
             <ProfileImagePicker uri={profileImageUri} onPress={handlePickProfileImage} />
-            <Text style={styles.title}>Create Account</Text>
+            <Text style={styles.title}>Create your account</Text>
             <Text style={styles.subtitle}>
               Join your community and discover local businesses
             </Text>
@@ -312,21 +312,24 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   headerSection: {
-    alignItems: "center",
-    paddingVertical: 32,
+    alignItems: "flex-start",
+    paddingVertical: 12,
+    gap: 12,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "800",
+    fontSize: 32,
+    fontFamily: fonts.serif,
     color: colors.textPrimary,
-    marginBottom: 6,
+    marginBottom: 8,
+    lineHeight: 40,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14,
+    fontFamily: fonts.regular,
     color: colors.textSecondary,
-    textAlign: "center",
-    lineHeight: 22,
-    paddingHorizontal: 16,
+    textAlign: "left",
+    lineHeight: 20,
+    paddingHorizontal: 0,
   },
   row: {
     flexDirection: "row",
@@ -409,9 +412,10 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   registerBtn: {
-    backgroundColor: "#3B82F6",
-    borderRadius: 14,
-    paddingVertical: 16,
+    backgroundColor: "#F6B853",
+    borderRadius: 12,
+    height: 48,
+    justifyContent: "center",
     alignItems: "center",
     marginTop: 4,
     marginBottom: 16,
@@ -434,6 +438,6 @@ const styles = StyleSheet.create({
   },
   loginLinkBold: {
     fontWeight: "700",
-    color: "#3B82F6",
+    color: "#F6B853",
   },
 });

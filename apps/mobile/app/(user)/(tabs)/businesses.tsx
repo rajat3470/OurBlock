@@ -31,7 +31,7 @@ export default function UserBusinesses() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#0E9F6E", "#0891B2"]} style={[styles.header, { paddingTop: insets.top + 16 }]}>
+      <LinearGradient colors={["#084C3D", "#084C3D"]} style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.headerTitle}>{content.header.title}</Text>
         <Text style={styles.headerSub}>{businesses.length} {content.header.subtitleSuffix}</Text>
       </LinearGradient>
@@ -84,7 +84,7 @@ export default function UserBusinesses() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7F8FA" },
+  container: { flex: 1, backgroundColor: "#FBF6EC" },
   header: {
     paddingHorizontal: 20,
     paddingTop: 16,
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 10,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: "#FBF6EC",
   },
   searchWrap: {
     flexDirection: "row",
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "#0E9F6E",
+    backgroundColor: "#084C3D",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,

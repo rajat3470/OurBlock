@@ -6,6 +6,7 @@ import {
   View,
   ViewStyle,
 } from "react-native";
+import { colors, fonts } from "../constants/theme";
 
 interface FormInputProps extends TextInputProps {
   label: string;
@@ -35,7 +36,7 @@ export default function FormInput({
           style,
         ]}
         multiline={multiline}
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor={colors.textMuted}
         {...inputProps}
       />
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -46,33 +47,35 @@ export default function FormInput({
 const styles = StyleSheet.create({
   fieldGroup: {
     marginBottom: 16,
+    gap: 7,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#111827",
-    marginBottom: 8,
+    fontSize: 12,
+    fontFamily: fonts.bold,
+    color: colors.textSecondary,
   },
   input: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1.5,
-    borderColor: "#E5E7EB",
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
     paddingVertical: 12,
-    fontSize: 15,
-    color: "#111827",
+    fontSize: 14,
+    color: colors.textPrimary,
+    fontFamily: fonts.regular,
+    minHeight: 48,
   },
   multilineInput: {
     height: 70,
     textAlignVertical: "top",
   },
   inputError: {
-    borderColor: "#EF4444",
+    borderColor: colors.red[500],
   },
   errorText: {
     fontSize: 12,
-    color: "#EF4444",
-    marginTop: 4,
+    color: colors.red[500],
+    fontFamily: fonts.regular,
   },
 });

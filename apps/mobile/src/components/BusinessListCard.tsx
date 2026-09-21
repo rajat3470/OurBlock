@@ -42,7 +42,7 @@ export default function BusinessListCard({
           <Ionicons
             name={isSuspended ? "ban-outline" : "storefront-outline"}
             size={22}
-            color={isSuspended ? "#9CA3AF" : "#0E9F6E"}
+            color={isSuspended ? "#9CA3AF" : "#084C3D"}
           />
         </View>
         <View style={styles.cardBody}>
@@ -92,7 +92,7 @@ export default function BusinessListCard({
         <Ionicons
           name={isFavorite ? "heart" : "heart-outline"}
           size={18}
-          color={isFavorite ? "#FFFFFF" : "#0E9F6E"}
+          color={isFavorite ? "#FFFFFF" : "#084C3D"}
         />
       </TouchableOpacity>
     </TouchableOpacity>
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 12,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   meta: {
     marginTop: 2,
     fontSize: 12,
-    color: "#0E9F6E",
+    color: "#084C3D",
     fontWeight: "600",
     textTransform: "capitalize",
   },
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   matchedItemsText: {
     marginTop: 4,
     fontSize: 11,
-    color: "#0A7D55",
+    color: "#0B2E22",
     fontWeight: "600",
   },
   favoriteBtn: {
@@ -190,11 +190,11 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     marginLeft: 8,
   },
   favoriteBtnActive: {
-    backgroundColor: "#0E9F6E",
+    backgroundColor: "#084C3D",
   },
   cardSuspended: {
     backgroundColor: "#F9FAFB",

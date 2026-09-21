@@ -72,7 +72,7 @@ export default function BusinessOwnerProfile() {
       >
         <ScrollView showsVerticalScrollIndicator={false}>
           <LinearGradient
-            colors={["#16A34A", "#0A7D55"]}
+            colors={["#084C3D", "#0B2E22"]}
             style={[styles.hero, { paddingTop: insets.top + 28 }]}
           >
             <View style={styles.avatarBox}>
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: "#FBF6EC",
   },
 
   // Hero
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
   },
   errorText: { fontSize: 12, color: "#EF4444", marginTop: 6 },
   savePasswordBtn: {
-    backgroundColor: "#007AFF",
+    backgroundColor: "#084C3D",
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",

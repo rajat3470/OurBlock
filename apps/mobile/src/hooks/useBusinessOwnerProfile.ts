@@ -68,8 +68,8 @@ export const useBusinessOwnerProfile = () => {
   const verificationMeta = useMemo(() => {
     const verified = !!businessProfile?.isVerified;
     return {
-      color: verified ? "#16A34A" : "#D97706",
-      bg: verified ? "#DCFCE7" : "#FFFBEB",
+      color: verified ? "#084C3D" : "#E0A030",
+      bg: verified ? "#E4F3EA" : "#FFFBEB",
       label: verified ? content.business.verified : content.business.pending,
     };
   }, [businessProfile?.isVerified]);

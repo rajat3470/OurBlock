@@ -132,7 +132,7 @@ export default function DeliveryPartnerOrderDetail() {
   if (loading || !order) {
     return (
       <View style={[styles.centered, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color="#0891B2" />
+        <ActivityIndicator size="large" color="#084C3D" />
       </View>
     );
   }
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  back: { fontSize: 16, fontWeight: "700", color: "#0891B2", width: 48 },
+  back: { fontSize: 16, fontWeight: "700", color: "#084C3D", width: 48 },
   headerTitle: { fontSize: 16, fontWeight: "800", color: colors.textPrimary },
   content: { padding: 16, paddingBottom: 24 },
   card: {
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 12, fontWeight: "700", color: "#94A3B8", textTransform: "uppercase" },
   value: { marginTop: 6, fontSize: 16, fontWeight: "700", color: colors.textPrimary },
   subValue: { marginTop: 4, fontSize: 13, color: "#64748B" },
-  amount: { marginTop: 6, fontSize: 24, fontWeight: "800", color: "#0E7490" },
+  amount: { marginTop: 6, fontSize: 24, fontWeight: "800", color: "#0B2E22" },
   itemLine: { marginTop: 6, fontSize: 14, color: "#334155" },
   methodRow: { flexDirection: "row", gap: 8, marginTop: 10 },
   methodChip: {
@@ -311,20 +311,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#F8FAFC",
   },
-  methodChipActive: { borderColor: "#0891B2", backgroundColor: "#ECFEFF" },
+  methodChipActive: { borderColor: "#084C3D", backgroundColor: "#ECFEFF" },
   methodIcon: { fontSize: 18 },
   methodLabel: { marginTop: 4, fontSize: 12, fontWeight: "600", color: "#64748B" },
-  methodLabelActive: { color: "#0E7490" },
+  methodLabelActive: { color: "#0B2E22" },
   proofImage: { marginTop: 10, width: "100%", height: 180, borderRadius: 12 },
   secondaryBtn: {
     marginTop: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#0891B2",
+    borderColor: "#084C3D",
     paddingVertical: 12,
     alignItems: "center",
   },
-  secondaryBtnText: { color: "#0891B2", fontWeight: "700", fontSize: 14 },
+  secondaryBtnText: { color: "#084C3D", fontWeight: "700", fontSize: 14 },
   footer: {
     paddingHorizontal: 16,
     paddingTop: 12,
@@ -333,12 +333,12 @@ const styles = StyleSheet.create({
     borderTopColor: "#E2E8F0",
   },
   primaryBtn: {
-    backgroundColor: "#0891B2",
+    backgroundColor: "#084C3D",
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
   },
-  completeBtn: { backgroundColor: "#0E9F6E" },
+  completeBtn: { backgroundColor: "#084C3D" },
   btnDisabled: { opacity: 0.6 },
   primaryBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
   waitBanner: {

@@ -15,7 +15,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0E9F6E"
+      "backgroundColor": "#084C3D"
     },
     "ios": {
       "bundleIdentifier": "com.mohallamitr.app",
@@ -24,7 +24,7 @@
       "splash": {
         "image": "./assets/splash-icon.png",
         "resizeMode": "contain",
-        "backgroundColor": "#0E9F6E"
+        "backgroundColor": "#084C3D"
       },
       "buildNumber": "2"
     },
@@ -32,13 +32,13 @@
       "package": "com.mohallamitr.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0E9F6E"
+        "backgroundColor": "#084C3D"
       },
 
       "splash": {
         "image": "./assets/splash-icon.png",
         "resizeMode": "contain",
-        "backgroundColor": "#0E9F6E"
+        "backgroundColor": "#084C3D"
       }
     },
     "web": {
@@ -59,7 +59,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0E9F6E",
+          "backgroundColor": "#084C3D",
           "image": "./assets/splash-icon.png",
           "imageWidth": 200
         }

@@ -142,27 +142,19 @@ export default function BusinessOwnerLayout() {
         <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: "#16A34A",
-          tabBarInactiveTintColor: "#9CA3AF",
+          tabBarActiveTintColor: "#0B2E22",
+          tabBarInactiveTintColor: "#A3AD9F",
           tabBarStyle: {
             backgroundColor: "#FFFFFF",
-            borderTopWidth: 0,
-            height: 82,
+            borderTopWidth: 1,
+            borderTopColor: "#E9E3D4",
+            height: 64,
             paddingBottom: 10,
-            paddingTop: 10,
-            marginHorizontal: 16,
-            marginBottom: 28,
-            borderRadius: 24,
-            position: "absolute",
-            shadowColor: "#1F2937",
-            shadowOffset: { width: 0, height: 10 },
-            shadowOpacity: 0.18,
-            shadowRadius: 24,
-            elevation: 16,
+            paddingTop: 8,
           },
           tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: "600",
+            fontSize: 9.5,
+            fontWeight: "700",
           },
         }}
       >
@@ -211,6 +203,13 @@ export default function BusinessOwnerLayout() {
             tabBarIcon: ({ focused }) => (
               <AppTabIcon iconName="settings-outline" focused={focused} role="businessOwner" />
             ),
+          }}
+        />
+        <Tabs.Screen
+          name="application-received"
+          options={{
+            href: null,
+            tabBarStyle: { display: "none" },
           }}
         />
         <Tabs.Screen

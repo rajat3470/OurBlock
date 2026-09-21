@@ -59,16 +59,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#EEF2F6",
   },
-  catIconBoxActive: { backgroundColor: "#ECFDF5", borderColor: "#A7F3D0" },
+  catIconBoxActive: { backgroundColor: "#E4F3EA", borderColor: "#084C3D" },
   catIconEmoji: { fontSize: 28 },
   catTileLabel: {
     marginTop: 6,
     fontSize: 12,
     fontWeight: "700",
-    color: "#475569",
+    color: "#646464",
     textTransform: "capitalize",
   },
-  catTileLabelActive: { color: "#B45309" },
+  catTileLabelActive: { color: "#084C3D" },
   catUnderline: {
     marginTop: 4,
     height: 3,
@@ -76,5 +76,5 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: "transparent",
   },
-  catUnderlineActive: { backgroundColor: "#F59E0B" },
+  catUnderlineActive: { backgroundColor: "#F6B853" },
 });

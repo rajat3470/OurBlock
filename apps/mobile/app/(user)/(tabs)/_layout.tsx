@@ -15,8 +15,8 @@ const TAB_META: Record<string, { label: string; icon: IconName; iconActive: Icon
   profile: { label: "Profile", icon: "person-outline", iconActive: "person" },
 };
 
-const ACTIVE = "#0E9F6E";
-const INACTIVE = "#94A3B8";
+const ACTIVE = "#0B2E22";
+const INACTIVE = "#A3AD9F";
 
 function UserTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
@@ -76,7 +76,7 @@ function UserTabBar({ state, navigation }: BottomTabBarProps) {
           hitSlop={8}
         >
           <LinearGradient
-            colors={["#F59E0B", "#D97706"]}
+            colors={["#F6B853", "#E0A030"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.cartCircle}
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
-    borderTopColor: "#EEF2F6",
+    borderTopColor: "#E9E3D4",
     paddingTop: 8,
     shadowColor: "#0F172A",
     shadowOffset: { width: 0, height: -4 },
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     backgroundColor: "#FFFFFF",
     padding: 4,
-    shadowColor: "#D97706",
+    shadowColor: "#E0A030",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 10,
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   cartLabel: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#D97706",
+    color: "#E0A030",
     marginTop: 3,
   },
   badge: {
@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
     minWidth: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#0E9F6E",
+    backgroundColor: "#084C3D",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,

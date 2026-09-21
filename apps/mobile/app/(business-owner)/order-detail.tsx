@@ -53,7 +53,7 @@ export default function BusinessOwnerOrderDetail() {
       <SafeAreaHeader
         title={`Order #${order.id.slice(0, 8).toUpperCase()}`}
         subtitle={formatDateTime(order.createdAt)}
-        colors={["#16A34A", "#15803D"] as const}
+        colors={["#084C3D", "#15803D"] as const}
         showBackButton
         onBackPress={goBack}
       />
@@ -127,7 +127,7 @@ export default function BusinessOwnerOrderDetail() {
           {order.discountAmount ? (
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>{content.sections.discount}</Text>
-              <Text style={[styles.priceValue, { color: "#16A34A" }]}>−{content.currency}{order.discountAmount}</Text>
+              <Text style={[styles.priceValue, { color: "#084C3D" }]}>−{content.currency}{order.discountAmount}</Text>
             </View>
           ) : null}
           {order.taxAmount ? (
@@ -160,7 +160,7 @@ export default function BusinessOwnerOrderDetail() {
             <Text style={styles.sectionTitle}>{content.sections.assignPartner}</Text>
             <Text style={styles.assignHint}>{content.sections.assignPartnerHint}</Text>
             {partnersLoading ? (
-              <ActivityIndicator style={{ marginTop: 10 }} color="#16A34A" />
+              <ActivityIndicator style={{ marginTop: 10 }} color="#084C3D" />
             ) : partners.length === 0 ? (
               <Text style={styles.assignEmpty}>{content.alerts.noPartners}</Text>
             ) : (
@@ -229,7 +229,7 @@ export default function BusinessOwnerOrderDetail() {
                   {idx < order.trackingUpdates!.length - 1 ? <View style={styles.trackLine} /> : null}
                 </View>
                 <View style={styles.trackContent}>
-                  <Text style={[styles.trackStatus, idx === 0 && { color: "#16A34A" }]}>
+                  <Text style={[styles.trackStatus, idx === 0 && { color: "#084C3D" }]}>
                     {getOrderStatusMeta(update.status)?.label ?? update.status}
                   </Text>
                   <Text style={styles.trackTime}>
@@ -323,11 +323,11 @@ export default function BusinessOwnerOrderDetail() {
           activeOpacity={0.85}
         >
           {sharing ? (
-            <ActivityIndicator size="small" color={canAdvance ? "#16A34A" : "#FFFFFF"} />
+            <ActivityIndicator size="small" color={canAdvance ? "#084C3D" : "#FFFFFF"} />
           ) : (
             <>
-              <Ionicons name="share-outline" size={18} color={canAdvance ? "#16A34A" : "#FFFFFF"} />
-              <Text style={[styles.shareBtnText, canAdvance && { color: "#16A34A" }]}>{content.footer.shareInvoice}</Text>
+              <Ionicons name="share-outline" size={18} color={canAdvance ? "#084C3D" : "#FFFFFF"} />
+              <Text style={[styles.shareBtnText, canAdvance && { color: "#084C3D" }]}>{content.footer.shareInvoice}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   notFoundText: { fontSize: 15, color: "#64748B", marginBottom: 12 },
   goBackBtn: {
     paddingHorizontal: 20, paddingVertical: 10,
-    backgroundColor: "#16A34A", borderRadius: 999,
+    backgroundColor: "#084C3D", borderRadius: 999,
   },
   goBackText: { color: "#FFFFFF", fontWeight: "700" },
 
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   },
   assignEmpty: {
     fontSize: 13,
-    color: "#D97706",
+    color: "#E0A030",
     fontWeight: "600",
     lineHeight: 18,
   },
@@ -394,13 +394,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   partnerChipActive: {
-    borderColor: "#16A34A",
-    backgroundColor: "#ECFDF5",
+    borderColor: "#084C3D",
+    backgroundColor: "#E4F3EA",
   },
   partnerIcon: { fontSize: 16, marginRight: 10 },
   partnerName: { flex: 1, fontSize: 14, fontWeight: "700", color: "#334155" },
   partnerNameActive: { color: "#15803D" },
-  partnerCheck: { fontSize: 14, fontWeight: "800", color: "#16A34A" },
+  partnerCheck: { fontSize: 14, fontWeight: "800", color: "#084C3D" },
   assignedLabel: {
     marginTop: 10,
     fontSize: 12,
@@ -419,10 +419,10 @@ const styles = StyleSheet.create({
   // Items
   itemRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
   qtyBadge: {
-    backgroundColor: "#DCFCE7", borderRadius: 6,
+    backgroundColor: "#E4F3EA", borderRadius: 6,
     paddingHorizontal: 7, paddingVertical: 3, minWidth: 30, alignItems: "center",
   },
-  qtyText: { fontSize: 12, fontWeight: "700", color: "#16A34A" },
+  qtyText: { fontSize: 12, fontWeight: "700", color: "#084C3D" },
   itemName: { flex: 1, fontSize: 13, color: "#1E293B", fontWeight: "500" },
   itemTotal: { fontSize: 13, fontWeight: "700", color: "#1E293B" },
 
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   priceValue: { fontSize: 13, color: "#1E293B", fontWeight: "500" },
   totalRow: { marginTop: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#E2E8F0" },
   totalLabel: { fontSize: 15, fontWeight: "700", color: "#1E293B" },
-  totalValue: { fontSize: 15, fontWeight: "800", color: "#16A34A" },
+  totalValue: { fontSize: 15, fontWeight: "800", color: "#084C3D" },
 
   // Tracking
   trackRow: { flexDirection: "row", gap: 12, marginBottom: 4 },
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
     width: 10, height: 10, borderRadius: 5,
     backgroundColor: "#CBD5E1", marginTop: 3,
   },
-  trackDotActive: { backgroundColor: "#16A34A", width: 12, height: 12, borderRadius: 6 },
+  trackDotActive: { backgroundColor: "#084C3D", width: 12, height: 12, borderRadius: 6 },
   trackLine: { width: 2, flex: 1, backgroundColor: "#E2E8F0", marginTop: 4, minHeight: 20 },
   trackContent: { flex: 1, paddingBottom: 16 },
   trackStatus: { fontSize: 13, fontWeight: "600", color: "#1E293B" },
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000", shadowOpacity: 0.06, shadowOffset: { width: 0, height: -3 }, shadowRadius: 8, elevation: 8,
   },
   advanceBtn: {
-    backgroundColor: "#16A34A", borderRadius: 999,
+    backgroundColor: "#084C3D", borderRadius: 999,
     paddingVertical: 14, alignItems: "center",
   },
   advanceBtnText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   },
   rejectBtnText: { fontSize: 15, fontWeight: "700", color: "#DC2626" },
   acceptBtn: {
-    flex: 1, backgroundColor: "#16A34A", borderRadius: 999,
+    flex: 1, backgroundColor: "#084C3D", borderRadius: 999,
     paddingVertical: 14, alignItems: "center",
   },
   acceptBtnText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   expiredBannerText: { fontSize: 14, fontWeight: "700", color: "#991B1B" },
   shareBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    backgroundColor: "#16A34A", borderRadius: 999, paddingVertical: 13,
+    backgroundColor: "#084C3D", borderRadius: 999, paddingVertical: 13,
   },
   shareBtnText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
 });

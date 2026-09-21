@@ -40,7 +40,7 @@ export function StoreList({
         <Text style={styles.sectionTitle}>{title}</Text>
         {cartCount > 0 ? (
           <TouchableOpacity style={styles.cartShortcut} onPress={goToCart}>
-            <Ionicons name="cart-outline" size={14} color="#0E9F6E" />
+            <Ionicons name="cart-outline" size={14} color="#084C3D" />
             <Text style={styles.cartShortcutText}>{cartCount}</Text>
           </TouchableOpacity>
         ) : null}
@@ -191,10 +191,10 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     borderRadius: 999,
   },
-  cartShortcutText: { fontSize: 12, fontWeight: "800", color: "#0E9F6E" },
+  cartShortcutText: { fontSize: 12, fontWeight: "800", color: "#084C3D" },
   stateWrap: {
     marginHorizontal: 16,
     marginTop: 16,
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  storeStatusOpen: { backgroundColor: "#DCFCE7" },
+  storeStatusOpen: { backgroundColor: "#E4F3EA" },
   storeStatusPaused: { backgroundColor: "#FEF3C7" },
   storeStatusClosed: { backgroundColor: "#FEE2E2" },
   storeStatusText: { fontSize: 11, fontWeight: "800", color: "#1F2937" },
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -253,15 +253,15 @@ const styles = StyleSheet.create({
   storeMeta: {
     marginTop: 2,
     fontSize: 12,
-    color: "#0E9F6E",
+    color: "#084C3D",
     fontWeight: "700",
     textTransform: "capitalize",
   },
   storeAddress: { flex: 1, fontSize: 12, color: "#64748B" },
-  matchedItemsText: { marginTop: 4, fontSize: 11, color: "#0A7D55", fontWeight: "600" },
+  matchedItemsText: { marginTop: 4, fontSize: 11, color: "#0B2E22", fontWeight: "600" },
   storeEta: { fontSize: 12, color: "#475569", fontWeight: "600" },
   storeCtaPill: {
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#F6B853",
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 9,

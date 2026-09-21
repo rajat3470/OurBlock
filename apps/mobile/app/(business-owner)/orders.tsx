@@ -11,12 +11,12 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { Order, OrderStatus } from "@/types";
 import AcceptanceCountdown from "@components/AcceptanceCountdown";
 import { DeliveryPartnerPickerModal } from "@components/business-owner/DeliveryPartnerPickerModal";
 import { useBusinessOwnerOrders } from "@hooks/useBusinessOwnerOrders";
 import content from "@/content/boOrders.json";
+import { colors, fonts } from "@/constants/theme";
 
 export default function BusinessOwnerOrders() {
   const insets = useSafeAreaInsets();
@@ -116,7 +116,7 @@ export default function BusinessOwnerOrders() {
                 {
                   color:
                     item.paymentStatus === "completed"
-                      ? "#166534"
+                      ? "#0B2E22"
                       : item.paymentStatus === "cod"
                       ? "#1E40AF"
                       : "#92400E",
@@ -260,13 +260,10 @@ export default function BusinessOwnerOrders() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={["#16A34A", "#0A7D55"]}
-        style={[styles.header, { paddingTop: insets.top + 16 }]}
-      >
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.headerTitle}>{content.header.title}</Text>
         <Text style={styles.headerSub}>{content.header.subtitle}</Text>
-      </LinearGradient>
+      </View>
 
       {/* Filter bar — plain View row so chips stay compact */}
       <View style={styles.filterBar}>
@@ -294,7 +291,7 @@ export default function BusinessOwnerOrders() {
 
       {isLoading && orders.length === 0 ? (
         <View style={styles.loaderWrap}>
-          <ActivityIndicator size="large" color="#16A34A" />
+          <ActivityIndicator size="large" color="#084C3D" />
         </View>
       ) : (
         <FlatList
@@ -387,7 +384,7 @@ export default function BusinessOwnerOrders() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: "#FBF6EC",
   },
   header: {
     paddingHorizontal: 20,
@@ -398,15 +395,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    letterSpacing: -0.5,
+    fontFamily: fonts.display,
+    color: colors.textPrimary,
   },
   headerSub: {
     marginTop: 4,
     fontSize: 13,
-    color: "rgba(255,255,255,0.75)",
-    fontWeight: "500",
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
   },
 
   // ── Filter bar ────────────────────────────────────────────────────────────
@@ -535,7 +531,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  paymentBadgePaid: { backgroundColor: "#DCFCE7" },
+  paymentBadgePaid: { backgroundColor: "#E4F3EA" },
   paymentBadgePending: { backgroundColor: "#FEF3C7" },
   paymentBadgeCod: { backgroundColor: "#DBEAFE" },
   paymentBadgeText: {

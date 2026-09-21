@@ -21,8 +21,8 @@ const ROLES: RoleMeta[] = [
     label: "Resident",
     hint: "Order from local shops",
     route: "/(auth)/user-login",
-    accent: "#0E9F6E",
-    soft: "#ECFDF5",
+    accent: "#084C3D",
+    soft: "#E4F3EA",
   },
   {
     key: "businessOwner",
@@ -30,7 +30,7 @@ const ROLES: RoleMeta[] = [
     label: "Business Owner",
     hint: "Manage your shop & orders",
     route: "/(auth)/business-owner-login",
-    accent: "#16A34A",
+    accent: "#084C3D",
     soft: "#F0FDF4",
   },
   {
@@ -39,7 +39,7 @@ const ROLES: RoleMeta[] = [
     label: "Delivery Partner",
     hint: "Deliver orders & collect payment",
     route: "/(auth)/delivery-partner-login",
-    accent: "#0891B2",
+    accent: "#084C3D",
     soft: "#ECFEFF",
   },
 ];

@@ -16,14 +16,14 @@ interface SafeAreaScreenProps extends PropsWithChildren {
  * Use this as the root wrapper for all screens to ensure consistent safe area handling.
  * 
  * @example
- * <SafeAreaScreen backgroundColor="#F7F8FA">
+ * <SafeAreaScreen backgroundColor="#FBF6EC">
  *   <YourContent />
  * </SafeAreaScreen>
  */
 export default function SafeAreaScreen({
   children,
   style,
-  backgroundColor = "#F7F8FA",
+  backgroundColor = "#FFF8ED",
   statusBarStyle = "dark-content",
   statusBarBackgroundColor,
 }: SafeAreaScreenProps) {

@@ -12,7 +12,7 @@ export default function AuthLayout() {
 
   return (
     <Stack
-      initialRouteName="user-login"
+      initialRouteName="onboarding"
       screenOptions={{ headerShown: false }}
     />
   );

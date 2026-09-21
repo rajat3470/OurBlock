@@ -1,46 +1,26 @@
 import { useEffect } from "react";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
-import { router } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { useAppSelector } from "../src/hooks/useRedux";
 import { AppTarget, getDefaultRoute } from "../src/utils/appRouting";
 import { consumePendingOrderNavigation } from "../src/services/orderNotificationService";
-import { colors } from "../src/constants/theme";
 
 export default function IndexScreen() {
-  const { isAuthenticated, isHydrated, user } = useAppSelector((state) => state.auth);
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const appTarget = process.env.EXPO_PUBLIC_APP_TARGET as AppTarget;
 
   useEffect(() => {
-    if (!isHydrated) return;
+    const pending = consumePendingOrderNavigation();
+    if (pending) {
+      router.replace({
+        pathname: pending.pathname as never,
+        params: pending.params,
+      });
+    }
+  }, []);
 
-    const timeout = setTimeout(() => {
-      const pending = consumePendingOrderNavigation();
-      if (pending) {
-        router.replace({
-          pathname: pending.pathname as any,
-          params: pending.params,
-        });
-        return;
-      }
+  if (isAuthenticated && user?.role) {
+    return <Redirect href={getDefaultRoute(true, user.role, appTarget)} />;
+  }
 
-      router.replace(getDefaultRoute(isAuthenticated, user?.role, appTarget));
-    }, 100);
-
-    return () => clearTimeout(timeout);
-  }, [appTarget, isAuthenticated, isHydrated, user?.role]);
-
-  return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color="#007AFF" />
-    </View>
-  );
+  return <Redirect href="/(auth)/onboarding" />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: colors.background,
-  },
-});

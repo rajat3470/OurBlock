@@ -43,7 +43,7 @@ export default function UserOrders() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#0E9F6E", "#0891B2"]}
+        colors={["#084C3D", "#084C3D"]}
         style={[styles.header, { paddingTop: insets.top + 16 }]}
       >
         <Text style={styles.headerTitle}>{content.header.title}</Text>
@@ -74,7 +74,7 @@ export default function UserOrders() {
 
       {isLoading && orders.length === 0 ? (
         <View style={styles.loaderWrap}>
-          <ActivityIndicator size="large" color="#0E9F6E" />
+          <ActivityIndicator size="large" color="#084C3D" />
         </View>
       ) : (
         <FlatList
@@ -138,7 +138,7 @@ export default function UserOrders() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: "#FBF6EC",
   },
   header: {
     paddingHorizontal: 20,
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  filterBtnActive: { backgroundColor: "#0E9F6E", borderColor: "#0E9F6E" },
+  filterBtnActive: { backgroundColor: "#084C3D", borderColor: "#084C3D" },
   filterLabel: { fontSize: 12, fontWeight: "700", color: "#6B7280" },
   filterLabelActive: { color: "#FFFFFF" },
   loaderWrap: { flex: 1, justifyContent: "center", alignItems: "center" },
@@ -191,13 +191,13 @@ const styles = StyleSheet.create({
     borderRadius: 42,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0E9F6E",
+    backgroundColor: "#084C3D",
   },
   emptyTitle: { fontSize: 18, fontWeight: "700", color: "#334155" },
   emptySubtitle: { fontSize: 13, color: "#94A3B8", textAlign: "center" },
   browseBtn: {
     marginTop: 8,
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#F6B853",
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 10,

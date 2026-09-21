@@ -149,7 +149,7 @@ export function ProductCard({
             <Text
               style={[
                 styles.availLabel,
-                { color: product.availableToday ? "#16A34A" : "#64748B" },
+                { color: product.availableToday ? "#084C3D" : "#64748B" },
               ]}
             >
               {product.availableToday
@@ -161,7 +161,7 @@ export function ProductCard({
           <View
             style={[
               styles.availPill,
-              { backgroundColor: product.availableToday ? "#22C55E" : "#CBD5E1" },
+              { backgroundColor: product.availableToday ? "#084C3D" : "#CBD5E1" },
             ]}
           >
             <Text style={styles.availPillText}>
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   },
   categoryChipText: {
     fontSize: 11,
-    color: "#3B82F6",
+    color: "#F6B853",
     fontWeight: "600",
     textTransform: "capitalize",
   },
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#16A34A",
+    color: "#084C3D",
   },
   originalPrice: {
     fontSize: 12,
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     color: "#6B7280",
   },
   stockGood: {
-    color: "#16A34A",
+    color: "#084C3D",
     fontWeight: "700",
   },
   stockOut: {
@@ -312,12 +312,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   statusBtn: {
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     borderWidth: 1,
     borderColor: "#BBF7D0",
   },
   statusBtnText: {
-    color: "#166534",
+    color: "#0B2E22",
     fontSize: 12,
     fontWeight: "700",
   },
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#16A34A",
+    backgroundColor: "#084C3D",
     borderWidth: 1.5,
     borderColor: "#15803D",
   },

@@ -10,7 +10,7 @@ export function PromoBanner({ onPress }: PromoBannerProps) {
   return (
     <TouchableOpacity style={styles.promoWrap} activeOpacity={0.9} onPress={onPress}>
       <LinearGradient
-        colors={["#FBBF24", "#F59E0B"]}
+        colors={["#F6B853", "#E0A030"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.promoCard}
@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 18,
     overflow: "hidden",
-    shadowColor: "#D97706",
+    shadowColor: "#E0A030",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.28,
     shadowRadius: 12,
@@ -57,6 +57,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  promoCodeText: { fontSize: 12, fontWeight: "800", color: "#B45309", letterSpacing: 0.3 },
+  promoCodeText: { fontSize: 12, fontWeight: "800", color: "#0B2E22", letterSpacing: 0.3 },
   promoEmoji: { fontSize: 56, marginLeft: 8 },
 });

@@ -46,7 +46,7 @@ export default function UserHome() {
   } = useHomeScreen();
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F7F8FA" }}>
+    <View style={{ flex: 1, backgroundColor: "#FBF6EC" }}>
       <HomeHero
         user={user}
         selectedSocietyName={selectedSocietyName}

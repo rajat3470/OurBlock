@@ -27,7 +27,7 @@ interface SafeAreaHeaderProps {
  * <SafeAreaHeader
  *   title="Orders"
  *   subtitle="Track and fulfill customer orders"
- *   colors={["#16A34A", "#0A7D55"]}
+ *   colors={["#084C3D", "#0B2E22"]}
  *   showBackButton
  *   onBackPress={() => router.back()}
  * />

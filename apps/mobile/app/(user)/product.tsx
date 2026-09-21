@@ -41,7 +41,7 @@ export default function ProductDetailScreen() {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={["#0E9F6E", "#0891B2"]}
+          colors={["#084C3D", "#084C3D"]}
           style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
         >
           <TouchableOpacity onPress={goBack} style={styles.backBtn}>
@@ -51,7 +51,7 @@ export default function ProductDetailScreen() {
           <View style={styles.headerRight} />
         </LinearGradient>
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color="#0E9F6E" />
+          <ActivityIndicator size="large" color="#084C3D" />
         </View>
       </View>
     );
@@ -61,7 +61,7 @@ export default function ProductDetailScreen() {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={["#0E9F6E", "#0891B2"]}
+          colors={["#084C3D", "#084C3D"]}
           style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
         >
           <TouchableOpacity onPress={goBack} style={styles.backBtn}>
@@ -85,7 +85,7 @@ export default function ProductDetailScreen() {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={["#0E9F6E", "#0891B2"]}
+        colors={["#084C3D", "#084C3D"]}
         style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
       >
         <TouchableOpacity onPress={goBack} style={styles.backBtn}>
@@ -268,7 +268,7 @@ export default function ProductDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7F8FA", flexDirection: "column" },
+  container: { flex: 1, backgroundColor: "#FBF6EC", flexDirection: "column" },
   loadingWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
   notFoundText: { fontSize: 16, color: "#6B7280" },
   headerRow: {
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 12,
     right: 12,
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#F6B853",
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#E5E7EB",
   },
-  thumbActive: { borderColor: "#0E9F6E" },
+  thumbActive: { borderColor: "#084C3D" },
   infoWrap: { padding: 16 },
   productName: {
     fontSize: 22,
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  price: { fontSize: 24, fontWeight: "800", color: "#0E9F6E" },
+  price: { fontSize: 24, fontWeight: "800", color: "#084C3D" },
   originalPrice: {
     fontSize: 16,
     color: "#9CA3AF",
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   },
   ratingBadge: {
     marginLeft: "auto",
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  stockOk: { backgroundColor: "#ECFDF5" },
+  stockOk: { backgroundColor: "#E4F3EA" },
   stockLow: { backgroundColor: "#FEF3C7" },
   stockText: { fontSize: 12, fontWeight: "700", color: "#374151" },
   categoryTag: {
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
   attrName: { fontSize: 13, color: "#6B7280", fontWeight: "600" },
   attrValue: { fontSize: 13, color: "#111827", fontWeight: "700" },
   priceSummaryWrap: {
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   priceSummaryTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#0A7D55",
+    color: "#0B2E22",
     marginBottom: 10,
   },
   priceSummaryRow: {
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   priceSummaryLabelBold: { fontSize: 14, fontWeight: "800", color: "#111827" },
-  priceSummaryValueBold: { fontSize: 14, fontWeight: "800", color: "#0E9F6E" },
+  priceSummaryValueBold: { fontSize: 14, fontWeight: "800", color: "#084C3D" },
   priceNote: {
     fontSize: 11,
     color: "#9CA3AF",
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
   },
   outOfStockText: { fontSize: 16, fontWeight: "700", color: "#9CA3AF" },
   addToCartBtn: {
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#F6B853",
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: "center",
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0E9F6E",
+    backgroundColor: "#084C3D",
   },
   qtyBtnText: { fontSize: 22, color: "#FFFFFF", fontWeight: "700" },
   qtyCount: {
@@ -505,11 +505,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 18,
     fontWeight: "800",
-    color: "#0A7D55",
+    color: "#0B2E22",
   },
   goToCartBtn: {
     flex: 1,
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#F6B853",
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",

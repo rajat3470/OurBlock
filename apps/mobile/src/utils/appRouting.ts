@@ -11,7 +11,7 @@ export const getHomeRouteByRole = (role?: UserRole) => {
     case "user":
       return "/(user)/home";
     default:
-      return "/(auth)/user-login";
+      return "/(auth)/welcome";
   }
 };
 
@@ -20,24 +20,20 @@ export const getDefaultRoute = (
   role?: UserRole,
   appTarget?: AppTarget
 ) => {
+  if (!isAuthenticated) {
+    return "/(auth)/welcome";
+  }
+
   if (appTarget === "businessOwner") {
-    return isAuthenticated
-      ? "/(business-owner)/dashboard"
-      : "/(auth)/business-owner-login";
+    return "/(business-owner)/dashboard";
   }
 
   if (appTarget === "deliveryPartner") {
-    return isAuthenticated
-      ? "/(delivery-partner)/dashboard"
-      : "/(auth)/delivery-partner-login";
+    return "/(delivery-partner)/dashboard";
   }
 
   if (appTarget === "user") {
-    return isAuthenticated ? "/(user)/home" : "/(auth)/user-login";
-  }
-
-  if (!isAuthenticated || !role) {
-    return "/(auth)/user-login";
+    return "/(user)/home";
   }
 
   return getHomeRouteByRole(role);

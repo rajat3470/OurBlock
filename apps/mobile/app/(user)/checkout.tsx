@@ -47,7 +47,7 @@ export default function CheckoutScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#0E9F6E", "#0891B2"]}
+        colors={["#084C3D", "#084C3D"]}
         style={[styles.headerRow, { paddingTop: insets.top + 12 }]}
       >
         <TouchableOpacity onPress={goBack} style={styles.backBtn}>
@@ -91,7 +91,7 @@ export default function CheckoutScreen() {
           </View>
 
           {loadingAddresses ? (
-            <ActivityIndicator size="small" color="#D97706" style={{ marginTop: 12 }} />
+            <ActivityIndicator size="small" color="#E0A030" style={{ marginTop: 12 }} />
           ) : addresses.length === 0 ? (
             <View style={styles.noAddressWrap}>
               <Text style={styles.noAddressText}>{content.noAddress.text}</Text>
@@ -213,7 +213,7 @@ export default function CheckoutScreen() {
           <Text style={styles.sectionTitle}>{content.sections.promoCode}</Text>
           {appliedCoupon ? (
             <View style={styles.couponApplied}>
-              <Ionicons name="checkmark-circle" size={18} color="#059669" />
+              <Ionicons name="checkmark-circle" size={18} color="#084C3D" />
               <View style={{ flex: 1 }}>
                 <Text style={styles.couponAppliedCode}>{appliedCoupon.code}</Text>
                 <Text style={styles.couponAppliedSavings}>
@@ -315,7 +315,7 @@ export default function CheckoutScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7F8FA" },
+  container: { flex: 1, backgroundColor: "#FBF6EC" },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     color: "#111827",
     marginBottom: 12,
   },
-  addLink: { fontSize: 13, fontWeight: "700", color: "#0E9F6E" },
+  addLink: { fontSize: 13, fontWeight: "700", color: "#084C3D" },
   orderItemRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   noAddressWrap: { alignItems: "center", paddingVertical: 16, gap: 12 },
   noAddressText: { fontSize: 14, color: "#6B7280" },
   addAddressBtn: {
-    backgroundColor: "#0E9F6E",
+    backgroundColor: "#084C3D",
     borderRadius: 12,
     paddingHorizontal: 20,
     paddingVertical: 10,
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 10,
   },
-  addressCardActive: { borderColor: "#0E9F6E", backgroundColor: "#ECFDF5" },
+  addressCardActive: { borderColor: "#084C3D", backgroundColor: "#E4F3EA" },
   addressRadio: {
     paddingTop: 2,
     width: 20,
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#D1D5DB",
   },
-  radioCircleActive: { borderColor: "#0E9F6E", backgroundColor: "#0E9F6E" },
+  radioCircleActive: { borderColor: "#084C3D", backgroundColor: "#084C3D" },
   addressBody: { flex: 1, gap: 3 },
   addressTitleRow: {
     flexDirection: "row",
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 10,
   },
-  paymentCardActive: { borderColor: "#0E9F6E", backgroundColor: "#ECFDF5" },
+  paymentCardActive: { borderColor: "#084C3D", backgroundColor: "#E4F3EA" },
   paymentIcon: { fontSize: 22 },
   paymentLabel: { flex: 1, fontSize: 14, fontWeight: "700", color: "#111827" },
   comingSoonBadge: {
@@ -455,10 +455,10 @@ const styles = StyleSheet.create({
   },
   billLabel: { fontSize: 13, color: "#4B5563" },
   billValue: { fontSize: 13, fontWeight: "600", color: "#374151" },
-  billValueGreen: { fontSize: 13, fontWeight: "700", color: "#059669" },
+  billValueGreen: { fontSize: 13, fontWeight: "700", color: "#084C3D" },
   billDivider: { height: 1, backgroundColor: "#F3F4F6", marginVertical: 6 },
   billLabelBold: { fontSize: 15, fontWeight: "800", color: "#111827" },
-  billValueBold: { fontSize: 15, fontWeight: "800", color: "#0E9F6E" },
+  billValueBold: { fontSize: 15, fontWeight: "800", color: "#084C3D" },
   bottomCta: {
     position: "absolute",
     bottom: 0,
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
   ctaTotalLabel: { fontSize: 12, color: "#6B7280" },
   ctaTotalAmount: { fontSize: 20, fontWeight: "800", color: "#111827" },
   placeOrderBtn: {
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#F6B853",
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 24,
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   couponApplyBtn: {
-    backgroundColor: "#0E9F6E",
+    backgroundColor: "#084C3D",
     borderRadius: 12,
     paddingHorizontal: 18,
     paddingVertical: 11,
@@ -516,13 +516,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
     borderColor: "#6EE7B7",
   },
-  couponAppliedCode: { fontSize: 13, fontWeight: "800", color: "#059669" },
+  couponAppliedCode: { fontSize: 13, fontWeight: "800", color: "#084C3D" },
   couponAppliedSavings: { fontSize: 11, color: "#047857", fontWeight: "600", marginTop: 1 },
   couponRemoveBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
   couponRemoveText: { fontSize: 12, color: "#6B7280", fontWeight: "600" },

@@ -161,7 +161,7 @@ export default function AddEditAddressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: "#FBF6EC",
   },
   flex: { flex: 1 },
   scrollView: {
@@ -187,8 +187,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   typeBtnActive: {
-    borderColor: "#0E9F6E",
-    backgroundColor: "#ECFDF5",
+    borderColor: "#084C3D",
+    backgroundColor: "#E4F3EA",
   },
   typeBtnText: {
     fontSize: 13,
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     color: "#6B7280",
   },
   typeBtnTextActive: {
-    color: "#0E9F6E",
+    color: "#084C3D",
   },
   row: {
     flexDirection: "row",
@@ -228,8 +228,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   checkboxChecked: {
-    backgroundColor: "#0E9F6E",
-    borderColor: "#0E9F6E",
+    backgroundColor: "#084C3D",
+    borderColor: "#084C3D",
   },
   checkmark: {
     color: "#FFFFFF",
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   saveBtn: {
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#F6B853",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",

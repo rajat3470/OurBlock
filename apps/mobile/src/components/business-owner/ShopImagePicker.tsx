@@ -40,18 +40,18 @@ export function ShopImagePicker({
         )}
         {loading ? (
           <View style={styles.overlay}>
-            <ActivityIndicator color="#2563EB" />
+            <ActivityIndicator color="#084C3D" />
           </View>
         ) : null}
       </View>
 
       <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.button} onPress={handleCamera} disabled={loading}>
-          <Ionicons name="camera-outline" size={18} color="#2563EB" />
+          <Ionicons name="camera-outline" size={18} color="#084C3D" />
           <Text style={styles.buttonText}>Capture</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={handleGallery} disabled={loading}>
-          <Ionicons name="images-outline" size={18} color="#2563EB" />
+          <Ionicons name="images-outline" size={18} color="#084C3D" />
           <Text style={styles.buttonText}>Gallery</Text>
         </TouchableOpacity>
       </View>
@@ -96,5 +96,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#BFDBFE",
   },
-  buttonText: { color: "#2563EB", fontWeight: "600", fontSize: 14 },
+  buttonText: { color: "#084C3D", fontWeight: "600", fontSize: 14 },
 });

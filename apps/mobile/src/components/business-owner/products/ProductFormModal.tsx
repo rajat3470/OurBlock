@@ -262,7 +262,7 @@ export function ProductFormModal({
                     <Text
                       style={[
                         styles.dietChipText,
-                        form.unit === opt.value && { color: "#166534", fontWeight: "700" },
+                        form.unit === opt.value && { color: "#0B2E22", fontWeight: "700" },
                       ]}
                     >
                       {opt.label}
@@ -287,8 +287,8 @@ export function ProductFormModal({
                       style={[
                         styles.quickAddBtn,
                         form.unitStep === preset.value && {
-                          backgroundColor: "#16A34A",
-                          borderColor: "#16A34A",
+                          backgroundColor: "#084C3D",
+                          borderColor: "#084C3D",
                         },
                       ]}
                       onPress={() => onSetUnitStep(preset.value)}
@@ -476,7 +476,7 @@ export function ProductFormModal({
                   <Text
                     style={[
                       styles.dietChipText,
-                      form.isVeg && { color: "#166534", fontWeight: "700" },
+                      form.isVeg && { color: "#0B2E22", fontWeight: "700" },
                     ]}
                   >
                     {content.modal.veg}
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
     color: "#0F172A",
   },
   modalSaveBtn: {
-    backgroundColor: "#16A34A",
+    backgroundColor: "#084C3D",
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -756,12 +756,12 @@ const styles = StyleSheet.create({
     color: "#374151",
   },
   dropdownItemTextSelected: {
-    color: "#16A34A",
+    color: "#084C3D",
     fontWeight: "700",
   },
   dropdownCheck: {
     fontSize: 14,
-    color: "#16A34A",
+    color: "#084C3D",
     fontWeight: "700",
   },
   priceFieldRow: {
@@ -826,7 +826,7 @@ const styles = StyleSheet.create({
   counterBtnText: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#16A34A",
+    color: "#084C3D",
     lineHeight: 28,
   },
   counterInput: {
@@ -861,16 +861,16 @@ const styles = StyleSheet.create({
   },
   quickAddBtnText: {
     fontSize: 13,
-    color: "#16A34A",
+    color: "#084C3D",
     fontWeight: "700",
   },
   saveBtn: {
-    backgroundColor: "#16A34A",
+    backgroundColor: "#084C3D",
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: "center",
     marginTop: 10,
-    shadowColor: "#16A34A",
+    shadowColor: "#084C3D",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -899,8 +899,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
   },
   dietChipVegActive: {
-    backgroundColor: "#DCFCE7",
-    borderColor: "#16A34A",
+    backgroundColor: "#E4F3EA",
+    borderColor: "#084C3D",
   },
   dietChipNonVegActive: {
     backgroundColor: "#FEE2E2",
@@ -915,7 +915,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#16A34A",
+    backgroundColor: "#084C3D",
     borderWidth: 1.5,
     borderColor: "#15803D",
   },

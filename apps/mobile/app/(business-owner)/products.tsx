@@ -9,12 +9,12 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect } from "expo-router";
 import { ProductCard } from "@/components/business-owner/products/ProductCard";
 import { ProductFormModal } from "@/components/business-owner/products/ProductFormModal";
 import { useBusinessOwnerProducts } from "@hooks/useBusinessOwnerProducts";
 import content from "@/content/boProducts.json";
+import { colors, fonts } from "@/constants/theme";
 
 export default function BusinessOwnerProducts() {
   const {
@@ -61,13 +61,10 @@ export default function BusinessOwnerProducts() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={["#16A34A", "#0A7D55"]}
-        style={[styles.header, { paddingTop: insets.top + 16 }]}
-      >
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.headerTitle}>{content.header.title}</Text>
         <Text style={styles.headerSub}>{content.header.subtitle}</Text>
-      </LinearGradient>
+      </View>
 
       <View style={styles.searchRow}>
         <TextInput
@@ -87,7 +84,7 @@ export default function BusinessOwnerProducts() {
 
       {isLoading && filteredProducts.length === 0 ? (
         <View style={styles.loaderWrap}>
-          <ActivityIndicator size="large" color="#16A34A" />
+          <ActivityIndicator size="large" color="#084C3D" />
         </View>
       ) : (
         <FlatList
@@ -95,7 +92,7 @@ export default function BusinessOwnerProducts() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#16A34A" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#084C3D" />
           }
           renderItem={({ item }) => (
             <ProductCard
@@ -151,7 +148,7 @@ export default function BusinessOwnerProducts() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: "#FBF6EC",
   },
   header: {
     paddingHorizontal: 20,
@@ -159,15 +156,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 26,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    letterSpacing: -0.5,
+    fontFamily: fonts.display,
+    color: colors.textPrimary,
   },
   headerSub: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.75)",
+    color: colors.textSecondary,
     marginTop: 2,
-    fontWeight: "500",
+    fontFamily: fonts.regular,
   },
   searchRow: {
     flexDirection: "row",
@@ -188,7 +184,7 @@ const styles = StyleSheet.create({
     color: "#0F172A",
   },
   addBtn: {
-    backgroundColor: "#16A34A",
+    backgroundColor: "#F6B853",
     borderRadius: 12,
     paddingHorizontal: 16,
     justifyContent: "center",
@@ -228,7 +224,7 @@ const styles = StyleSheet.create({
   },
   emptyAddBtn: {
     marginTop: 20,
-    backgroundColor: "#16A34A",
+    backgroundColor: "#F6B853",
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 12,

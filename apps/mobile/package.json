@@ -24,6 +24,10 @@
     "clean": "rm -rf node_modules .expo android/app/build ios/build"
   },
   "dependencies": {
+    "@expo-google-fonts/dm-sans": "^0.4.2",
+    "@expo-google-fonts/dm-serif-text": "^0.4.1",
+    "@expo-google-fonts/fraunces": "^0.4.1",
+    "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/poppins": "^0.4.1",
     "@hookform/resolvers": "^3.3.4",
     "@mohallamitr/shared": "1.0.0",

@@ -14,11 +14,11 @@ import content from "@/content/orderDetail.json";
 
 const STATUS_COLOR: Record<string, { bg: string; border: string; text: string; emoji: string }> = {
   pending: { bg: "#FFF7ED", border: "#FED7AA", text: "#9A3412", emoji: "⏳" },
-  confirmed: { bg: "#ECFDF5", border: "#A7F3D0", text: "#065F46", emoji: "✅" },
+  confirmed: { bg: "#E4F3EA", border: "#A7F3D0", text: "#065F46", emoji: "✅" },
   preparing: { bg: "#EFF6FF", border: "#BFDBFE", text: "#1E40AF", emoji: "⚙️" },
   ready: { bg: "#F0FDF4", border: "#86EFAC", text: "#15803D", emoji: "📦" },
   outForDelivery: { bg: "#FDF4FF", border: "#E9D5FF", text: "#6B21A8", emoji: "🚚" },
-  delivered: { bg: "#ECFDF5", border: "#6EE7B7", text: "#065F46", emoji: "🎉" },
+  delivered: { bg: "#E4F3EA", border: "#6EE7B7", text: "#065F46", emoji: "🎉" },
   cancelled: { bg: "#FEF2F2", border: "#FECACA", text: "#991B1B", emoji: "✗" },
   rejected: { bg: "#FEF2F2", border: "#FECACA", text: "#991B1B", emoji: "🚫" },
 };

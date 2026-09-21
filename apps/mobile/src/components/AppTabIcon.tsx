@@ -1,13 +1,6 @@
 import { View, StyleSheet } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-
-const ROLE_GRADIENTS: Record<string, readonly [string, string]> = {
-  businessOwner: ["#16A34A", "#0E8A3D"],
-  superAdmin: ["#2563EB", "#1D4ED8"],
-  user: ["#DC2626", "#991B1B"],
-  deliveryPartner: ["#0891B2", "#0E7490"],
-};
+import { brand } from "../constants/theme";
 
 interface AppTabIconProps {
   iconName: React.ComponentProps<typeof Ionicons>["name"];
@@ -15,23 +8,14 @@ interface AppTabIconProps {
   role: "superAdmin" | "businessOwner" | "user" | "deliveryPartner";
 }
 
-export default function AppTabIcon({ iconName, focused, role }: AppTabIconProps) {
-  const [start, end] = ROLE_GRADIENTS[role] ?? ROLE_GRADIENTS.user;
-
-  if (focused) {
-    return (
-      <LinearGradient
-        colors={[start, end]}
-        style={styles.iconWrap}
-      >
-        <Ionicons name={iconName} size={19} color="#FFFFFF" />
-      </LinearGradient>
-    );
-  }
-
+export default function AppTabIcon({ iconName, focused }: AppTabIconProps) {
   return (
     <View style={styles.iconWrap}>
-      <Ionicons name={iconName} size={19} color="#9CA3AF" />
+      <Ionicons
+        name={iconName}
+        size={20}
+        color={focused ? brand.primaryDark : brand.tabInactive}
+      />
     </View>
   );
 }

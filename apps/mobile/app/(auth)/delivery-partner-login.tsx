@@ -1,34 +1,14 @@
-import { View, StyleSheet } from "react-native";
 import RoleLoginForm from "../../src/components/RoleLoginForm";
-import LoginRoleSwitcher from "../../src/components/LoginRoleSwitcher";
-import BackButton from "../../src/components/BackButton";
 
 export default function DeliveryPartnerLoginScreen() {
   return (
-    <View style={styles.wrapper}>
-      <RoleLoginForm
-        role="deliveryPartner"
-        icon="🛵"
-        title="Delivery Partner"
-        subtitle="Sign in to deliver orders and collect payment"
-        emailPlaceholder="partner@business.com"
-        successRoute="/(delivery-partner)/dashboard"
-        footer={
-          <View style={styles.footer}>
-            <LoginRoleSwitcher currentRole="deliveryPartner" compact />
-          </View>
-        }
-      />
-      <BackButton top={12} />
-    </View>
+    <RoleLoginForm
+      role="deliveryPartner"
+      badge="Delivery Partner"
+      title={"Welcome back"}
+      subtitle="Sign in to deliver orders and collect payment for your shop."
+      emailPlaceholder="partner@business.com"
+      successRoute="/(delivery-partner)/dashboard"
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-  },
-  footer: {
-    alignItems: "center",
-  },
-});

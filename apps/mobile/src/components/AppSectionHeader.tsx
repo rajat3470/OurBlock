@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { colors, spacing, radius, typography, gradients } from "../constants/theme";
+import { colors, spacing, radius, fonts } from "../constants/theme";
 
 interface AppSectionHeaderProps {
   title: string;
@@ -14,24 +13,17 @@ export default function AppSectionHeader({
   badge,
 }: AppSectionHeaderProps) {
   return (
-    <LinearGradient
-      colors={[...gradients.appBackground]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.headerWrap}
-    >
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-        </View>
-        {badge ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{badge}</Text>
-          </View>
-        ) : null}
+    <View style={styles.headerWrap}>
+      <View>
+        <Text style={styles.title}>{title}</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
-    </LinearGradient>
+      {badge ? (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badge}</Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -39,40 +31,38 @@ const styles = StyleSheet.create({
   headerWrap: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.md,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: "rgba(148,163,184,0.22)",
-  },
-  header: {
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
-    backgroundColor: "rgba(255,255,255,0.72)",
-    borderRadius: radius.xl,
   },
   title: {
-    fontSize: typography.title.fontSize,
-    fontWeight: typography.title.fontWeight,
+    fontSize: 20,
+    fontFamily: fonts.serif,
     color: colors.textPrimary,
   },
   subtitle: {
-    fontSize: typography.subtitle.fontSize,
+    fontSize: 13,
+    fontFamily: fonts.regular,
     color: colors.textSecondary,
     marginTop: 2,
   },
   badge: {
-    backgroundColor: "rgba(59,130,246,0.14)",
+    backgroundColor: colors.forest[100],
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: "rgba(59,130,246,0.38)",
+    borderColor: "rgba(11,46,34,0.18)",
   },
   badgeText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: colors.blue[500],
+    fontFamily: fonts.semiBold,
+    color: colors.primary,
   },
 });

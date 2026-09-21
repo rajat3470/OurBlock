@@ -66,7 +66,7 @@ export function HorizontalStoreRow({
                 </View>
                 <View style={styles.oaRatingCol}>
                   <View style={styles.oaRatingPill}>
-                    <Ionicons name="star" size={11} color="#0E9F6E" />
+                    <Ionicons name="star" size={11} color="#084C3D" />
                     <Text style={styles.oaRatingText}>{Number(biz.rating || 0).toFixed(1)}</Text>
                   </View>
                   <View style={styles.oaStatusRow}>
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   sectionTitle: { fontSize: 16, color: "#0F172A", fontWeight: "800" },
-  viewAllText: { fontSize: 12, color: "#0E9F6E", fontWeight: "700" },
+  viewAllText: { fontSize: 12, color: "#084C3D", fontWeight: "700" },
   hRow: { paddingHorizontal: 16, gap: 12, paddingBottom: 4 },
   oaCard: {
     width: 252,
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -152,16 +152,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     borderRadius: 999,
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
-  oaRatingText: { fontSize: 11.5, fontWeight: "800", color: "#0E9F6E" },
+  oaRatingText: { fontSize: 11.5, fontWeight: "800", color: "#084C3D" },
   oaStatusRow: { flexDirection: "row", alignItems: "center", gap: 3 },
   oaStatusDot: { width: 7, height: 7, borderRadius: 4 },
-  dotOpen: { backgroundColor: "#16A34A" },
-  dotPaused: { backgroundColor: "#F59E0B" },
+  dotOpen: { backgroundColor: "#084C3D" },
+  dotPaused: { backgroundColor: "#F6B853" },
   dotClosed: { backgroundColor: "#9CA3AF" },
   oaStatusText: { fontSize: 10.5, fontWeight: "700", color: "#64748B" },
 });

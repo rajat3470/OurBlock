@@ -145,7 +145,7 @@ export default function RatingModal({
                   <Ionicons
                     name={star <= rating ? "star" : "star-outline"}
                     size={38}
-                    color={star <= rating ? "#F59E0B" : "#D1D5DB"}
+                    color={star <= rating ? "#F6B853" : "#D1D5DB"}
                   />
                 </TouchableOpacity>
               ))}
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   ratingLabel: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#F59E0B",
+    color: "#F6B853",
     marginBottom: 20,
   },
   commentInput: {

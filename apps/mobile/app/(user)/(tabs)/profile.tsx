@@ -44,12 +44,12 @@ export default function UserProfile() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Hero header */}
-        <LinearGradient colors={["#0E9F6E", "#0891B2"]} style={[styles.hero, { paddingTop: insets.top + 32 }]}>
+        <LinearGradient colors={["#084C3D", "#084C3D"]} style={[styles.hero, { paddingTop: insets.top + 32 }]}>
           <TouchableOpacity style={styles.avatarWrap} onPress={handlePickProfilePhoto} disabled={uploadingPhoto}>
             {user?.profileImageUrl ? (
               <Image source={{ uri: user.profileImageUrl }} style={styles.avatarImage} />
             ) : (
-              <Ionicons name="person" size={40} color="#0E9F6E" />
+              <Ionicons name="person" size={40} color="#084C3D" />
             )}
             <View style={styles.cameraOverlay}>
               {uploadingPhoto ? (
@@ -69,7 +69,7 @@ export default function UserProfile() {
 
           <TouchableOpacity style={styles.row} onPress={goToAddresses}>
             <View style={styles.rowIconWrap}>
-              <Ionicons name="location-outline" size={20} color="#0E9F6E" />
+              <Ionicons name="location-outline" size={20} color="#084C3D" />
             </View>
             <Text style={styles.rowLabel}>{content.account.manageAddresses}</Text>
             <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
@@ -80,7 +80,7 @@ export default function UserProfile() {
           {user?.isPhoneVerified ? (
             <View style={styles.row}>
               <View style={[styles.rowIconWrap, styles.rowIconGreen]}>
-                <Ionicons name="checkmark-circle" size={20} color="#16A34A" />
+                <Ionicons name="checkmark-circle" size={20} color="#084C3D" />
               </View>
               <Text style={styles.rowLabel}>{content.account.phoneVerified}</Text>
               <View style={styles.verifiedBadge}>
@@ -90,7 +90,7 @@ export default function UserProfile() {
           ) : (
             <TouchableOpacity style={styles.row} onPress={goToVerifyPhone}>
               <View style={[styles.rowIconWrap, styles.rowIconAmber]}>
-                <Ionicons name="call-outline" size={20} color="#D97706" />
+                <Ionicons name="call-outline" size={20} color="#E0A030" />
               </View>
               <Text style={styles.rowLabel}>{content.account.verifyPhone}</Text>
               <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
@@ -104,7 +104,7 @@ export default function UserProfile() {
             <>
               <TouchableOpacity style={styles.row} onPress={openDevDrawer}>
                 <View style={styles.rowIconWrap}>
-                  <Ionicons name="construct-outline" size={20} color="#0E9F6E" />
+                  <Ionicons name="construct-outline" size={20} color="#084C3D" />
                 </View>
                 <Text style={styles.rowLabel}>{content.dev.menuLabel}</Text>
                 <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
@@ -154,7 +154,7 @@ export default function UserProfile() {
                   <Switch
                     value={featureFlags.values[key] as boolean}
                     onValueChange={(v) => toggleFlag(key, v)}
-                    trackColor={{ false: "#D1D5DB", true: "#0E9F6E" }}
+                    trackColor={{ false: "#D1D5DB", true: "#084C3D" }}
                   />
                 </View>
               ))}
@@ -186,7 +186,7 @@ export default function UserProfile() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F7F8FA" },
+  container: { flex: 1, backgroundColor: "#FBF6EC" },
   scrollContent: { paddingBottom: 24 },
   hero: {
     paddingTop: 32,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "#0E9F6E",
+    backgroundColor: "#084C3D",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -271,12 +271,12 @@ const styles = StyleSheet.create({
   rowLabel: { flex: 1, fontSize: 15, fontWeight: "600", color: "#111827" },
   divider: { height: 1, backgroundColor: "#F3F4F6", marginHorizontal: 16 },
   verifiedBadge: {
-    backgroundColor: "#DCFCE7",
+    backgroundColor: "#E4F3EA",
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  verifiedBadgeText: { fontSize: 11, fontWeight: "700", color: "#16A34A" },
+  verifiedBadgeText: { fontSize: 11, fontWeight: "700", color: "#084C3D" },
   signOutBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   },
   devRefreshBtn: {
     marginTop: 8,
-    backgroundColor: "#0E9F6E",
+    backgroundColor: "#084C3D",
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: "center",

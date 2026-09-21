@@ -1,27 +1,39 @@
 export const colors = {
-  primary: "#0E9F6E",
-  background: "#08090D",
-  backgroundAlt: "#101114",
-  authBackground: "#F8FAFC",
+  primary: "#084C3D",
+  background: "#FFF8ED",
+  backgroundAlt: "#FBF6EC",
+  authBackground: "#FFF8ED",
   surface: "#FFFFFF",
-  surfaceAlt: "#F8FAFF",
-  textPrimary: "#111827",
-  textSecondary: "#6B7280",
-  textMuted: "#9CA3AF",
-  border: "#E5E7EB",
-  borderStrong: "#D1D5DB",
+  surfaceAlt: "#F8EEE0",
+  textPrimary: "#1A1F1C",
+  textSecondary: "#646464",
+  textMuted: "#A0A0A0",
+  border: "#E9E3D4",
+  borderStrong: "#E9E3D4",
+  forest: {
+    900: "#0B2E22",
+    800: "#084C3D",
+    700: "#0C4A3A",
+    600: "#376E62",
+    100: "#E4F3EA",
+  },
+  gold: {
+    700: "#E0A030",
+    500: "#F6B853",
+    100: "#F8EEE0",
+  },
   blue: {
     50: "#EEF4FF",
     100: "#DCEBFF",
     300: "#93C5FD",
-    500: "#007AFF",
-    600: "#0A5CFF",
+    500: "#0C4A3A",
+    600: "#084C3D",
   },
   green: {
-    50: "#EAFBF4",
-    100: "#D2F5E3",
-    500: "#16A34A",
-    600: "#0E8A3D",
+    50: "#E4F3EA",
+    100: "#E4F3EA",
+    500: "#3A8A5C",
+    600: "#084C3D",
   },
   red: {
     50: "#FEF2F2",
@@ -31,70 +43,81 @@ export const colors = {
     500: "#EF4444",
   },
   slate: {
-    800: "#1E293B",
-    900: "#0B1220",
+    800: "#1A1F1C",
+    900: "#0B2E22",
   },
   emerald: {
-    50: "#ECFDF5",
-    100: "#D1FAE5",
-    200: "#A7F3D0",
-    500: "#10B981",
-    600: "#0E9F6E",
-    700: "#0A7D55",
+    50: "#E4F3EA",
+    100: "#E4F3EA",
+    200: "#C5E0D2",
+    500: "#3A8A5C",
+    600: "#084C3D",
+    700: "#0B2E22",
   },
   teal: {
-    50: "#ECFEFF",
-    100: "#CFFAFE",
-    500: "#06B6D4",
-    600: "#0891B2",
-    700: "#0E7490",
+    50: "#E4F3EA",
+    100: "#C5E0D2",
+    500: "#376E62",
+    600: "#084C3D",
+    700: "#0B2E22",
   },
   amber: {
-    50: "#FFFBEB",
-    100: "#FEF3C7",
-    500: "#F59E0B",
-    600: "#D97706",
-    700: "#B45309",
+    50: "#F8EEE0",
+    100: "#F8EEE0",
+    500: "#F6B853",
+    600: "#E0A030",
+    700: "#E0A030",
   },
 } as const;
 
 /**
- * Customer ("user") app brand palette — Emerald-Teal + Amber.
- * Emerald/teal is the primary brand color (headers, links, active states);
- * amber is the accent used for calls-to-action and promo highlights.
+ * Mohalla Mitr brand palette — Forest + Gold on cream.
+ * Forest is used for immersive screens (splash, role select) and selected states.
+ * Gold is the primary call-to-action.
  */
 export const brand = {
-  primary: "#0E9F6E",
-  primaryDark: "#0A7D55",
-  teal: "#0891B2",
-  accent: "#F59E0B",
-  accentDark: "#D97706",
-  soft: "#ECFDF5",
-  softStrong: "#D1FAE5",
-  accentSoft: "#FEF3C7",
-  heroGradient: ["#0E9F6E", "#0891B2"] as const,
-  ctaGradient: ["#F59E0B", "#D97706"] as const,
+  primary: "#084C3D",
+  primaryDark: "#0B2E22",
+  teal: "#376E62",
+  accent: "#F6B853",
+  accentDark: "#E0A030",
+  soft: "#E4F3EA",
+  softStrong: "#C5E0D2",
+  accentSoft: "#F8EEE0",
+  cream: "#FFF8ED",
+  creamAlt: "#FBF6EC",
+  progressTrack: "#F2EBE1",
+  tabInactive: "#A3AD9F",
+  muted: "#7B8580",
+  heroGradient: ["#084C3D", "#0C4A3A"] as const,
+  ctaGradient: ["#F6B853", "#E0A030"] as const,
 } as const;
 
 export const gradients = {
-  appBackground: ["#07080C", "#111215", "#17181C"],
-  authBackground: ["#F8FAFC", "#F1F5F9", "#E2E8F0"],
-  superAdmin: ["#2563EB", "#4F46E5"],
-  businessOwner: ["#0F9F68", "#0A7D55"],
-  user: ["#0E9F6E", "#0891B2"],
-  deliveryPartner: ["#0891B2", "#0E7490"],
-  ctaBlue: ["#2563EB", "#0A5CFF"],
-  ctaGreen: ["#16A34A", "#0E8A3D"],
-  ctaAmber: ["#F59E0B", "#D97706"],
-  ctaTeal: ["#0891B2", "#0E7490"],
+  appBackground: ["#FFF8ED", "#FBF6EC", "#F8EEE0"],
+  authBackground: ["#FFF8ED", "#FFF8ED", "#FBF6EC"],
+  superAdmin: ["#084C3D", "#0B2E22"],
+  businessOwner: ["#084C3D", "#0B2E22"],
+  user: ["#084C3D", "#0C4A3A"],
+  deliveryPartner: ["#084C3D", "#376E62"],
+  ctaBlue: ["#084C3D", "#0B2E22"],
+  ctaGreen: ["#F6B853", "#E0A030"],
+  ctaAmber: ["#F6B853", "#E0A030"],
+  ctaTeal: ["#F6B853", "#E0A030"],
 } as const;
 
 export const fonts = {
-  regular: "Poppins_400Regular",
-  medium: "Poppins_500Medium",
-  semiBold: "Poppins_600SemiBold",
-  bold: "Poppins_700Bold",
-  extraBold: "Poppins_800ExtraBold",
+  regular: "DMSans_400Regular",
+  medium: "DMSans_500Medium",
+  semiBold: "DMSans_600SemiBold",
+  bold: "DMSans_700Bold",
+  extraBold: "DMSans_700Bold",
+  serif: "DMSerifText_400Regular",
+  display: "Fraunces_600SemiBold",
+  ui: "Inter_400Regular",
+  uiMedium: "Inter_500Medium",
+  uiSemiBold: "Inter_600SemiBold",
+  uiBold: "Inter_700Bold",
 } as const;
 
 type GradientTuple = readonly [string, string, ...string[]];
@@ -109,9 +132,9 @@ export function getRoleGradient(role: AppRoleTheme): GradientTuple {
 }
 
 export const glass = {
-  border: "rgba(255,255,255,0.36)",
-  background: "rgba(255,255,255,0.18)",
-  shadow: "#0F172A",
+  border: "rgba(11,46,34,0.12)",
+  background: "rgba(255,255,255,0.86)",
+  shadow: "#0B2E22",
 } as const;
 
 export const spacing = {
@@ -124,49 +147,58 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  sm: 10,
+  sm: 8,
   md: 12,
-  lg: 14,
+  lg: 16,
   xl: 20,
   full: 999,
 } as const;
 
 export const typography = {
   title: {
-    fontSize: 22,
-    fontWeight: "700" as const,
+    fontSize: 32,
+    fontWeight: "400" as const,
+    fontFamily: fonts.serif,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 14,
+    fontFamily: fonts.regular,
   },
   body: {
     fontSize: 14,
+    fontFamily: fonts.regular,
   },
   button: {
     fontSize: 16,
+    fontWeight: "600" as const,
+    fontFamily: fonts.semiBold,
+  },
+  label: {
+    fontSize: 12,
     fontWeight: "700" as const,
+    fontFamily: fonts.bold,
   },
 } as const;
 
 export const roleTheme = {
   superAdmin: {
-    accent: colors.blue[500],
-    soft: colors.blue[100],
+    accent: brand.primary,
+    soft: brand.soft,
     gradient: gradients.superAdmin,
   },
   businessOwner: {
-    accent: colors.green[500],
-    soft: colors.green[100],
+    accent: brand.primary,
+    soft: brand.soft,
     gradient: gradients.businessOwner,
   },
   user: {
-    accent: colors.emerald[600],
-    soft: colors.emerald[100],
+    accent: brand.primary,
+    soft: brand.soft,
     gradient: gradients.user,
   },
   deliveryPartner: {
-    accent: colors.teal[600],
-    soft: colors.teal[100],
+    accent: brand.primary,
+    soft: brand.soft,
     gradient: gradients.deliveryPartner,
   },
 } as const;

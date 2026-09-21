@@ -8,7 +8,7 @@ export default function DeliveryPartnerLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: "#0891B2",
+          tabBarActiveTintColor: "#084C3D",
           tabBarInactiveTintColor: "#9CA3AF",
           tabBarStyle: {
             backgroundColor: "#FFFFFF",

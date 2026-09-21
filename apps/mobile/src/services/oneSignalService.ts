@@ -96,7 +96,7 @@ export const OneSignalService = {
     }
 
     _verificationDialogShown = true;
-    this.showIntegrationCompleteDialog();
+    // this.showIntegrationCompleteDialog();
   },
 
   showIntegrationCompleteDialog(): void {

@@ -8,16 +8,15 @@ import {
   TouchableOpacity,
   Switch,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { gradients } from "@/constants/theme";
+import { Ionicons } from "@expo/vector-icons";
+import { brand, colors, fonts } from "@/constants/theme";
 import { useBusinessOwnerDashboard } from "@hooks/useBusinessOwnerDashboard";
 import content from "@/content/boDashboard.json";
 
 export default function BusinessOwnerDashboard() {
   const insets = useSafeAreaInsets();
   const {
-    user,
     businessProfile,
     businessStatus,
     canToggleOrders,
@@ -28,10 +27,6 @@ export default function BusinessOwnerDashboard() {
     approvedProducts,
     pendingProducts,
     rejectedProducts,
-    totalProducts,
-    activeOrders,
-    deliveredOrders,
-    totalOrders,
     maxRevenue,
     recentOrders,
     loading,
@@ -47,292 +42,221 @@ export default function BusinessOwnerDashboard() {
   if (loading) {
     return (
       <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
-        <ActivityIndicator size="large" color="#16A34A" />
+        <ActivityIndicator size="large" color={brand.primary} />
       </View>
     );
   }
+
+  const today = analytics?.daily?.[analytics.daily.length - 1];
+  const ordersToday = today?.orders ?? 0;
+  const revenueToday = today?.revenue ?? 0;
+  const rating =
+    businessProfile && typeof (businessProfile as { rating?: number }).rating === "number"
+      ? (businessProfile as { rating?: number }).rating
+      : null;
 
   return (
     <View style={styles.container}>
       <ScrollView
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 28 }}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#FFFFFF"
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={brand.primary} />
         }
       >
-        {/* ── Hero ─────────────────────────────────────────────────────── */}
-        <LinearGradient colors={[...gradients.businessOwner]} style={[styles.hero, { paddingTop: insets.top + 22 }]}>
-          <View style={styles.heroTop}>
-            <View style={styles.heroLeft}>
-              <Text style={styles.heroGreeting}>
-                {greeting}, {user?.firstName || content.ownerFallback} 👋
-              </Text>
-              <Text style={styles.heroBusinessName} numberOfLines={1}>
-                {businessProfile?.name || content.businessFallback}
-              </Text>
-            </View>
-            <View style={{ alignItems: "flex-end", gap: 8 }}>
+        <View style={[styles.homeHeader, { paddingTop: insets.top + 18 }]}>
+          <View style={styles.greet}>
+            <Text style={styles.greetLabel}>{greeting},</Text>
+            <Text style={styles.shopName} numberOfLines={1}>
+              {businessProfile?.name || content.businessFallback}
+            </Text>
+            <View
+              style={[
+                styles.statusPill,
+                !businessProfile?.isVerified
+                  ? styles.statusPending
+                  : businessStatus === "open"
+                  ? styles.statusLive
+                  : styles.statusPaused,
+              ]}
+            >
               <View
                 style={[
-                  styles.verifiedPill,
-                  !businessProfile?.isVerified
-                    ? styles.verifiedPillPending
-                    : businessStatus === "open"
-                    ? styles.verifiedPillLive
-                    : businessStatus === "paused"
-                    ? styles.verifiedPillPaused
-                    : styles.verifiedPillClosed,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.verifiedPillText,
-                    { color: businessProfile?.isVerified ? "#FFFFFF" : "#92400E" },
-                  ]}
-                >
-                  {!businessProfile?.isVerified
-                    ? content.pills.pending
-                    : businessStatus === "open"
-                    ? content.pills.live
-                    : businessStatus === "paused"
-                    ? content.pills.paused
-                    : content.pills.closed}
-                </Text>
-              </View>
-              {/* Pause / Resume toggle */}
-              <View
-                style={[
-                  styles.pauseRow,
+                  styles.statusDot,
                   {
-                    backgroundColor: !canToggleOrders
-                      ? "rgba(239,68,68,0.22)"
-                      : isTakingOrders
-                      ? "rgba(255,255,255,0.12)"
-                      : "rgba(252,165,165,0.15)",
+                    backgroundColor: !businessProfile?.isVerified
+                      ? "#3A8A5C"
+                      : businessStatus === "open"
+                      ? "#3A8A5C"
+                      : "#E0A030",
+                  },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.statusText,
+                  {
+                    color: !businessProfile?.isVerified
+                      ? "#3A8A5C"
+                      : businessStatus === "open"
+                      ? "#3A8A5C"
+                      : "#92400E",
                   },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.pauseLabel,
-                    {
-                      color: !canToggleOrders
-                        ? "#FECACA"
-                        : isTakingOrders
-                        ? "#FFFFFF"
-                        : "#FCA5A5",
-                    },
-                  ]}
-                >
-                  {!canToggleOrders
-                    ? businessProfile?.status === "suspended"
-                      ? content.pills.suspended
-                      : content.pills.inactive
-                    : isTakingOrders
-                    ? content.pills.takingOrders
-                    : content.pills.pausedLabel}
-                </Text>
-                <Switch
-                  value={isTakingOrders}
-                  onValueChange={handleToggleTakingOrders}
-                  disabled={!canToggleOrders || toggleLoading}
-                  trackColor={{ false: "rgba(255,255,255,0.3)", true: "#4ADE80" }}
-                  thumbColor={isTakingOrders ? "#FFFFFF" : "#FECACA"}
-                  ios_backgroundColor="rgba(255,255,255,0.3)"
-                  style={{ opacity: !canToggleOrders || toggleLoading ? 0.6 : 1 }}
-                />
+                {!businessProfile?.isVerified
+                  ? "Verification pending"
+                  : businessStatus === "open"
+                  ? "Live"
+                  : businessStatus === "paused"
+                  ? "Paused"
+                  : "Closed"}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.headerActions}>
+            <View
+              style={[
+                styles.pauseRow,
+                { backgroundColor: isTakingOrders ? brand.soft : "rgba(239,68,68,0.08)" },
+              ]}
+            >
+              <Text style={[styles.pauseLabel, { color: isTakingOrders ? brand.primary : "#DC2626" }]}>
+                {isTakingOrders ? "Orders on" : "Paused"}
+              </Text>
+              <Switch
+                value={isTakingOrders}
+                onValueChange={handleToggleTakingOrders}
+                disabled={!canToggleOrders || toggleLoading}
+                trackColor={{ false: "#E9E3D4", true: brand.accent }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+            <View style={styles.bell}>
+              <Ionicons name="notifications-outline" size={18} color={colors.textPrimary} />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.stats}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{ordersToday}</Text>
+            <Text style={styles.statLabel}>Orders today</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>₹{Math.round(revenueToday)}</Text>
+            <Text style={styles.statLabel}>Revenue today</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>{rating ? rating.toFixed(1) : "—"}</Text>
+            <Text style={styles.statLabel}>Shop rating</Text>
+          </View>
+        </View>
+
+        <Text style={styles.sectionLabel}>Quick actions</Text>
+        <View style={styles.quickRow}>
+          {[
+            { icon: "add" as const, label: "Add product", onPress: goToProducts },
+            { icon: "cube-outline" as const, label: "Inventory", onPress: goToProducts },
+            { icon: "time-outline" as const, label: "Timings", onPress: goToOrders },
+            { icon: "storefront-outline" as const, label: "Storefront", onPress: goToProducts },
+          ].map((action) => (
+            <TouchableOpacity key={action.label} style={styles.quickCard} onPress={action.onPress} activeOpacity={0.85}>
+              <View style={styles.quickIcon}>
+                <Ionicons name={action.icon} size={16} color={brand.primary} />
               </View>
-            </View>
-          </View>
+              <Text style={styles.quickLabel}>{action.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-          <View style={styles.heroStats}>
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatValue}>{totalProducts}</Text>
-              <Text style={styles.heroStatLabel}>{content.heroStats.products}</Text>
-            </View>
-            <View style={styles.heroStatDivider} />
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatValue}>{activeOrders}</Text>
-              <Text style={styles.heroStatLabel}>{content.heroStats.active}</Text>
-            </View>
-            <View style={styles.heroStatDivider} />
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatValue}>{deliveredOrders}</Text>
-              <Text style={styles.heroStatLabel}>{content.heroStats.delivered}</Text>
-            </View>
-            <View style={styles.heroStatDivider} />
-            <View style={styles.heroStat}>
-              <Text style={styles.heroStatValue}>{totalOrders}</Text>
-              <Text style={styles.heroStatLabel}>{content.heroStats.allOrders}</Text>
-            </View>
-          </View>
-        </LinearGradient>
+        <View style={styles.sectionHead}>
+          <Text style={styles.sectionLabelInline}>Recent orders</Text>
+          <TouchableOpacity onPress={goToOrders}>
+            <Text style={styles.viewAll}>View all</Text>
+          </TouchableOpacity>
+        </View>
 
-        {loading ? (
-          <View style={styles.loaderWrap}>
-            <ActivityIndicator size="large" color="#16A34A" />
+        {recentOrders.length === 0 ? (
+          <View style={styles.emptyOrder}>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="cart-outline" size={18} color={brand.accentDark} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.emptyTitle}>{content.empty.title}</Text>
+              <Text style={styles.emptySub}>New orders will show up here</Text>
+            </View>
           </View>
         ) : (
-          <>
-            {/* ── Revenue Chart ──────────────────────────────────────── */}
-            {analytics && analytics.daily.length > 0 ? (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>{content.sections.revenueTitle}</Text>
-                  <Text style={styles.sectionSubtitle}>{content.currency}{analytics.totalRevenue7d.toFixed(0)}</Text>
+          recentOrders.map((order) => {
+            const meta = getOrderStatusMeta(order.status);
+            return (
+              <View key={order.id} style={styles.orderRow}>
+                <View style={styles.emptyIcon}>
+                  <Ionicons name="cart-outline" size={18} color={brand.accentDark} />
                 </View>
-                <View style={styles.chartWrap}>
-                  {analytics.daily.map((d) => {
-                    const ratio = maxRevenue > 0 ? d.revenue / maxRevenue : 0;
-                    const barH = Math.max(4, Math.round(ratio * 90));
-                    const label = d.date.slice(5); // "MM-DD"
-                    return (
-                      <View key={d.date} style={styles.chartBar}>
-                        <Text style={styles.chartBarValue}>{d.revenue > 0 ? `${content.currency}${d.revenue}` : ""}</Text>
-                        <View style={styles.chartBarTrack}>
-                          <View style={[styles.chartBarFill, { height: barH, backgroundColor: d.revenue > 0 ? "#16A34A" : "#E2E8F0" }]} />
-                        </View>
-                        <Text style={styles.chartBarLabel}>{label}</Text>
-                        <Text style={styles.chartBarOrders}>{d.orders > 0 ? `${d.orders}` : ""}</Text>
-                      </View>
-                    );
-                  })}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.emptyTitle}>#{order.id.slice(0, 8).toUpperCase()}</Text>
+                  <Text style={styles.emptySub}>
+                    {timeAgo(order.createdAt)} · {meta?.label ?? order.status}
+                  </Text>
                 </View>
+                <Text style={styles.orderAmount}>₹{order.finalAmount}</Text>
               </View>
-            ) : null}
-
-            {/* ── Popular Items ─────────────────────────────────────── */}
-            {analytics && analytics.popularItems.length > 0 ? (
-              <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>{content.sections.popularTitle}</Text>
-                </View>
-                {analytics.popularItems.map((item, idx) => (
-                  <View key={item.productId} style={styles.popularRow}>
-                    <View style={[styles.popularRank, { backgroundColor: idx === 0 ? "#FEF3C7" : "#F1F5F9" }]}>
-                      <Text style={[styles.popularRankText, { color: idx === 0 ? "#D97706" : "#64748B" }]}>
-                        #{idx + 1}
-                      </Text>
-                    </View>
-                    <Text style={styles.popularName} numberOfLines={1}>{item.name}</Text>
-                    <View style={styles.popularRight}>
-                      <Text style={styles.popularCount}>{item.count}{content.sections.soldSuffix}</Text>
-                      <Text style={styles.popularRevenue}>{content.currency}{item.revenue}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-
-            {/* ── Product Pipeline ─────────────────────────────────────── */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>{content.sections.pipelineTitle}</Text>
-                <TouchableOpacity onPress={goToProducts} activeOpacity={0.7}>
-                  <Text style={styles.sectionLink}>{content.sections.manage}</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.pipelineRow}>
-                <View style={[styles.pipelineCard, { backgroundColor: "#DCFCE7" }]}>
-                  <Text style={styles.pipelineEmoji}>✅</Text>
-                  <Text style={[styles.pipelineValue, { color: "#166534" }]}>{approvedProducts}</Text>
-                  <Text style={[styles.pipelineLabel, { color: "#166534" }]}>{content.pipeline.approved}</Text>
-                </View>
-                <View style={[styles.pipelineCard, { backgroundColor: "#FFFBEB" }]}>
-                  <Text style={styles.pipelineEmoji}>⏳</Text>
-                  <Text style={[styles.pipelineValue, { color: "#92400E" }]}>{pendingProducts}</Text>
-                  <Text style={[styles.pipelineLabel, { color: "#92400E" }]}>{content.pipeline.pending}</Text>
-                </View>
-                <View style={[styles.pipelineCard, { backgroundColor: "#FEF2F2" }]}>
-                  <Text style={styles.pipelineEmoji}>✗</Text>
-                  <Text style={[styles.pipelineValue, { color: "#991B1B" }]}>{rejectedProducts}</Text>
-                  <Text style={[styles.pipelineLabel, { color: "#991B1B" }]}>{content.pipeline.rejected}</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* ── Recent Orders ─────────────────────────────────────────── */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>{content.sections.recentTitle}</Text>
-                <TouchableOpacity onPress={goToOrders} activeOpacity={0.7}>
-                  <Text style={styles.sectionLink}>{content.sections.viewAll}</Text>
-                </TouchableOpacity>
-              </View>
-
-              {recentOrders.length === 0 ? (
-                <View style={styles.emptyCard}>
-                  <Text style={styles.emptyEmoji}>{content.empty.emoji}</Text>
-                  <Text style={styles.emptyTitle}>{content.empty.title}</Text>
-                  <Text style={styles.emptySubtitle}>{content.empty.subtitle}</Text>
-                </View>
-              ) : (
-                recentOrders.map((order) => {
-                  const meta = getOrderStatusMeta(order.status);
-                  const addr = order.deliveryAddress;
-                  const addressLine = addr
-                    ? [addr.street, addr.landmark].filter(Boolean).join(", ")
-                    : null;
-                  return (
-                    <View key={order.id} style={styles.orderCard}>
-                      <View style={styles.orderCardTop}>
-                        <View>
-                          <Text style={styles.orderCardId}>
-                            #{order.id.slice(0, 8).toUpperCase()}
-                          </Text>
-                          <Text style={styles.orderCardTime}>
-                            {timeAgo(order.createdAt)}
-                          </Text>
-                        </View>
-                        <Text style={styles.orderCardAmount}>{content.currency}{order.finalAmount}</Text>
-                      </View>
-
-                      {addressLine ? (
-                        <Text style={styles.orderCardAddress} numberOfLines={1}>
-                          📍 {addressLine}
-                        </Text>
-                      ) : null}
-
-                      <Text style={styles.orderCardItems} numberOfLines={1}>
-                        🛍 {order.items.slice(0, 3).map((i) => `×${i.quantity}`).join("  ")} · {order.items.length} {order.items.length !== 1 ? content.order.itemPlural : content.order.itemSingular}
-                      </Text>
-
-                      <View style={styles.orderCardFooter}>
-                        <View style={[styles.statusPill, { backgroundColor: meta?.bg ?? "#F1F5F9" }]}>
-                          <Text style={[styles.statusPillText, { color: meta?.color ?? "#64748B" }]}>
-                            {meta?.emoji} {meta?.label ?? order.status}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.paymentPill,
-                            order.paymentStatus === "completed"
-                              ? styles.paymentPillPaid
-                              : styles.paymentPillPending,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.paymentPillText,
-                              { color: order.paymentStatus === "completed" ? "#166534" : "#92400E" },
-                            ]}
-                          >
-                            {order.paymentMethod.toUpperCase()} · {order.paymentStatus === "completed" ? content.order.paid : order.paymentStatus === "cod" ? "COD" : content.order.pending}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })
-              )}
-            </View>
-          </>
+            );
+          })
         )}
-        <View style={styles.bottomPad} />
+
+        {analytics && analytics.daily.length > 0 ? (
+          <View style={styles.extraSection}>
+            <View style={styles.sectionHead}>
+              <Text style={styles.sectionLabelInline}>{content.sections.revenueTitle}</Text>
+              <Text style={styles.viewAll}>₹{analytics.totalRevenue7d.toFixed(0)}</Text>
+            </View>
+            <View style={styles.chartWrap}>
+              {analytics.daily.map((d) => {
+                const ratio = maxRevenue > 0 ? d.revenue / maxRevenue : 0;
+                const barH = Math.max(4, Math.round(ratio * 90));
+                return (
+                  <View key={d.date} style={styles.chartBar}>
+                    <View style={styles.chartBarTrack}>
+                      <View
+                        style={[
+                          styles.chartBarFill,
+                          { height: barH, backgroundColor: d.revenue > 0 ? brand.primary : colors.border },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.chartBarLabel}>{d.date.slice(5)}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
+
+        <View style={styles.extraSection}>
+          <View style={styles.sectionHead}>
+            <Text style={styles.sectionLabelInline}>{content.sections.pipelineTitle}</Text>
+            <TouchableOpacity onPress={goToProducts}>
+              <Text style={styles.viewAll}>{content.sections.manage}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.pipelineRow}>
+            <View style={[styles.pipelineCard, { backgroundColor: brand.soft }]}>
+              <Text style={[styles.pipelineValue, { color: brand.primary }]}>{approvedProducts}</Text>
+              <Text style={[styles.pipelineLabel, { color: brand.primary }]}>{content.pipeline.approved}</Text>
+            </View>
+            <View style={[styles.pipelineCard, { backgroundColor: brand.accentSoft }]}>
+              <Text style={[styles.pipelineValue, { color: brand.accentDark }]}>{pendingProducts}</Text>
+              <Text style={[styles.pipelineLabel, { color: brand.accentDark }]}>{content.pipeline.pending}</Text>
+            </View>
+            <View style={[styles.pipelineCard, { backgroundColor: "#FEF2F2" }]}>
+              <Text style={[styles.pipelineValue, { color: "#991B1B" }]}>{rejectedProducts}</Text>
+              <Text style={[styles.pipelineLabel, { color: "#991B1B" }]}>{content.pipeline.rejected}</Text>
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -341,134 +265,214 @@ export default function BusinessOwnerDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: brand.creamAlt,
   },
-
-  // ── Hero
-  hero: {
-    paddingHorizontal: 24,
-    paddingBottom: 28,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
-    overflow: "hidden",
-  },
-  heroTop: {
+  homeHeader: {
     flexDirection: "row",
-    alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 22,
+    paddingHorizontal: 22,
+    paddingBottom: 14,
   },
-  heroLeft: { flex: 1, marginRight: 12 },
-  heroGreeting: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "rgba(255,255,255,0.65)",
-    marginBottom: 4,
-  },
-  heroBusinessName: {
-    fontSize: 23,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    letterSpacing: -0.3,
-  },
-  verifiedPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    marginTop: 4,
-  },
-  verifiedPillLive: {
-    backgroundColor: "rgba(255,255,255,0.18)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
-  },
-  verifiedPillPending: {
-    backgroundColor: "#FEF3C7",
-  },
-  verifiedPillPaused: {
-    backgroundColor: "rgba(251,146,60,0.22)",
-    borderWidth: 1,
-    borderColor: "rgba(251,146,60,0.45)",
-  },
-  verifiedPillClosed: {
-    backgroundColor: "rgba(239,68,68,0.25)",
-    borderWidth: 1,
-    borderColor: "rgba(239,68,68,0.5)",
-  },
-  verifiedPillText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  heroStats: {
-    flexDirection: "row",
-    backgroundColor: "rgba(255,255,255,0.10)",
-    borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-  },
-  heroStat: {
+  greet: {
     flex: 1,
+    marginRight: 12,
+  },
+  greetLabel: {
+    fontFamily: fonts.ui,
+    fontSize: 12,
+    color: brand.muted,
+  },
+  shopName: {
+    fontFamily: fonts.display,
+    fontSize: 19,
+    color: colors.textPrimary,
+    marginTop: 2,
+  },
+  statusPill: {
+    marginTop: 8,
+    alignSelf: "flex-start",
+    flexDirection: "row",
     alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
   },
-  heroStatValue: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    marginBottom: 2,
+  statusPending: { backgroundColor: brand.soft },
+  statusLive: { backgroundColor: brand.soft },
+  statusPaused: { backgroundColor: brand.accentSoft },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: {
+    fontFamily: fonts.uiBold,
+    fontSize: 10.5,
   },
-  heroStatLabel: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.55)",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+  headerActions: {
+    alignItems: "flex-end",
+    gap: 8,
   },
-  heroStatDivider: {
-    width: 1,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    marginVertical: 4,
-  },
-
-  // ── Pause toggle row
   pauseRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.12)",
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    gap: 6,
+    paddingLeft: 10,
+    gap: 4,
   },
   pauseLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#FFFFFF",
+    fontFamily: fonts.uiBold,
+    fontSize: 10,
   },
-
-  // ── Revenue Chart
-  sectionSubtitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#16A34A",
+  bell: {
+    width: 33,
+    height: 33,
+    borderRadius: 18,
+    backgroundColor: "rgba(0,0,0,0.04)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stats: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 22,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    gap: 3,
+  },
+  statValue: {
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: brand.primary,
+  },
+  statLabel: {
+    fontFamily: fonts.uiBold,
+    fontSize: 10,
+    color: brand.muted,
+    letterSpacing: 0.3,
+  },
+  sectionLabel: {
+    fontFamily: fonts.uiBold,
+    fontSize: 14.5,
+    color: colors.textPrimary,
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 10,
+  },
+  sectionHead: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 22,
+    paddingTop: 20,
+    paddingBottom: 10,
+  },
+  sectionLabelInline: {
+    fontFamily: fonts.uiBold,
+    fontSize: 14.5,
+    color: colors.textPrimary,
+  },
+  viewAll: {
+    fontFamily: fonts.uiBold,
+    fontSize: 12,
+    color: brand.accentDark,
+  },
+  quickRow: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 22,
+  },
+  quickCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    alignItems: "center",
+    paddingVertical: 14,
+    gap: 8,
+  },
+  quickIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: brand.accentSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  quickLabel: {
+    fontFamily: fonts.uiBold,
+    fontSize: 10,
+    color: colors.textPrimary,
+    textAlign: "center",
+  },
+  emptyOrder: {
+    marginHorizontal: 22,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  orderRow: {
+    marginHorizontal: 22,
+    marginBottom: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  emptyIcon: {
+    width: 35,
+    height: 35,
+    borderRadius: 11,
+    backgroundColor: brand.primaryDark,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyTitle: {
+    fontFamily: fonts.uiBold,
+    fontSize: 13.5,
+    color: colors.textPrimary,
+  },
+  emptySub: {
+    fontFamily: fonts.ui,
+    fontSize: 11.5,
+    color: brand.muted,
+    marginTop: 2,
+  },
+  orderAmount: {
+    fontFamily: fonts.display,
+    fontSize: 16,
+    color: brand.primary,
+  },
+  extraSection: {
+    marginTop: 8,
   },
   chartWrap: {
     flexDirection: "row",
     alignItems: "flex-end",
-    paddingHorizontal: 12,
-    paddingVertical: 16,
+    paddingHorizontal: 22,
     gap: 4,
+    height: 120,
   },
   chartBar: {
     flex: 1,
     alignItems: "center",
     gap: 4,
-  },
-  chartBarValue: {
-    fontSize: 8,
-    fontWeight: "600",
-    color: "#64748B",
-    textAlign: "center",
-    minHeight: 12,
   },
   chartBarTrack: {
     width: "100%",
@@ -482,104 +486,13 @@ const styles = StyleSheet.create({
     minHeight: 4,
   },
   chartBarLabel: {
+    fontFamily: fonts.uiSemiBold,
     fontSize: 9,
-    fontWeight: "600",
-    color: "#94A3B8",
-    textAlign: "center",
+    color: brand.muted,
   },
-  chartBarOrders: {
-    fontSize: 9,
-    color: "#16A34A",
-    fontWeight: "600",
-    minHeight: 12,
-  },
-
-  // ── Popular Items
-  popularRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-    gap: 12,
-  },
-  popularRank: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  popularRankText: {
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  popularName: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#0F172A",
-  },
-  popularRight: {
-    alignItems: "flex-end",
-    gap: 2,
-  },
-  popularCount: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#64748B",
-  },
-  popularRevenue: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#16A34A",
-  },
-
-  loaderWrap: {
-    paddingVertical: 60,
-    alignItems: "center",
-  },
-
-  // ── Sections
-  section: {
-    backgroundColor: "#FFFFFF",
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 20,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#0F172A",
-    letterSpacing: -0.1,
-  },
-  sectionLink: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#16A34A",
-  },
-
-  // ── Product Pipeline
   pipelineRow: {
     flexDirection: "row",
-    padding: 14,
+    paddingHorizontal: 22,
     gap: 10,
   },
   pipelineCard: {
@@ -589,99 +502,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
-  pipelineEmoji: { fontSize: 20 },
   pipelineValue: {
-    fontSize: 26,
-    fontWeight: "800",
+    fontFamily: fonts.display,
+    fontSize: 22,
   },
   pipelineLabel: {
+    fontFamily: fonts.uiBold,
     fontSize: 11,
-    fontWeight: "600",
   },
-
-  // ── Order Cards
-  orderCard: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#F1F5F9",
-    gap: 6,
-  },
-  orderCardTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  orderCardId: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  orderCardTime: {
-    fontSize: 11,
-    color: "#94A3B8",
-    marginTop: 2,
-    fontWeight: "500",
-  },
-  orderCardAmount: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: "#0F172A",
-  },
-  orderCardAddress: {
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-  orderCardItems: {
-    fontSize: 12,
-    color: "#64748B",
-    fontWeight: "500",
-  },
-  orderCardFooter: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 4,
-    flexWrap: "wrap",
-  },
-  statusPill: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  statusPillText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  paymentPill: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  paymentPillPaid: { backgroundColor: "#DCFCE7" },
-  paymentPillPending: { backgroundColor: "#FEF3C7" },
-  paymentPillText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-
-  // ── Empty
-  emptyCard: {
-    alignItems: "center",
-    paddingVertical: 36,
-    paddingHorizontal: 24,
-  },
-  emptyEmoji: { fontSize: 36, marginBottom: 10 },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#334155",
-  },
-  emptySubtitle: {
-    marginTop: 4,
-    fontSize: 13,
-    color: "#94A3B8",
-    textAlign: "center",
-  },
-  bottomPad: { height: 130 },
 });

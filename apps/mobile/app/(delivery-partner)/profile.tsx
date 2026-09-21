@@ -52,10 +52,10 @@ export default function DeliveryPartnerProfile() {
       <ScrollView
         contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor="#0891B2" />
+          <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor="#084C3D" />
         }
       >
-        <LinearGradient colors={["#0891B2", "#0E7490"]} style={styles.hero}>
+        <LinearGradient colors={["#084C3D", "#0B2E22"]} style={styles.hero}>
           <Text style={styles.heroEmoji}>🛵</Text>
           <Text style={styles.heroName}>
             {user?.firstName} {user?.lastName}
@@ -67,7 +67,7 @@ export default function DeliveryPartnerProfile() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Linked shop</Text>
           {loading ? (
-            <ActivityIndicator style={{ marginTop: 12 }} color="#0891B2" />
+            <ActivityIndicator style={{ marginTop: 12 }} color="#084C3D" />
           ) : business ? (
             <>
               <Text style={styles.shopName}>{business.name}</Text>
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 12, fontWeight: "700", color: "#94A3B8", textTransform: "uppercase" },
   shopName: { marginTop: 8, fontSize: 18, fontWeight: "800", color: colors.textPrimary },
   cardBody: { marginTop: 6, fontSize: 13, color: "#64748B", lineHeight: 19 },
-  cardMeta: { marginTop: 6, fontSize: 13, color: "#0E7490", fontWeight: "600" },
+  cardMeta: { marginTop: 6, fontSize: 13, color: "#0B2E22", fontWeight: "600" },
   logoutBtn: {
     marginHorizontal: 16,
     marginTop: 24,

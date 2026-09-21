@@ -21,10 +21,10 @@ function formatAddress(addr: any): string {
 
 function paymentBadge(order: Order) {
   if (order.paymentStatus === "completed") {
-    return { label: "Paid", color: "#059669", bg: "#ECFDF5" };
+    return { label: "Paid", color: "#084C3D", bg: "#E4F3EA" };
   }
   if (order.paymentMethod === "cash" || order.paymentStatus === "cod") {
-    return { label: "Collect cash", color: "#D97706", bg: "#FFFBEB" };
+    return { label: "Collect cash", color: "#E0A030", bg: "#FFFBEB" };
   }
   return { label: "Collect payment", color: "#0284C7", bg: "#F0F9FF" };
 }
@@ -51,7 +51,7 @@ export default function DeliveryPartnerDashboard() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <LinearGradient colors={["#0891B2", "#0E7490"]} style={styles.hero}>
+      <LinearGradient colors={["#084C3D", "#0B2E22"]} style={styles.hero}>
         <Text style={styles.shopLabel}>Linked shop</Text>
         <Text style={styles.shopName} numberOfLines={1}>
           {business?.name || "Your shop"}
@@ -75,7 +75,7 @@ export default function DeliveryPartnerDashboard() {
       </LinearGradient>
 
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color="#0891B2" size="large" />
+        <ActivityIndicator style={{ marginTop: 40 }} color="#084C3D" size="large" />
       ) : (
         <FlatList
           data={orders}
@@ -221,13 +221,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  amount: { fontSize: 18, fontWeight: "800", color: "#0E7490" },
+  amount: { fontSize: 18, fontWeight: "800", color: "#0B2E22" },
   status: { fontSize: 12, color: "#94A3B8", fontWeight: "600" },
   waitHint: {
     marginTop: 10,
     fontSize: 12,
     fontWeight: "600",
-    color: "#D97706",
+    color: "#E0A030",
   },
   empty: { alignItems: "center", marginTop: 80, paddingHorizontal: 32 },
   emptyEmoji: { fontSize: 42 },

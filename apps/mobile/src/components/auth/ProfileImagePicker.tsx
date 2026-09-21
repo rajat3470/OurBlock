@@ -53,6 +53,6 @@ const styles = StyleSheet.create({
   imagePickerBtnText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#2563EB",
+    color: "#084C3D",
   },
 });

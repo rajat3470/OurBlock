@@ -36,7 +36,7 @@ export default function PhoneVerificationScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#0E9F6E", "#0891B2"]}
+        colors={["#084C3D", "#084C3D"]}
         style={[styles.header, { paddingTop: insets.top + 12 }]}
       >
         <TouchableOpacity style={styles.backBtn} onPress={goBack}>
@@ -155,7 +155,7 @@ export default function PhoneVerificationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: "#FBF6EC",
   },
   flex: { flex: 1 },
   header: {
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 24,
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   },
   sendBtn: {
     width: "100%",
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#F6B853",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   },
   verifyBtn: {
     width: "100%",
-    backgroundColor: "#F59E0B",
+    backgroundColor: "#F6B853",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   resendLink: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#0E9F6E",
+    color: "#084C3D",
   },
   changeNumberBtn: {
     marginTop: 16,

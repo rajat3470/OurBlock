@@ -139,7 +139,7 @@ export default function DeliveryPartnersScreen() {
     >
       <View style={styles.container}>
         <LinearGradient
-          colors={["#16A34A", "#0A7D55"]}
+          colors={["#084C3D", "#0B2E22"]}
           style={[styles.hero, { paddingTop: insets.top + 12 }]}
         >
           <View style={styles.heroTop}>
@@ -227,7 +227,7 @@ export default function DeliveryPartnersScreen() {
           ) : null}
 
           {loading ? (
-            <ActivityIndicator style={{ marginTop: 30 }} color="#16A34A" />
+            <ActivityIndicator style={{ marginTop: 30 }} color="#084C3D" />
           ) : partners.length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>🚚</Text>
@@ -255,13 +255,13 @@ export default function DeliveryPartnersScreen() {
                       styles.statusPill,
                       {
                         backgroundColor:
-                          partner.status === "active" ? "#ECFDF5" : "#FEF2F2",
+                          partner.status === "active" ? "#E4F3EA" : "#FEF2F2",
                       },
                     ]}
                   >
                     <Text
                       style={{
-                        color: partner.status === "active" ? "#059669" : "#DC2626",
+                        color: partner.status === "active" ? "#084C3D" : "#DC2626",
                         fontWeight: "700",
                         fontSize: 11,
                       }}
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   },
   content: { padding: 16, paddingBottom: 40 },
   addBtn: {
-    backgroundColor: "#16A34A",
+    backgroundColor: "#084C3D",
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: "center",
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     flexDirection: "row",
     gap: 8,
-    shadowColor: "#166534",
+    shadowColor: "#0B2E22",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     marginTop: 4,
-    backgroundColor: "#0A7D55",
+    backgroundColor: "#0B2E22",
     borderRadius: 12,
     paddingVertical: 13,
     alignItems: "center",
@@ -400,12 +400,12 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
-  avatarText: { fontSize: 16, fontWeight: "800", color: "#059669" },
+  avatarText: { fontSize: 16, fontWeight: "800", color: "#084C3D" },
   cardMeta: { flex: 1, paddingRight: 8 },
   name: { fontSize: 16, fontWeight: "800", color: "#111827" },
   statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },

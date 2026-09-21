@@ -90,10 +90,10 @@ function getCategoryLabel(value: string) {
 
 function getApprovalMeta(status: string) {
   const bg =
-    status === "approved" ? "#DCFCE7" :
+    status === "approved" ? "#E4F3EA" :
     status === "rejected" ? "#FEE2E2" : "#FEF9C3";
   const color =
-    status === "approved" ? "#16A34A" :
+    status === "approved" ? "#084C3D" :
     status === "rejected" ? "#DC2626" : "#B45309";
   const icon =
     status === "approved" ? "✓" :

@@ -1,11 +1,14 @@
 import "../src/reactotron";
 import { useEffect, useRef } from "react";
-import { ActivityIndicator, View, StyleSheet, Text, TextInput, AppState, Platform } from "react-native";
+import { Text, TextInput, AppState, Platform } from "react-native";
 import { Stack } from "expo-router";
 import { Provider } from "react-redux";
 import { ToastProvider } from "react-native-toast-notifications";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFonts, Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, Poppins_800ExtraBold } from "@expo-google-fonts/poppins";
+import { useFonts, DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from "@expo-google-fonts/dm-sans";
+import { DMSerifText_400Regular } from "@expo-google-fonts/dm-serif-text";
+import { Fraunces_600SemiBold } from "@expo-google-fonts/fraunces";
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import * as SplashScreen from "expo-splash-screen";
@@ -28,7 +31,6 @@ import {
   NEW_ORDER_SOUND_ANDROID,
   ORDER_REVIEW_CATEGORY,
 } from "../src/services/orderNotificationService";
-import { brand } from "../src/constants/theme";
 import { socketService } from "../src/services/socketService";
 
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -295,12 +297,13 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
   }, [authUser?.id]);
 
 
+  useEffect(() => {
+    if (!isHydrated) return;
+    SplashScreen.hideAsync().catch(() => null);
+  }, [isHydrated]);
+
   if (!isHydrated) {
-    return (
-      <View style={styles.loaderWrap}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
-      </View>
-    );
+    return null;
   }
 
   return <>{children}</>;
@@ -308,15 +311,19 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Poppins_400Regular,
-    Poppins_500Medium,
-    Poppins_600SemiBold,
-    Poppins_700Bold,
-    Poppins_800ExtraBold,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_600SemiBold,
+    DMSans_700Bold,
+    DMSerifText_400Regular,
+    Fraunces_600SemiBold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
   });
 
-  const needsFonts = process.env.EXPO_PUBLIC_APP_TARGET === "user";
-  const appReady = !needsFonts || fontsLoaded;
+  const appReady = fontsLoaded;
 
   // Initialize OneSignal once at the root level, before any content renders.
   useEffect(() => {
@@ -329,26 +336,19 @@ export default function RootLayout() {
 
     const TextAny = Text as any;
     const TextInputAny = TextInput as any;
-    if (needsFonts) {
-      TextAny.defaultProps = {
-        ...(TextAny.defaultProps ?? {}),
-        style: [{ fontFamily: "Poppins_400Regular" }, TextAny.defaultProps?.style],
-      };
-      TextInputAny.defaultProps = {
-        ...(TextInputAny.defaultProps ?? {}),
-        style: [{ fontFamily: "Poppins_400Regular" }, TextInputAny.defaultProps?.style],
-      };
-    }
+    TextAny.defaultProps = {
+      ...(TextAny.defaultProps ?? {}),
+      style: [{ fontFamily: "DMSans_400Regular" }, TextAny.defaultProps?.style],
+    };
+    TextInputAny.defaultProps = {
+      ...(TextInputAny.defaultProps ?? {}),
+      style: [{ fontFamily: "DMSans_400Regular" }, TextInputAny.defaultProps?.style],
+    };
 
-    SplashScreen.hideAsync().catch(() => null);
-  }, [appReady, needsFonts]);
+  }, [appReady]);
 
   if (!appReady) {
-    return (
-      <View style={styles.loaderWrap}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
-      </View>
-    );
+    return null;
   }
 
   return (
@@ -363,12 +363,3 @@ export default function RootLayout() {
     </Provider>
   );
 }
-
-const styles = StyleSheet.create({
-  loaderWrap: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: brand.primary,
-  },
-});

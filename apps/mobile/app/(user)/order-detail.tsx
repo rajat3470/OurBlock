@@ -38,7 +38,7 @@ export default function UserOrderDetail() {
 
   if (fetching) {
     return (
-      <SafeAreaScreen backgroundColor="#0E9F6E">
+      <SafeAreaScreen backgroundColor="#084C3D">
         <View style={styles.fullCenter}>
           <ActivityIndicator size="large" color="#FFFFFF" />
         </View>
@@ -64,7 +64,7 @@ export default function UserOrderDetail() {
       <SafeAreaHeader
         title={`${content.invoice.order} #${(order.id ?? "").slice(0, 8).toUpperCase()}`}
         subtitle={formatDateTime(order.createdAt)}
-        colors={["#0E9F6E", "#0891B2"] as const}
+        colors={["#084C3D", "#084C3D"] as const}
         showBackButton
         onBackPress={goBack}
       />
@@ -144,7 +144,7 @@ export default function UserOrderDetail() {
           {order.discountAmount ? (
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>{content.sections.discount}</Text>
-              <Text style={[styles.priceValue, { color: "#16A34A" }]}>−{content.currency}{order.discountAmount}</Text>
+              <Text style={[styles.priceValue, { color: "#084C3D" }]}>−{content.currency}{order.discountAmount}</Text>
             </View>
           ) : null}
           {order.taxAmount ? (
@@ -192,7 +192,7 @@ export default function UserOrderDetail() {
                   {idx < order.trackingUpdates!.length - 1 ? <View style={styles.trackLine} /> : null}
                 </View>
                 <View style={styles.trackContent}>
-                  <Text style={[styles.trackStatus, idx === 0 && { color: "#0E9F6E" }]}>
+                  <Text style={[styles.trackStatus, idx === 0 && { color: "#084C3D" }]}>
                     {content.statusLabels[update.status] ?? update.status}
                   </Text>
                   <Text style={styles.trackTime}>
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   notFoundText: { fontSize: 15, color: "#64748B", marginBottom: 12 },
   goBackBtn: {
     paddingHorizontal: 20, paddingVertical: 10,
-    backgroundColor: "#0E9F6E", borderRadius: 999,
+    backgroundColor: "#084C3D", borderRadius: 999,
   },
   goBackText: { color: "#FFFFFF", fontWeight: "700" },
 
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FEF3C7", borderRadius: 6,
     paddingHorizontal: 7, paddingVertical: 3, minWidth: 30, alignItems: "center",
   },
-  qtyText: { fontSize: 12, fontWeight: "700", color: "#D97706" },
+  qtyText: { fontSize: 12, fontWeight: "700", color: "#E0A030" },
   itemName: { flex: 1, fontSize: 13, color: "#1E293B", fontWeight: "500" },
   itemTotal: { fontSize: 13, fontWeight: "700", color: "#1E293B" },
 
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: "#E2E8F0",
   },
   totalLabel: { fontSize: 15, fontWeight: "700", color: "#1E293B" },
-  totalValue: { fontSize: 15, fontWeight: "800", color: "#0E9F6E" },
+  totalValue: { fontSize: 15, fontWeight: "800", color: "#084C3D" },
 
   // Address type
   addressTypePill: {
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
     width: 10, height: 10, borderRadius: 5,
     backgroundColor: "#CBD5E1", marginTop: 3,
   },
-  trackDotActive: { backgroundColor: "#0E9F6E", width: 12, height: 12, borderRadius: 6 },
+  trackDotActive: { backgroundColor: "#084C3D", width: 12, height: 12, borderRadius: 6 },
   trackLine: { width: 2, flex: 1, backgroundColor: "#E2E8F0", marginTop: 4, minHeight: 20 },
   trackContent: { flex: 1, paddingBottom: 16 },
   trackStatus: { fontSize: 13, fontWeight: "600", color: "#1E293B" },
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   },
   shareBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    backgroundColor: "#F59E0B", borderRadius: 999, paddingVertical: 14,
+    backgroundColor: "#F6B853", borderRadius: 999, paddingVertical: 14,
   },
   shareBtnText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
 });

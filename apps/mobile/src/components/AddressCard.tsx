@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   defaultBadge: {
-    backgroundColor: "#0E9F6E",
+    backgroundColor: "#084C3D",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: "#0E9F6E",
+    backgroundColor: "#084C3D",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -134,13 +134,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: "#ECFDF5",
+    backgroundColor: "#E4F3EA",
     borderRadius: 8,
     alignSelf: "flex-start",
   },
   setDefaultText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#0E9F6E",
+    color: "#084C3D",
   },
 });

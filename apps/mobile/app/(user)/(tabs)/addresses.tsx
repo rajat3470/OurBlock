@@ -59,7 +59,7 @@ export default function AddressesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FA",
+    backgroundColor: "#FBF6EC",
   },
   listContent: {
     padding: 16,
