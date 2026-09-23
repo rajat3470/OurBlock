@@ -32,6 +32,14 @@ import {
   ORDER_REVIEW_CATEGORY,
 } from "../src/services/orderNotificationService";
 import { socketService } from "../src/services/socketService";
+import * as Sentry from "@sentry/react-native";
+
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  enabled: Boolean(process.env.EXPO_PUBLIC_SENTRY_DSN),
+  environment: process.env.EXPO_PUBLIC_APP_ENV ?? process.env.NODE_ENV,
+  tracesSampleRate: 0.1,
+});
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   /* splash may already be hidden in fast refresh */
@@ -251,6 +259,7 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
 
   // Register push token once authenticated
   useEffect(() => {
+    Sentry.setUser(authUser ? { id: authUser.id, role: authUser.role } : null);
     if (!authUser) return;
 
     OneSignalService.login(authUser.id, {
@@ -309,7 +318,7 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const [fontsLoaded] = useFonts({
     DMSans_400Regular,
     DMSans_500Medium,
@@ -363,3 +372,5 @@ export default function RootLayout() {
     </Provider>
   );
 }
+
+export default Sentry.wrap(RootLayout);

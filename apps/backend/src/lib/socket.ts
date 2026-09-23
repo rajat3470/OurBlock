@@ -146,9 +146,14 @@ export function emitOrderUpdate(orderId: string, order: any, previousDeliveryPar
 }
 
 export function emitBusinessUpdate(businessId: string, business: any): void {
-  const s = getIO();
-  s.to(`business:${businessId}`).emit("business:updated", business);
-  if (business.societyId) s.to(`society:${business.societyId}`).emit("businesses:society:updated", business);
+  if (!io) return;
+  io.to(`business:${businessId}`).emit("business:updated", business);
+  if (business.societyId) io.to(`society:${business.societyId}`).emit("businesses:society:updated", business);
+}
+
+export function emitBusinessProductsChanged(businessId: string): void {
+  if (!io) return;
+  io.to(`business:${businessId}`).emit("business:products:changed", { businessId });
 }
 
 export function emitToUser(userId: string, event: string, data: any): void {

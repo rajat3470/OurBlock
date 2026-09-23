@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { requireAuth, AuthedRequest } from "../middleware/auth";
 import { autoRejectIfExpired, isExpiredPending } from "../services/orderExpiry";
 import { evaluateBlacklistRejection } from "../services/blacklist";
-import { emitOrderUpdate } from "../lib/socket";
+import { emitBusinessProductsChanged, emitBusinessUpdate, emitOrderUpdate } from "../lib/socket";
 import { onOrderStatusChanged } from "../services/orderEvents";
 
 const router = Router();
@@ -71,6 +71,7 @@ router.post("/products", requireAuth, async (req: AuthedRequest, res) => {
         approvalNote: null,
       },
     });
+    emitBusinessProductsChanged(business.id);
     return res.status(201).json({ success: true, data: product });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
@@ -91,6 +92,7 @@ router.put("/products/:id", requireAuth, async (req: AuthedRequest, res) => {
 
     const { businessId: _ignored, ...safeBody } = req.body;
     const updated = await prisma.product.update({ where: { id: req.params.id }, data: { ...safeBody, businessId: business.id } });
+    emitBusinessProductsChanged(business.id);
     return res.json({ success: true, data: updated });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
@@ -110,6 +112,7 @@ router.delete("/products/:id", requireAuth, async (req: AuthedRequest, res) => {
     if (product.businessId !== business.id) return res.status(403).json({ success: false, error: "Product does not belong to your business" });
 
     await prisma.product.delete({ where: { id: req.params.id } });
+    emitBusinessProductsChanged(business.id);
     return res.json({ success: true, message: "Product deleted successfully" });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
@@ -286,7 +289,8 @@ router.patch("/business/taking-orders", requireAuth, async (req: AuthedRequest, 
     const business = await getOwnerBusiness(req.uid!);
     if (!business) return res.status(404).json({ success: false, error: "No business found" });
 
-    await prisma.business.update({ where: { id: business.id }, data: { isTakingOrders } });
+    const updated = await prisma.business.update({ where: { id: business.id }, data: { isTakingOrders } });
+    emitBusinessUpdate(business.id, updated);
     return res.json({ success: true, data: { isTakingOrders } });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
@@ -310,6 +314,7 @@ router.patch("/business/settings", requireAuth, async (req: AuthedRequest, res) 
     if (Array.isArray(tags)) updates.tags = tags.map(String);
 
     const updated = await prisma.business.update({ where: { id: business.id }, data: updates });
+    emitBusinessUpdate(business.id, updated);
     return res.json({ success: true, data: updated });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
@@ -331,6 +336,7 @@ router.patch("/business/image", requireAuth, async (req: AuthedRequest, res) => 
     if (Object.keys(updates).length === 0) return res.status(400).json({ success: false, error: "imageUrl or bannerUrl is required" });
 
     const updated = await prisma.business.update({ where: { id: business.id }, data: updates });
+    emitBusinessUpdate(business.id, updated);
     return res.json({ success: true, data: updated });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });

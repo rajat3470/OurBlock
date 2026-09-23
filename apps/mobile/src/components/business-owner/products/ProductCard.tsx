@@ -12,7 +12,7 @@ interface ApprovalMeta {
 interface ProductCardProps {
   product: Product;
   getApprovalMeta: (status: string) => ApprovalMeta;
-  onToggleAvailableToday: (product: Product) => void;
+  onEdit: (product: Product) => void;
   onToggleStatus: (product: Product) => void;
   onDelete: (id: string | undefined, name: string) => void;
 }
@@ -20,7 +20,7 @@ interface ProductCardProps {
 export function ProductCard({
   product,
   getApprovalMeta,
-  onToggleAvailableToday,
+  onEdit,
   onToggleStatus,
   onDelete,
 }: ProductCardProps) {
@@ -135,43 +135,13 @@ export function ProductCard({
         </View>
       </View>
 
-      {isApproved ? (
-        <TouchableOpacity
-          style={[
-            styles.availBanner,
-            product.availableToday ? styles.availOn : styles.availOff,
-          ]}
-          onPress={() => onToggleAvailableToday(product)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.availIcon}>{product.availableToday ? "✅" : "⏸️"}</Text>
-          <View style={styles.availInfo}>
-            <Text
-              style={[
-                styles.availLabel,
-                { color: product.availableToday ? "#084C3D" : "#64748B" },
-              ]}
-            >
-              {product.availableToday
-                ? content.card.availableToday
-                : content.card.unavailableToday}
-            </Text>
-            <Text style={styles.availHint}>{content.card.toggleHint}</Text>
-          </View>
-          <View
-            style={[
-              styles.availPill,
-              { backgroundColor: product.availableToday ? "#084C3D" : "#CBD5E1" },
-            ]}
-          >
-            <Text style={styles.availPillText}>
-              {product.availableToday ? content.card.on : content.card.off}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      ) : null}
-
       <View style={styles.actionsRow}>
+        <TouchableOpacity
+          style={[styles.actionBtn, styles.editBtn]}
+          onPress={() => onEdit(product)}
+        >
+          <Text style={styles.editBtnText}>Edit</Text>
+        </TouchableOpacity>
         {isApproved ? (
           <TouchableOpacity
             style={[styles.actionBtn, styles.statusBtn]}
@@ -310,6 +280,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 8,
     alignItems: "center",
+  },
+  editBtn: {
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  editBtnText: {
+    color: "#1D4ED8",
+    fontSize: 12,
+    fontWeight: "700",
   },
   statusBtn: {
     backgroundColor: "#E4F3EA",

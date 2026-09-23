@@ -47,7 +47,8 @@ export default function BusinessOwnerDashboard() {
     );
   }
 
-  const today = analytics?.daily?.[analytics.daily.length - 1];
+  const dailyAnalytics = Array.isArray(analytics?.daily) ? analytics.daily : [];
+  const today = dailyAnalytics[dailyAnalytics.length - 1];
   const ordersToday = today?.orders ?? 0;
   const revenueToday = today?.revenue ?? 0;
   const rating =
@@ -108,9 +109,7 @@ export default function BusinessOwnerDashboard() {
                   ? "Verification pending"
                   : businessStatus === "open"
                   ? "Live"
-                  : businessStatus === "paused"
-                  ? "Paused"
-                  : "Closed"}
+                  : "Currently unavailable"}
               </Text>
             </View>
           </View>
@@ -122,7 +121,7 @@ export default function BusinessOwnerDashboard() {
               ]}
             >
               <Text style={[styles.pauseLabel, { color: isTakingOrders ? brand.primary : "#DC2626" }]}>
-                {isTakingOrders ? "Orders on" : "Paused"}
+                {isTakingOrders ? "Orders on" : "Currently unavailable"}
               </Text>
               <Switch
                 value={isTakingOrders}
@@ -207,14 +206,14 @@ export default function BusinessOwnerDashboard() {
           })
         )}
 
-        {analytics && analytics.daily.length > 0 ? (
+        {dailyAnalytics.length > 0 ? (
           <View style={styles.extraSection}>
             <View style={styles.sectionHead}>
               <Text style={styles.sectionLabelInline}>{content.sections.revenueTitle}</Text>
-              <Text style={styles.viewAll}>₹{analytics.totalRevenue7d.toFixed(0)}</Text>
+              <Text style={styles.viewAll}>₹{(analytics?.totalRevenue7d ?? 0).toFixed(0)}</Text>
             </View>
             <View style={styles.chartWrap}>
-              {analytics.daily.map((d) => {
+              {dailyAnalytics.map((d) => {
                 const ratio = maxRevenue > 0 ? d.revenue / maxRevenue : 0;
                 const barH = Math.max(4, Math.round(ratio * 90));
                 return (

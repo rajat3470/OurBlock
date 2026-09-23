@@ -12,6 +12,7 @@ import {
 import { useFocusEffect } from "expo-router";
 import { ProductCard } from "@/components/business-owner/products/ProductCard";
 import { ProductFormModal } from "@/components/business-owner/products/ProductFormModal";
+import { AppAlertModal } from "@/components/ui/AppAlertModal";
 import { useBusinessOwnerProducts } from "@hooks/useBusinessOwnerProducts";
 import content from "@/content/boProducts.json";
 import { colors, fonts } from "@/constants/theme";
@@ -22,8 +23,16 @@ export default function BusinessOwnerProducts() {
     filteredProducts,
     searchQuery,
     setSearchQuery,
+    statusFilter,
+    setStatusFilter,
     showCreateModal,
-    setShowCreateModal,
+    openCreateModal,
+    openEditModal,
+    editingProductId,
+    formError,
+    deleteTarget,
+    cancelDelete,
+    confirmDelete,
     form,
     isSubmitting,
     showCategoryDropdown,
@@ -39,7 +48,6 @@ export default function BusinessOwnerProducts() {
     handleCreate,
     handleDelete,
     toggleStatus,
-    toggleAvailableToday,
     setCategory,
     setUnit,
     setUnitStep,
@@ -76,10 +84,24 @@ export default function BusinessOwnerProducts() {
         />
         <TouchableOpacity
           style={styles.addBtn}
-          onPress={() => setShowCreateModal(true)}
+          onPress={openCreateModal}
         >
           <Text style={styles.addBtnText}>{content.add}</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.filterRow}>
+        {(["all", "active", "inactive"] as const).map((filter) => (
+          <TouchableOpacity
+            key={filter}
+            style={[styles.filterChip, statusFilter === filter && styles.filterChipActive]}
+            onPress={() => setStatusFilter(filter)}
+          >
+            <Text style={[styles.filterChipText, statusFilter === filter && styles.filterChipTextActive]}>
+              {filter === "all" ? "All" : filter === "active" ? "Active" : "Inactive"}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {isLoading && filteredProducts.length === 0 ? (
@@ -98,7 +120,7 @@ export default function BusinessOwnerProducts() {
             <ProductCard
               product={item}
               getApprovalMeta={getApprovalMeta}
-              onToggleAvailableToday={toggleAvailableToday}
+              onEdit={openEditModal}
               onToggleStatus={toggleStatus}
               onDelete={handleDelete}
             />
@@ -110,7 +132,7 @@ export default function BusinessOwnerProducts() {
               <Text style={styles.emptySubtitle}>{content.empty.subtitle}</Text>
               <TouchableOpacity
                 style={styles.emptyAddBtn}
-                onPress={() => setShowCreateModal(true)}
+                onPress={openCreateModal}
               >
                 <Text style={styles.emptyAddBtnText}>{content.empty.addBtn}</Text>
               </TouchableOpacity>
@@ -119,10 +141,23 @@ export default function BusinessOwnerProducts() {
         />
       )}
 
+      <AppAlertModal
+        visible={Boolean(deleteTarget)}
+        title={content.alerts.deleteConfirmTitle}
+        message={content.alerts.deleteConfirmMsg.replace("{name}", deleteTarget?.name ?? "")}
+        confirmLabel={content.alerts.delete}
+        cancelLabel={content.alerts.cancel}
+        destructive
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
+
       <ProductFormModal
         visible={showCreateModal}
         isSubmitting={isSubmitting}
         form={form}
+        formError={formError}
+        isEditing={Boolean(editingProductId)}
         showCategoryDropdown={showCategoryDropdown}
         getCategoryLabel={getCategoryLabel}
         onClose={closeModal}
@@ -172,6 +207,23 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 4,
   },
+  filterRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+  },
+  filterChipActive: { backgroundColor: "#084C3D", borderColor: "#084C3D" },
+  filterChipText: { color: "#64748B", fontSize: 12, fontFamily: fonts.uiBold },
+  filterChipTextActive: { color: "#FFFFFF" },
   searchInput: {
     flex: 1,
     backgroundColor: "#FFFFFF",

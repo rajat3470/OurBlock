@@ -121,7 +121,11 @@ export const useBusinessOwnerProducts = () => {
   } = useBusinessOwner();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -169,13 +173,42 @@ export const useBusinessOwnerProducts = () => {
     const q = searchQuery.toLowerCase();
     return products.filter(
       (item) =>
-        (item.name ?? "").toLowerCase().includes(q) ||
-        (item.category ?? "").toLowerCase().includes(q)
+        (statusFilter === "all" || item.status === statusFilter) &&
+        ((item.name ?? "").toLowerCase().includes(q) ||
+          (item.category ?? "").toLowerCase().includes(q))
     );
-  }, [products, searchQuery]);
+  }, [products, searchQuery, statusFilter]);
 
   const resetForm = useCallback(() => {
     setForm(EMPTY_FORM);
+    setEditingProductId(null);
+    setFormError(null);
+  }, []);
+
+  const openCreateModal = useCallback(() => {
+    resetForm();
+    setShowCreateModal(true);
+  }, [resetForm]);
+
+  const openEditModal = useCallback((product: Product) => {
+    setEditingProductId(product.id);
+    setFormError(null);
+    setForm({
+      name: product.name ?? "",
+      category: product.category ?? "general",
+      menuSection: product.menuSection ?? "",
+      isVeg: product.isVeg !== false,
+      price: String(product.price ?? ""),
+      originalPrice: product.originalPrice ? String(product.originalPrice) : "",
+      stock: product.stock ?? 0,
+      stockText: String(product.stock ?? 0),
+      unit: (product.unit as ProductUnit) ?? "piece",
+      unitStep: String(product.unitStep ?? 1),
+      description: product.description ?? "",
+      imageUri: product.imageUrls?.[0] ?? null,
+      additionalImageUris: product.imageUrls?.slice(1, 4) ?? [],
+    });
+    setShowCreateModal(true);
   }, []);
 
   const closeModal = useCallback(() => {
@@ -362,22 +395,22 @@ export const useBusinessOwnerProducts = () => {
 
   const handleCreate = useCallback(async () => {
     if (!form.imageUri && form.additionalImageUris.length === 0) {
-      Alert.alert(content.alerts.missingImageTitle, content.alerts.missingImageMsg);
+      setFormError(content.alerts.missingImageMsg);
       return;
     }
     if (!form.name.trim()) {
-      Alert.alert(content.alerts.missingNameTitle, content.alerts.missingNameMsg);
+      setFormError(content.alerts.missingNameMsg);
       return;
     }
     if (!form.price.trim()) {
-      Alert.alert(content.alerts.missingPriceTitle, content.alerts.missingPriceMsg);
+      setFormError(content.alerts.missingPriceMsg);
       return;
     }
 
     if (form.unit !== "piece") {
       const step = parseFloat(form.unitStep);
       if (!step || step <= 0) {
-        Alert.alert(content.alerts.missingUnitStepTitle, content.alerts.missingUnitStepMsg);
+        setFormError(content.alerts.missingUnitStepMsg);
         return;
       }
     }
@@ -386,20 +419,21 @@ export const useBusinessOwnerProducts = () => {
     const originalPrice = form.originalPrice.trim() ? parseFloat(form.originalPrice) : undefined;
 
     if (Number.isNaN(price) || price <= 0) {
-      Alert.alert(content.alerts.invalidPriceTitle, content.alerts.invalidPriceMsg);
+      setFormError(content.alerts.invalidPriceMsg);
       return;
     }
     if (originalPrice !== undefined && (Number.isNaN(originalPrice) || originalPrice <= 0)) {
-      Alert.alert(content.alerts.invalidPriceTitle, content.alerts.invalidOriginalPriceMsg);
+      setFormError(content.alerts.invalidOriginalPriceMsg);
       return;
     }
 
     const stockNum = form.unit === "piece" ? form.stock : parseFloat(form.stockText) || 0;
     if (stockNum < 0) {
-      Alert.alert(content.alerts.invalidPriceTitle, content.alerts.invalidStockMsg);
+      setFormError(content.alerts.invalidStockMsg);
       return;
     }
 
+    setFormError(null);
     setIsSubmitting(true);
     try {
       const imageUrls = form.imageUri
@@ -412,7 +446,7 @@ export const useBusinessOwnerProducts = () => {
         return;
       }
 
-      await createProduct({
+      const productData = {
         name: form.name.trim(),
         category: form.category || "general",
         menuSection: form.menuSection.trim() || undefined,
@@ -423,44 +457,42 @@ export const useBusinessOwnerProducts = () => {
         stock: stockNum,
         unit: form.unit !== "piece" ? form.unit : undefined,
         unitStep: form.unit !== "piece" ? parseFloat(form.unitStep) || undefined : undefined,
-        status: "active",
+        status: "active" as const,
         imageUrls,
-      });
+      };
+      if (editingProductId) {
+        await editProduct(editingProductId, productData);
+      } else {
+        await createProduct(productData);
+      }
       setShowCreateModal(false);
       resetForm();
     } catch (err) {
       const msg = extractRequestError(err, content.alerts.createFailedFallback);
-      Alert.alert(content.alerts.createFailedTitle, msg);
+      setFormError(msg);
     } finally {
       setIsSubmitting(false);
     }
-  }, [form, createProduct, resetForm]);
+  }, [form, createProduct, editProduct, editingProductId, resetForm]);
 
   const handleDelete = useCallback((productId: string | undefined, productName: string) => {
     if (!productId) {
       Alert.alert(content.alerts.deleteErrorTitle, content.alerts.deleteNoIdMsg);
       return;
     }
-    Alert.alert(
-      content.alerts.deleteConfirmTitle,
-      content.alerts.deleteConfirmMsg.replace("{name}", productName),
-      [
-        { text: content.alerts.cancel, style: "cancel" },
-        {
-          text: content.alerts.delete,
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await removeProductById(productId);
-            } catch (err) {
-              const msg = err instanceof Error ? err.message : content.alerts.deleteFailedFallback;
-              Alert.alert(content.alerts.deleteFailedTitle, msg);
-            }
-          },
-        },
-      ]
-    );
-  }, [removeProductById]);
+    setDeleteTarget({ id: productId, name: productName });
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    try {
+      await removeProductById(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : content.alerts.deleteFailedFallback);
+      setDeleteTarget(null);
+    }
+  }, [deleteTarget, removeProductById]);
 
   const toggleStatus = useCallback(async (item: Product) => {
     const nextStatus = item.status === "active" ? "inactive" : "active";
@@ -489,8 +521,16 @@ export const useBusinessOwnerProducts = () => {
     filteredProducts,
     searchQuery,
     setSearchQuery,
+    statusFilter,
+    setStatusFilter,
     showCreateModal,
-    setShowCreateModal,
+    openCreateModal,
+    openEditModal,
+    editingProductId,
+    formError,
+    deleteTarget,
+    cancelDelete: () => setDeleteTarget(null),
+    confirmDelete,
     form,
     isSubmitting,
     showCategoryDropdown,

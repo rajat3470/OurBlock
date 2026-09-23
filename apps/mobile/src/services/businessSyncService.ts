@@ -4,6 +4,19 @@ import { socketService } from "./socketService";
 export type BusinessSyncCallback = (business: Business) => void;
 export type Unsubscribe = () => void;
 
+export function subscribeToBusinessProducts(
+  businessId: string,
+  onChange: () => void
+): Unsubscribe {
+  const roomKey = `business:${businessId}`;
+  socketService.joinRoom(roomKey, "join:business", { businessId });
+  const unsubscribe = socketService.on<{ businessId?: string }>("business:products:changed", (event) => {
+    if (event?.businessId !== businessId) return;
+    onChange();
+  });
+  return unsubscribe;
+}
+
 /**
  * Subscribe to real-time updates for a single business document.
  * Returns an unsubscribe function.

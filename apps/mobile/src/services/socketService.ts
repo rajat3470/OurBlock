@@ -16,7 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Set EXPO_PUBLIC_SOCKET_URL in your .env to point at your Socket.io server.
 // Without this, socket connection is disabled and polling fallback remains active.
-const ENABLE_SOCKET = process.env.EXPO_PUBLIC_ENABLE_SOCKET === "true";
+const ENABLE_SOCKET = process.env.EXPO_PUBLIC_ENABLE_SOCKET !== "false";
 const RAW_SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL ?? "";
 const SOCKET_URL = RAW_SOCKET_URL.replace(/\/api\/?$/, "");
 const SOCKET_PATH = process.env.EXPO_PUBLIC_SOCKET_PATH ?? "/socket.io";

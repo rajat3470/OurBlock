@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -20,6 +21,8 @@ interface ProductFormModalProps {
   visible: boolean;
   isSubmitting: boolean;
   form: ProductForm;
+  formError: string | null;
+  isEditing: boolean;
   showCategoryDropdown: boolean;
   getCategoryLabel: (value: string) => string;
   onClose: () => void;
@@ -43,6 +46,8 @@ export function ProductFormModal({
   visible,
   isSubmitting,
   form,
+  formError,
+  isEditing,
   showCategoryDropdown,
   getCategoryLabel,
   onClose,
@@ -61,6 +66,12 @@ export function ProductFormModal({
   onQuickAddStock,
   onSetFormField,
 }: ProductFormModalProps) {
+  const [categoryQuery, setCategoryQuery] = useState("");
+  const filteredCategories = useMemo(() => {
+    const query = categoryQuery.trim().toLowerCase();
+    return content.categories.filter((category) => category.label.toLowerCase().includes(query));
+  }, [categoryQuery]);
+  const supportsDietaryType = ["general", "grocery", "fruits_veg", "dairy", "bakery", "beverages", "snacks", "other"].includes(form.category);
   const discountPercent =
     form.originalPrice && form.price &&
     parseFloat(form.originalPrice) > parseFloat(form.price)
@@ -75,8 +86,8 @@ export function ProductFormModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      presentationStyle="fullScreen"
+      onRequestClose={() => undefined}
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -92,7 +103,7 @@ export function ProductFormModal({
             >
               <Text style={styles.modalCloseBtnText}>✕</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>{content.modal.title}</Text>
+            <Text style={styles.modalTitle}>{isEditing ? "Edit Product" : content.modal.title}</Text>
             <TouchableOpacity
               style={[
                 styles.modalSaveBtn,
@@ -115,6 +126,11 @@ export function ProductFormModal({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
+            {formError ? (
+              <View style={styles.formError}>
+                <Text style={styles.formErrorText}>{formError}</Text>
+              </View>
+            ) : null}
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>
                 {content.modal.photoLabel}{" "}
@@ -219,13 +235,20 @@ export function ProductFormModal({
               </TouchableOpacity>
               {showCategoryDropdown && (
                 <View style={styles.dropdownList}>
-                  {content.categories.map((cat, idx) => (
+                  <TextInput
+                    style={styles.categorySearch}
+                    value={categoryQuery}
+                    onChangeText={setCategoryQuery}
+                    placeholder="Search categories…"
+                    placeholderTextColor="#94A3B8"
+                  />
+                  {filteredCategories.map((cat, idx) => (
                     <TouchableOpacity
                       key={cat.value}
                       style={[
                         styles.dropdownItem,
                         form.category === cat.value && styles.dropdownItemSelected,
-                        idx === content.categories.length - 1 && { borderBottomWidth: 0 },
+                        idx === filteredCategories.length - 1 && { borderBottomWidth: 0 },
                       ]}
                       onPress={() => onSetCategory(cat.value)}
                     >
@@ -464,6 +487,7 @@ export function ProductFormModal({
               />
             </View>
 
+            {supportsDietaryType ? (
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>{content.modal.dietary}</Text>
               <View style={{ flexDirection: "row", gap: 10 }}>
@@ -502,6 +526,7 @@ export function ProductFormModal({
                 </TouchableOpacity>
               </View>
             </View>
+            ) : null}
 
             <TouchableOpacity
               style={[styles.saveBtn, isSubmitting && styles.saveBtnDisabled]}
@@ -523,6 +548,22 @@ export function ProductFormModal({
 }
 
 const styles = StyleSheet.create({
+  formError: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 14,
+  },
+  formErrorText: { color: "#B91C1C", fontSize: 13, fontWeight: "600" },
+  categorySearch: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+  },
   modalContainer: {
     flex: 1,
     backgroundColor: "#F8FAFC",

@@ -1,9 +1,11 @@
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
 import { subscribeToOrdersByBusiness } from "@services/orderSyncService";
-import { setOrders, upsertOrder } from "@store/slices/businessOwnerSlice";
+import { setBusinessProfile, setOrders, setProducts, upsertOrder } from "@store/slices/businessOwnerSlice";
 import { hasPendingWrite } from "@services/pendingWrites";
 import { businessOwnerService } from "@services/businessOwnerService";
+import { subscribeToBusiness, subscribeToBusinessProducts } from "@services/businessSyncService";
+import { socketService } from "@services/socketService";
 
 export function useBusinessOwnerRealtimeSync() {
   const dispatch = useAppDispatch();
@@ -27,5 +29,35 @@ export function useBusinessOwnerRealtimeSync() {
       if (hasPendingWrite(order.id)) return;
       dispatch(upsertOrder(order));
     });
+  }, [businessId, dispatch]);
+
+  useEffect(() => {
+    if (!businessId) return;
+
+    const refreshBusinessData = () => {
+      Promise.all([
+        businessOwnerService.getMyBusiness().then((business) => dispatch(setBusinessProfile(business))),
+        businessOwnerService.getMyProducts().then((response) => dispatch(setProducts(response.data))),
+        businessOwnerService.getMyOrders().then((response) => dispatch(setOrders(response.data))),
+      ]).catch(() => {});
+    };
+
+    const unsubscribeBusiness = subscribeToBusiness(businessId, (business) => {
+      if (hasPendingWrite(business.id)) return;
+      dispatch(setBusinessProfile(business));
+    });
+    const unsubscribeProducts = subscribeToBusinessProducts(businessId, () => {
+      businessOwnerService
+        .getMyProducts()
+        .then((response) => dispatch(setProducts(response.data)))
+        .catch(() => {});
+    });
+    const unsubscribeReconnect = socketService.on("connect", refreshBusinessData);
+
+    return () => {
+      unsubscribeReconnect();
+      unsubscribeProducts();
+      unsubscribeBusiness();
+    };
   }, [businessId, dispatch]);
 }

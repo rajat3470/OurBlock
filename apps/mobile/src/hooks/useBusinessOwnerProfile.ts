@@ -2,13 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
+import { useAppSelector } from "@hooks/useRedux";
 import { useAuth } from "@hooks/useAuth";
 import { useBusinessOwner } from "@hooks/useBusinessOwner";
 import { getBusinessStatus } from "@utils/businessStatus";
-import { subscribeToBusiness } from "@services/businessSyncService";
 import { businessOwnerService } from "@services/businessOwnerService";
-import { setBusinessProfile } from "@store/slices/businessOwnerSlice";
 import content from "@/content/boProfile.json";
 
 /**
@@ -17,7 +15,6 @@ import content from "@/content/boProfile.json";
  * and logout.
  */
 export const useBusinessOwnerProfile = () => {
-  const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const { logoutUser, changePassword } = useAuth();
   const { businessProfile, loadBusinessProfile } = useBusinessOwner();
@@ -42,13 +39,6 @@ export const useBusinessOwnerProfile = () => {
   useEffect(() => {
     loadBusinessProfile().catch(() => null);
   }, [loadBusinessProfile]);
-
-  useEffect(() => {
-    if (!businessProfile?.id) return;
-    return subscribeToBusiness(businessProfile.id, (updated) => {
-      dispatch(setBusinessProfile(updated));
-    });
-  }, [businessProfile?.id, dispatch]);
 
   useEffect(() => {
     if (businessProfile) {

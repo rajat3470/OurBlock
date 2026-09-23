@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { requireSuperAdmin } from "../middleware/superAdmin";
 import { AuthedRequest } from "../middleware/auth";
 import bcrypt from "bcryptjs";
+import { emitBusinessProductsChanged, emitBusinessUpdate } from "../lib/socket";
 
 const router = Router();
 router.use(requireSuperAdmin);
@@ -226,6 +227,7 @@ router.post("/products/:id/approve", async (req, res) => {
       where: { id: req.params.id },
       data: { approvalStatus: "approved", isVerified: true, approvalNote: null, status: "active" },
     });
+    emitBusinessProductsChanged(product.businessId);
     res.json({ success: true, data: product });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -238,6 +240,7 @@ router.post("/products/:id/reject", async (req, res) => {
       where: { id: req.params.id },
       data: { approvalStatus: "rejected", isVerified: false, approvalNote: req.body.note ?? null, status: "inactive" },
     });
+    emitBusinessProductsChanged(product.businessId);
     res.json({ success: true, data: product });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -248,6 +251,7 @@ router.post("/products/:id/reject", async (req, res) => {
 router.post("/businesses/:id/verify", async (req, res) => {
   try {
     const business = await prisma.business.update({ where: { id: req.params.id }, data: { isVerified: true } });
+    emitBusinessUpdate(business.id, business);
     res.json({ success: true, data: business });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -257,6 +261,7 @@ router.post("/businesses/:id/verify", async (req, res) => {
 router.post("/businesses/:id/reject", async (req, res) => {
   try {
     const business = await prisma.business.update({ where: { id: req.params.id }, data: { isVerified: false, rejectionReason: req.body.reason ?? null } });
+    emitBusinessUpdate(business.id, business);
     res.json({ success: true, data: business });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -369,6 +374,7 @@ router.post("/businesses/:id/blacklist-suspend", async (req: AuthedRequest, res)
     });
 
     const updated = await prisma.business.findUnique({ where: { id: business.id } });
+    if (updated) emitBusinessUpdate(business.id, updated);
     return res.json({ success: true, data: updated });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
@@ -396,6 +402,7 @@ router.post("/businesses/:id/blacklist-activate", async (req: AuthedRequest, res
     });
 
     const updated = await prisma.business.findUnique({ where: { id: business.id } });
+    if (updated) emitBusinessUpdate(business.id, updated);
     return res.json({ success: true, data: updated });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });

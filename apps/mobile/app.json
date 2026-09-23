@@ -19,7 +19,9 @@
     },
     "ios": {
       "bundleIdentifier": "com.mohallamitr.app",
-
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Mohalla Mitr uses your location to show nearby societies, businesses, and delivery information while you use the app."
+      },
       "icon": "./assets/icon.png",
       "splash": {
         "image": "./assets/splash-icon.png",
@@ -56,6 +58,7 @@
       "expo-font",
       "expo-image",
       "expo-router",
+      "@sentry/react-native/expo",
       [
         "expo-splash-screen",
         {

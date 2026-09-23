@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Tabs, useSegments } from "expo-router";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import RoleGate from "../../src/components/RoleGate";
 import AppTabIcon from "../../src/components/AppTabIcon";
 import PendingOrderBanner from "../../src/components/PendingOrderBanner";
@@ -107,6 +108,7 @@ const overlayStyles = StyleSheet.create({
 });
 
 export default function BusinessOwnerLayout() {
+  const insets = useSafeAreaInsets();
   useBusinessOwnerRealtimeSync();
   useOrderNotifications();
   useOwnerLocalOrderAlerts();
@@ -148,9 +150,9 @@ export default function BusinessOwnerLayout() {
             backgroundColor: "#FFFFFF",
             borderTopWidth: 1,
             borderTopColor: "#E9E3D4",
-            height: 64,
-            paddingBottom: 10,
-            paddingTop: 8,
+            height: 54 + Math.max(insets.bottom, 10),
+            paddingBottom: Math.max(insets.bottom, 10),
+            paddingTop: 6,
           },
           tabBarLabelStyle: {
             fontSize: 9.5,
