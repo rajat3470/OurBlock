@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from "react-native";
-import { categoryEmoji } from "@hooks/useHomeScreen";
+import { getCategoryEmoji, getCategoryLabel } from "@utils/categoryMetadata";
 
 interface CategoryTilesProps {
   categories: string[];
@@ -30,13 +30,13 @@ export function CategoryTiles({
               onPress={() => setSelectedCategory(active ? "all" : category)}
             >
               <View style={[styles.catIconBox, active ? styles.catIconBoxActive : null]}>
-                <Text style={styles.catIconEmoji}>{categoryEmoji(category)}</Text>
+                <Text style={styles.catIconEmoji}>{getCategoryEmoji(category)}</Text>
               </View>
               <Text
                 style={[styles.catTileLabel, active ? styles.catTileLabelActive : null]}
                 numberOfLines={1}
               >
-                {category}
+                {category === "all" ? category : getCategoryLabel(category)}
               </Text>
               <View style={[styles.catUnderline, active ? styles.catUnderlineActive : null]} />
             </TouchableOpacity>

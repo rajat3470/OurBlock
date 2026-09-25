@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { Product } from "@/types";
+import { categorySupportsDietary } from "@utils/categoryMetadata";
 import { getFirstImage } from "@hooks/useHomeScreen";
 import content from "@/content/home.json";
 
@@ -43,7 +44,7 @@ export function DishList({ dishes, businessNameById, onPressDish }: DishListProp
               </View>
               <View style={styles.dishInfo}>
                 <View style={styles.dishNameRow}>
-                  {dish.isVeg !== undefined ? (
+                  {dish.isVeg !== undefined && categorySupportsDietary(dish.category) ? (
                     <View
                       style={[
                         styles.dietMark,

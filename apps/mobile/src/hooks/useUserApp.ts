@@ -157,6 +157,18 @@ export const useUserApp = () => {
     [dispatch]
   );
 
+  /** Lightweight refresh — re-fetches only business list for the selected society. */
+  const refreshBusinesses = useCallback(async () => {
+    const societyId = state.selectedSocietyId;
+    if (!societyId) return;
+    try {
+      const businesses = await userAppService.getBusinessesBySociety(societyId);
+      dispatch(setBusinesses(Array.isArray(businesses) ? businesses : []));
+    } catch {
+      /* silent — data stays as-is */
+    }
+  }, [dispatch, state.selectedSocietyId]);
+
   return {
     ...state,
     initializeHome,
@@ -166,5 +178,6 @@ export const useUserApp = () => {
     toggleFavorite,
     placeOrder,
     cancelOrder,
+    refreshBusinesses,
   };
 };

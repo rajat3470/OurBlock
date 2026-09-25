@@ -1,5 +1,6 @@
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { Product } from "@/types";
+import { categorySupportsDietary } from "@utils/categoryMetadata";
 import content from "@/content/boProducts.json";
 
 interface ApprovalMeta {
@@ -69,7 +70,7 @@ export function ProductCard({
             <Text style={styles.productName} numberOfLines={2}>
               {product.name ?? content.card.noName}
             </Text>
-            {product.isVeg !== undefined && (
+            {product.isVeg !== undefined && categorySupportsDietary(product.category) && (
               <View style={product.isVeg ? styles.vegDot : styles.nonVegDot} />
             )}
           </View>

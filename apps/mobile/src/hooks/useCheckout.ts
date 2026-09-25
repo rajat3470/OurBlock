@@ -5,6 +5,7 @@ import { useToast } from "react-native-toast-notifications";
 import { useAppSelector } from "@hooks/useRedux";
 import { useUserApp } from "@hooks/useUserApp";
 import { userAppService } from "@services/userAppService";
+import { getBusinessStatus } from "@utils/businessStatus";
 import { Address } from "@/types";
 import { ORDER_FEES } from "@/constants";
 import content from "@/content/checkout.json";
@@ -105,7 +106,13 @@ export const useCheckout = () => {
       toast.show(content.toasts.cartEmpty, { type: "warning" });
       return;
     }
-    const storeMin = businesses.find((b) => b.id === cartBusinessId)?.minimumOrderAmount;
+    const cartBusiness = businesses.find((b) => b.id === cartBusinessId);
+    const businessStatus = cartBusiness ? getBusinessStatus(cartBusiness) : "open";
+    if (businessStatus !== "open") {
+      toast.show("This store is currently not accepting orders", { type: "warning" });
+      return;
+    }
+    const storeMin = cartBusiness?.minimumOrderAmount;
     const minOrder = storeMin && storeMin > 0 ? storeMin : MINIMUM_ORDER;
     if (subTotal < minOrder) {
       toast.show(`${content.toasts.minOrderPrefix} ${minOrder}`, { type: "warning" });

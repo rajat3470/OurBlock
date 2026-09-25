@@ -52,9 +52,7 @@ export function subscribeToBusinessesBySociety(
   socketService.joinRoom(roomKey, "join:society", { societyId });
 
   const unsubscribe = socketService.on<Business>("businesses:society:updated", (business) => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("[businessSync] society business update:", societyId, business.id);
-    }
+    console.log("[businessSync] society business update received:", societyId, business.id, "isTakingOrders:", business.isTakingOrders);
     onChange(business);
   });
 

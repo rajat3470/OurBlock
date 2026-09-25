@@ -9,12 +9,12 @@
 /* Begin PBXBuildFile section */
 		0317E90E8A2A47CD8ACE63BB /* OneSignalNotificationServiceExtension.appex in Copy Files */ = {isa = PBXBuildFile; fileRef = 26780A5D9FEB4D019793E713 /* OneSignalNotificationServiceExtension.appex */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		39D76BBA81E204456A46E00D /* libPods-mohallaMitr.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 515094776BBF13A709CB4BA5 /* libPods-mohallaMitr.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		4EEB55FAB755975E1A44CEDE /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 382FBCB5BFAC53F7FCD2F1A9 /* PrivacyInfo.xcprivacy */; };
+		6B792FF8FB85262378151402 /* libPods-OneSignalNotificationServiceExtension.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 904938D6263100F298195BFE /* libPods-OneSignalNotificationServiceExtension.a */; };
 		6ED8B6577C0244CE87C02A66 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D522095CDE54F999B97C8B1 /* NotificationService.swift */; };
-		8CC6CC76359DC17C92135DD9 /* Pods_mohallaMitr.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 605D1538FD6A2D7BDF9C35E8 /* Pods_mohallaMitr.framework */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		D0740C02FF69E8A308C89C38 /* Pods_OneSignalNotificationServiceExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5EF0503D9F2D288180263739 /* Pods_OneSignalNotificationServiceExtension.framework */; };
 		DAA30143ED70734F5234D1D7 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D96F25AA8EF455EDEDDD4D4 /* ExpoModulesProvider.swift */; };
 		E1A2B3C42D0307B40044C1D9 /* new_order_alert.wav in Resources */ = {isa = PBXBuildFile; fileRef = E1A2B3C32D0307B40044C1D9 /* new_order_alert.wav */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
@@ -54,12 +54,12 @@
 		382FBCB5BFAC53F7FCD2F1A9 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = mohallaMitr/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		4BE890ED8BAAAF8BAB556451 /* Pods-mohallaMitr.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-mohallaMitr.debug.xcconfig"; path = "Target Support Files/Pods-mohallaMitr/Pods-mohallaMitr.debug.xcconfig"; sourceTree = "<group>"; };
 		4D522095CDE54F999B97C8B1 /* NotificationService.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		515094776BBF13A709CB4BA5 /* libPods-mohallaMitr.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-mohallaMitr.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		55BA38F62E724C719CF2389A /* OneSignalNotificationServiceExtension.entitlements */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; path = OneSignalNotificationServiceExtension.entitlements; sourceTree = "<group>"; };
 		5D96F25AA8EF455EDEDDD4D4 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-mohallaMitr/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		5EF0503D9F2D288180263739 /* Pods_OneSignalNotificationServiceExtension.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_OneSignalNotificationServiceExtension.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		605D1538FD6A2D7BDF9C35E8 /* Pods_mohallaMitr.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_mohallaMitr.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		6182767A605D75ED847DCA65 /* Pods-OneSignalNotificationServiceExtension.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-OneSignalNotificationServiceExtension.debug.xcconfig"; path = "Target Support Files/Pods-OneSignalNotificationServiceExtension/Pods-OneSignalNotificationServiceExtension.debug.xcconfig"; sourceTree = "<group>"; };
 		8CB013D2EF814B3CA3F8223D /* OneSignalNotificationServiceExtension-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; path = "OneSignalNotificationServiceExtension-Info.plist"; sourceTree = "<group>"; };
+		904938D6263100F298195BFE /* libPods-OneSignalNotificationServiceExtension.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-OneSignalNotificationServiceExtension.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = mohallaMitr/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		E1A2B3C32D0307B40044C1D9 /* new_order_alert.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = new_order_alert.wav; path = mohallaMitr/new_order_alert.wav; sourceTree = "<group>"; };
@@ -73,7 +73,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0740C02FF69E8A308C89C38 /* Pods_OneSignalNotificationServiceExtension.framework in Frameworks */,
+				6B792FF8FB85262378151402 /* libPods-OneSignalNotificationServiceExtension.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -81,7 +81,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8CC6CC76359DC17C92135DD9 /* Pods_mohallaMitr.framework in Frameworks */,
+				39D76BBA81E204456A46E00D /* libPods-mohallaMitr.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -107,8 +107,8 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				605D1538FD6A2D7BDF9C35E8 /* Pods_mohallaMitr.framework */,
-				5EF0503D9F2D288180263739 /* Pods_OneSignalNotificationServiceExtension.framework */,
+				904938D6263100F298195BFE /* libPods-OneSignalNotificationServiceExtension.a */,
+				515094776BBF13A709CB4BA5 /* libPods-mohallaMitr.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -431,6 +431,7 @@
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/React-Core_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-cxxreact/React-cxxreact_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/SDWebImage/SDWebImage.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/Sentry/Sentry.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-launcher/EXDevLauncher.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/expo-dev-menu/EXDevMenu.bundle",
 			);
@@ -449,6 +450,7 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-Core_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-cxxreact_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/SDWebImage.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Sentry.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXDevLauncher.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/EXDevMenu.bundle",
 			);
@@ -466,8 +468,6 @@
 			inputPaths = (
 			);
 			name = "[CP-User] [RNGoogleMobileAds] Configuration";
-			outputPaths = (
-			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = true;

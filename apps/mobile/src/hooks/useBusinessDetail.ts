@@ -12,6 +12,7 @@ import { patchBusiness } from "@store/slices/userAppSlice";
 import { Business, Product, ProductAttribute } from "@/types";
 import { unitStepLabel, displayQuantity, maxCartSteps } from "@utils/helpers";
 import { getBusinessStatus } from "@utils/businessStatus";
+import { categorySupportsDietary } from "@utils/categoryMetadata";
 import { ORDER_FEES } from "@/constants";
 import content from "@/content/business.json";
 
@@ -90,13 +91,19 @@ export const useBusinessDetail = () => {
   const bizCartCount = bizCartItems.reduce((acc, i) => acc + i.quantity, 0);
   const bizSubtotal = bizCartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
 
-  const hasVeg = useMemo(() => products.some((p) => p.isVeg === true), [products]);
-  const hasNonVeg = useMemo(() => products.some((p) => p.isVeg === false), [products]);
+  const hasVeg = useMemo(
+    () => products.some((p) => p.isVeg === true && categorySupportsDietary(p.category)),
+    [products]
+  );
+  const hasNonVeg = useMemo(
+    () => products.some((p) => p.isVeg === false && categorySupportsDietary(p.category)),
+    [products]
+  );
   const hasBestseller = useMemo(() => products.some(isBestsellerProduct), [products]);
 
   const filteredProducts = useMemo(() => {
-    if (dietFilter === "veg") return products.filter((p) => p.isVeg === true);
-    if (dietFilter === "nonveg") return products.filter((p) => p.isVeg === false);
+    if (dietFilter === "veg") return products.filter((p) => p.isVeg === true && categorySupportsDietary(p.category));
+    if (dietFilter === "nonveg") return products.filter((p) => p.isVeg === false && categorySupportsDietary(p.category));
     if (dietFilter === "bestseller") return products.filter(isBestsellerProduct);
     return products;
   }, [products, dietFilter]);
@@ -171,6 +178,15 @@ export const useBusinessDetail = () => {
     loadProducts();
   }, [businessId]);
 
+  // Keep local business state in sync with the Redux store so that
+  // status changes from polling / socket (e.g. shop going paused/closed)
+  // immediately update isOrderable and hide the Add buttons.
+  useEffect(() => {
+    if (!businessId) return;
+    const fresh = businesses.find((b) => b.id === businessId);
+    if (fresh) setBusiness(fresh);
+  }, [businesses, businessId]);
+
   const openCustomize = useCallback((product: Product) => {
     const groups = groupAttributes(product.attributes);
     const initial: Record<string, string> = {};
@@ -185,6 +201,11 @@ export const useBusinessDetail = () => {
   const commitCustomize = useCallback(() => {
     const product = customizeProduct;
     if (!product) return;
+    if (!isOrderable) {
+      setCustomizeProduct(null);
+      toast.show("This store is currently not accepting orders", { type: "warning" });
+      return;
+    }
     const imageUrl = getFirstImageUrl(product.imageUrls);
     const maxSteps = maxCartSteps(product.stock, product.unit, product.unitStep);
     if (maxSteps <= 0) {
@@ -230,10 +251,14 @@ export const useBusinessDetail = () => {
       return;
     }
     run();
-  }, [business, cartBusinessId, customizeProduct, customizeQty, dispatch, selectedOptions, toast]);
+  }, [business, cartBusinessId, customizeProduct, customizeQty, dispatch, selectedOptions, toast, isOrderable]);
 
   const addProductToCart = useCallback(
     (product: Product) => {
+      if (!isOrderable) {
+        toast.show("This store is currently not accepting orders", { type: "warning" });
+        return;
+      }
       if (maxCartSteps(product.stock, product.unit, product.unitStep) <= 0) {
         toast.show(content.outOfStock, { type: "warning" });
         return;
@@ -254,7 +279,7 @@ export const useBusinessDetail = () => {
       );
       toast.show(`${product.name}${content.toasts.addedSuffix}`, { type: "success" });
     },
-    [business, dispatch, toast]
+    [business, dispatch, toast, isOrderable]
   );
 
   const handleAddPress = useCallback(

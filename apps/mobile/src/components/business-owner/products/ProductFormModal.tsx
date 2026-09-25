@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -11,11 +11,24 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  type LayoutChangeEvent,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { ProductForm } from "@hooks/useBusinessOwnerProducts";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { ProductForm, type CategoryMetadata } from "@hooks/useBusinessOwnerProducts";
+import { isCategoryRecommended } from "@utils/categoryMetadata";
 import { type ProductUnit } from "@utils/helpers";
 import content from "@/content/boProducts.json";
+
+type ErrorField = "photo" | "name" | "price" | "mrp" | "unitStep";
+
+const ERROR_FIELDS: Record<string, ErrorField> = {
+  [content.alerts.missingImageMsg]: "photo",
+  [content.alerts.missingNameMsg]: "name",
+  [content.alerts.missingPriceMsg]: "price",
+  [content.alerts.invalidPriceMsg]: "price",
+  [content.alerts.invalidOriginalPriceMsg]: "mrp",
+  [content.alerts.missingUnitStepMsg]: "unitStep",
+};
 
 interface ProductFormModalProps {
   visible: boolean;
@@ -24,7 +37,9 @@ interface ProductFormModalProps {
   formError: string | null;
   isEditing: boolean;
   showCategoryDropdown: boolean;
-  getCategoryLabel: (value: string) => string;
+  businessCategory?: string;
+  getCategoryMetadata: (value: string) => CategoryMetadata | undefined;
+  getCategoriesForBusinessType: (businessCategory?: string) => CategoryMetadata[];
   onClose: () => void;
   onSave: () => void;
   onShowImageOptions: () => void;
@@ -40,6 +55,12 @@ interface ProductFormModalProps {
   onSetStockText: (value: string) => void;
   onQuickAddStock: (amount: number) => void;
   onSetFormField: <K extends keyof ProductForm>(field: K, value: ProductForm[K]) => void;
+  onAddAttribute: () => void;
+  onRemoveAttribute: (index: number) => void;
+  onSetAttributeName: (index: number, name: string) => void;
+  onAddAttributeValue: (index: number) => void;
+  onRemoveAttributeValue: (attrIndex: number, valueIndex: number) => void;
+  onSetAttributeValue: (attrIndex: number, valueIndex: number, value: string) => void;
 }
 
 export function ProductFormModal({
@@ -49,7 +70,9 @@ export function ProductFormModal({
   formError,
   isEditing,
   showCategoryDropdown,
-  getCategoryLabel,
+  businessCategory,
+  getCategoryMetadata,
+  getCategoriesForBusinessType,
   onClose,
   onSave,
   onShowImageOptions,
@@ -65,13 +88,54 @@ export function ProductFormModal({
   onSetStockText,
   onQuickAddStock,
   onSetFormField,
+  onAddAttribute,
+  onRemoveAttribute,
+  onSetAttributeName,
+  onAddAttributeValue,
+  onRemoveAttributeValue,
+  onSetAttributeValue,
 }: ProductFormModalProps) {
-  const [categoryQuery, setCategoryQuery] = useState("");
-  const filteredCategories = useMemo(() => {
-    const query = categoryQuery.trim().toLowerCase();
-    return content.categories.filter((category) => category.label.toLowerCase().includes(query));
-  }, [categoryQuery]);
-  const supportsDietaryType = ["general", "grocery", "fruits_veg", "dairy", "bakery", "beverages", "snacks", "other"].includes(form.category);
+  const insets = useSafeAreaInsets();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [fieldLayouts, setFieldLayouts] = useState<Record<ErrorField, number>>({} as Record<ErrorField, number>);
+
+  const errorField = useMemo<ErrorField | null>(() => {
+    if (!formError) return null;
+    return ERROR_FIELDS[formError] ?? null;
+  }, [formError]);
+
+  useEffect(() => {
+    if (!errorField) return;
+    const y = fieldLayouts[errorField];
+    if (y !== undefined && scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: y - 20, animated: true });
+    }
+  }, [errorField, fieldLayouts]);
+
+  const onFieldLayout = (field: ErrorField) => (event: LayoutChangeEvent) => {
+    const y = event.nativeEvent?.layout?.y;
+    if (y === undefined) return;
+    setFieldLayouts((prev) => ({ ...prev, [field]: y }));
+  };
+
+  const renderFieldError = (field: ErrorField) => {
+    if (errorField !== field || !formError) return null;
+    return (
+      <View style={styles.inlineError}>
+        <Text style={styles.inlineErrorText}>{formError}</Text>
+      </View>
+    );
+  };
+
+  const categoryMeta = getCategoryMetadata(form.category);
+  const supportsDietaryType = categoryMeta?.supportsDietary ?? false;
+  const supportsMenuSection = categoryMeta?.supportsMenuSection ?? false;
+  const requiresUnitStep = categoryMeta?.requiresUnitStep ?? false;
+  const unitStepPresets = categoryMeta?.unitStepPresets ?? content.unitStepPresets;
+  const quickAddValues = categoryMeta?.quickAddStockValues ?? content.quickAddValues;
+  const supportsAttributes = categoryMeta?.supportsAttributes ?? false;
+
+
   const discountPercent =
     form.originalPrice && form.price &&
     parseFloat(form.originalPrice) > parseFloat(form.price)
@@ -95,7 +159,7 @@ export function ProductFormModal({
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+          <View style={[styles.modalHeader, { paddingTop: insets.top + 2 }]}>
             <TouchableOpacity
               onPress={onClose}
               style={styles.modalCloseBtn}
@@ -121,23 +185,19 @@ export function ProductFormModal({
           </View>
 
           <ScrollView
+            ref={scrollViewRef}
             style={{ flex: 1 }}
             contentContainerStyle={styles.modalScroll}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {formError ? (
-              <View style={styles.formError}>
-                <Text style={styles.formErrorText}>{formError}</Text>
-              </View>
-            ) : null}
-            <View style={styles.fieldGroup}>
+            <View style={styles.fieldGroup} onLayout={onFieldLayout("photo")}>
               <Text style={styles.fieldLabel}>
                 {content.modal.photoLabel}{" "}
                 <Text style={styles.required}>{content.modal.required}</Text>
               </Text>
               <TouchableOpacity
-                style={styles.imagePicker}
+                style={[styles.imagePicker, errorField === "photo" && styles.imagePickerError]}
                 onPress={onShowImageOptions}
                 activeOpacity={0.8}
               >
@@ -165,6 +225,7 @@ export function ProductFormModal({
                   </View>
                 )}
               </TouchableOpacity>
+              {renderFieldError("photo")}
             </View>
 
             <View style={styles.fieldGroup}>
@@ -203,13 +264,13 @@ export function ProductFormModal({
               </View>
             </View>
 
-            <View style={styles.fieldGroup}>
+            <View style={styles.fieldGroup} onLayout={onFieldLayout("name")}>
               <Text style={styles.fieldLabel}>
                 {content.modal.productName}{" "}
                 <Text style={styles.required}>{content.modal.required}</Text>
               </Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, errorField === "name" && styles.inputError]}
                 value={form.name}
                 onChangeText={(v) => onSetFormField("name", v)}
                 placeholder={content.modal.productNamePlaceholder}
@@ -217,6 +278,7 @@ export function ProductFormModal({
                 returnKeyType="next"
                 maxLength={100}
               />
+              {renderFieldError("name")}
             </View>
 
             <View style={styles.fieldGroup}>
@@ -226,85 +288,52 @@ export function ProductFormModal({
                 onPress={onToggleCategoryDropdown}
                 activeOpacity={0.8}
               >
-                <Text style={styles.dropdownTriggerText}>
-                  {getCategoryLabel(form.category)}
-                </Text>
-                <Text style={styles.dropdownArrow}>
-                  {showCategoryDropdown ? "▲" : "▼"}
-                </Text>
-              </TouchableOpacity>
-              {showCategoryDropdown && (
-                <View style={styles.dropdownList}>
-                  <TextInput
-                    style={styles.categorySearch}
-                    value={categoryQuery}
-                    onChangeText={setCategoryQuery}
-                    placeholder="Search categories…"
-                    placeholderTextColor="#94A3B8"
-                  />
-                  {filteredCategories.map((cat, idx) => (
-                    <TouchableOpacity
-                      key={cat.value}
-                      style={[
-                        styles.dropdownItem,
-                        form.category === cat.value && styles.dropdownItemSelected,
-                        idx === filteredCategories.length - 1 && { borderBottomWidth: 0 },
-                      ]}
-                      onPress={() => onSetCategory(cat.value)}
-                    >
-                      <Text
-                        style={[
-                          styles.dropdownItemText,
-                          form.category === cat.value && styles.dropdownItemTextSelected,
-                        ]}
-                      >
-                        {cat.label}
-                      </Text>
-                      {form.category === cat.value && (
-                        <Text style={styles.dropdownCheck}>✓</Text>
-                      )}
-                    </TouchableOpacity>
-                  ))}
+                <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+                  <Text style={styles.categoryEmoji}>{getCategoryMetadata(form.category)?.emoji ?? "🏷️"}</Text>
+                  <Text style={styles.dropdownTriggerText}>
+                    {getCategoryMetadata(form.category)?.label ?? form.category}
+                  </Text>
                 </View>
-              )}
+                <Text style={styles.dropdownArrow}>▼</Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>{content.modal.unit}</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                 {content.units.map((opt) => (
-                  <TouchableOpacity
-                    key={opt.value}
-                    style={[
-                      styles.dietChip,
-                      form.unit === opt.value && styles.dietChipVegActive,
-                    ]}
-                    onPress={() => onSetUnit(opt.value as ProductUnit)}
-                    activeOpacity={0.8}
-                  >
-                    <Text
+                    <TouchableOpacity
+                      key={opt.value}
                       style={[
-                        styles.dietChipText,
-                        form.unit === opt.value && { color: "#0B2E22", fontWeight: "700" },
+                        styles.dietChip,
+                        form.unit === opt.value && styles.dietChipVegActive,
                       ]}
+                      onPress={() => onSetUnit(opt.value as ProductUnit)}
+                      activeOpacity={0.8}
                     >
-                      {opt.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={[
+                          styles.dietChipText,
+                          form.unit === opt.value && { color: "#0B2E22", fontWeight: "700" },
+                        ]}
+                      >
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
               </View>
             </View>
 
-            {form.unit !== "piece" && (
-              <View style={styles.fieldGroup}>
+            {form.unit !== "piece" && requiresUnitStep && (
+              <View style={styles.fieldGroup} onLayout={onFieldLayout("unitStep")}>
                 <Text style={styles.fieldLabel}>
                   {content.modal.unitStep}{" "}
                   <Text style={styles.optional}>{content.modal.unitStepOptional}</Text>
                 </Text>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                  {content.unitStepPresets[
+                <View style={[styles.unitStepRow, errorField === "unitStep" && styles.unitStepError]}>
+                  {(unitStepPresets[
                     form.unit as Exclude<ProductUnit, "piece">
-                  ].map((preset) => (
+                  ] ?? []).map((preset) => (
                     <TouchableOpacity
                       key={preset.value}
                       style={[
@@ -328,6 +357,7 @@ export function ProductFormModal({
                     </TouchableOpacity>
                   ))}
                 </View>
+                {renderFieldError("unitStep")}
                 <Text style={styles.charCount}>
                   Price you enter = price per{" "}
                   {
@@ -340,13 +370,13 @@ export function ProductFormModal({
               </View>
             )}
 
-            <View style={styles.priceFieldRow}>
+            <View style={styles.priceFieldRow} onLayout={onFieldLayout("price")}>
               <View style={[styles.fieldGroup, { flex: 1 }]}>
                 <Text style={styles.fieldLabel}>
                   {content.modal.priceLabel}{" "}
                   <Text style={styles.required}>{content.modal.required}</Text>
                 </Text>
-                <View style={styles.priceInputWrap}>
+                <View style={[styles.priceInputWrap, errorField === "price" && styles.inputError]}>
                   <Text style={styles.pricePrefix}>{content.currency}</Text>
                   <TextInput
                     style={styles.priceInput}
@@ -358,11 +388,12 @@ export function ProductFormModal({
                     returnKeyType="next"
                   />
                 </View>
+                {renderFieldError("price")}
               </View>
               <View style={{ width: 12 }} />
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
+              <View style={[styles.fieldGroup, { flex: 1 }]} onLayout={onFieldLayout("mrp")}>
                 <Text style={styles.fieldLabel}>{content.modal.mrpLabel}</Text>
-                <View style={styles.priceInputWrap}>
+                <View style={[styles.priceInputWrap, errorField === "mrp" && styles.inputError]}>
                   <Text style={styles.pricePrefix}>{content.currency}</Text>
                   <TextInput
                     style={styles.priceInput}
@@ -374,6 +405,7 @@ export function ProductFormModal({
                     returnKeyType="next"
                   />
                 </View>
+                {renderFieldError("mrp")}
               </View>
             </View>
 
@@ -390,12 +422,12 @@ export function ProductFormModal({
 
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>
-                {form.unit === "piece"
+                {form.unit === "piece" || form.unit === undefined
                   ? content.modal.stockPiece
                   : `${content.modal.stockUnitPrefix}${form.unit}${content.modal.stockUnitSuffix}`}
               </Text>
 
-              {form.unit === "piece" ? (
+              {form.unit === "piece" || form.unit === undefined ? (
                 <>
                   <View style={styles.counterRow}>
                     <TouchableOpacity
@@ -426,7 +458,7 @@ export function ProductFormModal({
                   </View>
                   <View style={styles.quickAddRow}>
                     <Text style={styles.quickAddLabel}>{content.modal.quickAdd}</Text>
-                    {content.quickAddValues.map((n) => (
+                    {quickAddValues.map((n) => (
                       <TouchableOpacity
                         key={n}
                         style={styles.quickAddBtn}
@@ -475,58 +507,125 @@ export function ProductFormModal({
               <Text style={styles.charCount}>{form.description.length}/500</Text>
             </View>
 
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>{content.modal.menuSection}</Text>
-              <TextInput
-                style={styles.input}
-                value={form.menuSection}
-                onChangeText={(v) => onSetFormField("menuSection", v)}
-                placeholder={content.modal.menuSectionPlaceholder}
-                placeholderTextColor="#94A3B8"
-                maxLength={40}
-              />
-            </View>
+            {supportsMenuSection ? (
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>{content.modal.menuSection}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={form.menuSection}
+                  onChangeText={(v) => onSetFormField("menuSection", v)}
+                  placeholder={content.modal.menuSectionPlaceholder}
+                  placeholderTextColor="#94A3B8"
+                  maxLength={40}
+                />
+              </View>
+            ) : null}
 
             {supportsDietaryType ? (
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>{content.modal.dietary}</Text>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <TouchableOpacity
-                  style={[styles.dietChip, form.isVeg && styles.dietChipVegActive]}
-                  onPress={() => onSetFormField("isVeg", true)}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.vegDot} />
-                  <Text
-                    style={[
-                      styles.dietChipText,
-                      form.isVeg && { color: "#0B2E22", fontWeight: "700" },
-                    ]}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>{content.modal.dietary}</Text>
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <TouchableOpacity
+                    style={[styles.dietChip, form.isVeg && styles.dietChipVegActive]}
+                    onPress={() => onSetFormField("isVeg", true)}
+                    activeOpacity={0.8}
                   >
-                    {content.modal.veg}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.dietChip,
-                    !form.isVeg && styles.dietChipNonVegActive,
-                  ]}
-                  onPress={() => onSetFormField("isVeg", false)}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.nonVegDot} />
-                  <Text
+                    <View style={styles.vegDot} />
+                    <Text
+                      style={[
+                        styles.dietChipText,
+                        form.isVeg && { color: "#0B2E22", fontWeight: "700" },
+                      ]}
+                    >
+                      {content.modal.veg}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={[
-                      styles.dietChipText,
-                      !form.isVeg && { color: "#991B1B", fontWeight: "700" },
+                      styles.dietChip,
+                      !form.isVeg && styles.dietChipNonVegActive,
                     ]}
+                    onPress={() => onSetFormField("isVeg", false)}
+                    activeOpacity={0.8}
                   >
-                    {content.modal.nonVeg}
-                  </Text>
+                    <View style={styles.nonVegDot} />
+                    <Text
+                      style={[
+                        styles.dietChipText,
+                        !form.isVeg && { color: "#991B1B", fontWeight: "700" },
+                      ]}
+                    >
+                      {content.modal.nonVeg}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : null}
+
+            {supportsAttributes && (
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>
+                  {content.modal.attributes}{" "}
+                  <Text style={styles.optional}>{content.modal.attributesOptional}</Text>
+                </Text>
+                {form.attributes.map((attr, attrIdx) => (
+                  <View key={attrIdx} style={styles.attributeCard}>
+                    <View style={styles.attributeHeader}>
+                      <TextInput
+                        style={styles.attributeNameInput}
+                        value={attr.name}
+                        onChangeText={(v) => onSetAttributeName(attrIdx, v)}
+                        placeholder={content.modal.attributeNamePlaceholder}
+                        placeholderTextColor="#94A3B8"
+                      />
+                      <TouchableOpacity
+                        style={styles.attributeRemoveBtn}
+                        onPress={() => onRemoveAttribute(attrIdx)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.attributeRemoveBtnText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.attributeValuesRow}>
+                      {attr.values.map((value, valueIdx) => (
+                        <View key={valueIdx} style={styles.attributeValueChip}>
+                          <TextInput
+                            style={styles.attributeValueInput}
+                            value={value}
+                            onChangeText={(v) => onSetAttributeValue(attrIdx, valueIdx, v)}
+                            placeholder={content.modal.attributeValuePlaceholder}
+                            placeholderTextColor="#94A3B8"
+                          />
+                          {attr.values.length > 1 && (
+                            <TouchableOpacity
+                              style={styles.attributeValueRemoveBtn}
+                              onPress={() => onRemoveAttributeValue(attrIdx, valueIdx)}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.attributeValueRemoveBtnText}>✕</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      ))}
+                      <TouchableOpacity
+                        style={styles.addAttributeValueBtn}
+                        onPress={() => onAddAttributeValue(attrIdx)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.addAttributeValueBtnText}>{content.modal.addValue}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+                <TouchableOpacity
+                  style={styles.addAttributeBtn}
+                  onPress={onAddAttribute}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.addAttributeBtnText}>{content.modal.addAttribute}</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-            ) : null}
+            )}
 
             <TouchableOpacity
               style={[styles.saveBtn, isSubmitting && styles.saveBtnDisabled]}
@@ -543,6 +642,116 @@ export function ProductFormModal({
           </ScrollView>
         </SafeAreaView>
       </KeyboardAvoidingView>
+
+      <CategoryPickerModal
+        visible={showCategoryDropdown}
+        onClose={onToggleCategoryDropdown}
+        selectedValue={form.category}
+        businessCategory={businessCategory}
+        getCategoriesForBusinessType={getCategoriesForBusinessType}
+        onSelect={onSetCategory}
+      />
+    </Modal>
+  );
+}
+
+interface CategoryPickerModalProps {
+  visible: boolean;
+  onClose: () => void;
+  selectedValue: string;
+  businessCategory?: string;
+  getCategoriesForBusinessType: (businessCategory?: string) => CategoryMetadata[];
+  onSelect: (value: string) => void;
+}
+
+function CategoryPickerModal({
+  visible,
+  onClose,
+  selectedValue,
+  businessCategory,
+  getCategoriesForBusinessType,
+  onSelect,
+}: CategoryPickerModalProps) {
+  const insets = useSafeAreaInsets();
+  const [query, setQuery] = useState("");
+  const allOptions = useMemo(() => getCategoriesForBusinessType(businessCategory), [businessCategory, getCategoriesForBusinessType]);
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return allOptions;
+    return allOptions.filter((cat) => cat.label.toLowerCase().includes(q));
+  }, [allOptions, query]);
+
+  const recommended = useMemo(() => filtered.filter((c) => isCategoryRecommended(c.value, businessCategory)), [filtered, businessCategory]);
+  const others = useMemo(() => filtered.filter((c) => !isCategoryRecommended(c.value, businessCategory)), [filtered, businessCategory]);
+  const showSections = Boolean(businessCategory) && recommended.length > 0 && others.length > 0;
+
+  const handleSelect = useCallback(
+    (value: string) => {
+      onSelect(value);
+      onClose();
+    },
+    [onSelect, onClose]
+  );
+
+  const renderItem = (cat: CategoryMetadata, isLast: boolean) => {
+    const selected = selectedValue === cat.value;
+    return (
+      <TouchableOpacity
+        key={cat.value}
+        style={[styles.categoryModalItem, selected && styles.categoryModalItemSelected, isLast && { borderBottomWidth: 0 }]}
+        onPress={() => handleSelect(cat.value)}
+        activeOpacity={0.7}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+          <Text style={styles.categoryModalEmoji}>{cat.emoji ?? "🏷️"}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.categoryModalItemText, selected && styles.categoryModalItemTextSelected]}>{cat.label}</Text>
+            {!isCategoryRecommended(cat.value, businessCategory) && (
+              <Text style={styles.categoryModalHint}>Not typical for your shop type</Text>
+            )}
+          </View>
+        </View>
+        {selected && <Text style={styles.categoryModalCheck}>✓</Text>}
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
+        <View style={[styles.categoryModalHeader, { paddingTop: insets.top + 8 }]}>
+          <TouchableOpacity style={styles.modalCloseBtn} onPress={onClose} activeOpacity={0.7}>
+            <Text style={styles.modalCloseBtnText}>✕</Text>
+          </TouchableOpacity>
+          <Text style={styles.categoryModalTitle}>Select Category</Text>
+          <View style={{ width: 34 }} />
+        </View>
+        <View style={styles.categoryModalSearchWrap}>
+          <TextInput
+            style={styles.categoryModalSearch}
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search categories…"
+            placeholderTextColor="#94A3B8"
+            autoFocus
+          />
+        </View>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}>
+          {showSections && (
+            <View style={styles.categoryModalSectionHeader}>
+              <Text style={styles.categoryModalSectionHeaderText}>Recommended for your shop</Text>
+            </View>
+          )}
+          {recommended.map((cat, idx) => renderItem(cat, !showSections && idx === recommended.length - 1 && others.length === 0))}
+          {showSections && (
+            <View style={styles.categoryModalSectionHeader}>
+              <Text style={styles.categoryModalSectionHeaderText}>All Categories</Text>
+            </View>
+          )}
+          {others.map((cat, idx) => renderItem(cat, idx === others.length - 1))}
+          {!showSections && filtered.map((cat, idx) => renderItem(cat, idx === filtered.length - 1))}
+        </ScrollView>
+      </SafeAreaView>
     </Modal>
   );
 }
@@ -557,12 +766,217 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   formErrorText: { color: "#B91C1C", fontSize: 13, fontWeight: "600" },
+  inlineError: {
+    marginTop: 8,
+  },
+  inlineErrorText: {
+    color: "#B91C1C",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  inputError: {
+    borderColor: "#EF4444",
+    backgroundColor: "#FEF2F2",
+  },
+  unitStepRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  unitStepError: {
+    padding: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#EF4444",
+    backgroundColor: "#FEF2F2",
+  },
+  attributeCard: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  attributeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 10,
+  },
+  attributeNameInput: {
+    flex: 1,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: "#0F172A",
+  },
+  attributeRemoveBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  attributeRemoveBtnText: {
+    color: "#DC2626",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  attributeValuesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    alignItems: "center",
+  },
+  attributeValueChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
+    paddingLeft: 10,
+  },
+  attributeValueInput: {
+    width: 90,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: "#0F172A",
+  },
+  attributeValueRemoveBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  attributeValueRemoveBtnText: {
+    color: "#DC2626",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  addAttributeValueBtn: {
+    backgroundColor: "#F0FDF4",
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  addAttributeValueBtnText: {
+    color: "#084C3D",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  addAttributeBtn: {
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderStyle: "dashed",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    backgroundColor: "#F8FAFC",
+  },
+  addAttributeBtnText: {
+    color: "#084C3D",
+    fontSize: 13,
+    fontWeight: "700",
+  },
   categorySearch: {
     borderBottomWidth: 1,
     borderBottomColor: "#E2E8F0",
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
+  },
+  categoryEmoji: {
+    fontSize: 16,
+    marginRight: 10,
+  },
+  categoryModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  categoryModalTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#0F172A",
+  },
+  categoryModalSearchWrap: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  categoryModalSearch: {
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: "#0F172A",
+  },
+  categoryModalSectionHeader: {
+    backgroundColor: "#F1F5F9",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E2E8F0",
+  },
+  categoryModalSectionHeaderText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  categoryModalItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#F1F5F9",
+  },
+  categoryModalItemSelected: {
+    backgroundColor: "#F0FDF4",
+  },
+  categoryModalEmoji: {
+    fontSize: 20,
+    marginRight: 14,
+  },
+  categoryModalItemText: {
+    fontSize: 15,
+    color: "#374151",
+    fontWeight: "500",
+  },
+  categoryModalItemTextSelected: {
+    color: "#084C3D",
+    fontWeight: "700",
+  },
+  categoryModalHint: {
+    fontSize: 12,
+    color: "#94A3B8",
+    marginTop: 2,
+  },
+  categoryModalCheck: {
+    fontSize: 16,
+    color: "#084C3D",
+    fontWeight: "700",
   },
   modalContainer: {
     flex: 1,
@@ -657,6 +1071,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#E2E8F0",
     borderStyle: "dashed",
+  },
+  imagePickerError: {
+    borderColor: "#EF4444",
+    backgroundColor: "#FEF2F2",
   },
   imagePreview: {
     width: "100%",

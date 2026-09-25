@@ -1,11 +1,13 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Alert } from "react-native";
+import { useToast } from "react-native-toast-notifications";
 import { router } from "expo-router";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
 import { updateQuantity, removeItem, clearCart } from "@store/slices/cartSlice";
 import { useFeatureFlags } from "@hooks/useFeatureFlags";
 import { useRewardedAd } from "@hooks/useRewardedAd";
 import { userAppService } from "@services/userAppService";
+import { getBusinessStatus } from "@utils/businessStatus";
 import { ORDER_FEES } from "@/constants";
 import content from "@/content/cart.json";
 
@@ -16,6 +18,7 @@ const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
  * rewarded-ad coupon flow, and navigation.
  */
 export const useCart = () => {
+  const toast = useToast();
   const dispatch = useAppDispatch();
   const cartItems = useAppSelector((state) => state.cart.items);
   const cartBusinessId = useAppSelector((state) => state.cart.businessId);
@@ -27,12 +30,19 @@ export const useCart = () => {
     null
   );
 
-  const storeMin = businesses.find((b) => b.id === cartBusinessId)?.minimumOrderAmount;
+  const cartBusiness = useMemo(
+    () => businesses.find((b) => b.id === cartBusinessId) ?? null,
+    [businesses, cartBusinessId]
+  );
+  const businessStatus = cartBusiness ? getBusinessStatus(cartBusiness) : "open";
+  const isStoreOpen = businessStatus === "open";
+
+  const storeMin = cartBusiness?.minimumOrderAmount;
   const MIN_ORDER = storeMin && storeMin > 0 ? storeMin : MINIMUM_ORDER;
 
   const subTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const finalAmount = subTotal + PLATFORM_FEE;
-  const canCheckout = cartItems.length > 0 && subTotal >= MIN_ORDER;
+  const canCheckout = cartItems.length > 0 && isStoreOpen && subTotal >= MIN_ORDER;
 
   const handleWatchAd = useCallback(async () => {
     const earned = await showRewardedAd();
@@ -89,7 +99,13 @@ export const useCart = () => {
   }, []);
 
   const goToHome = useCallback(() => router.push("/(user)/home"), []);
-  const goToCheckout = useCallback(() => router.push("/(user)/checkout"), []);
+  const goToCheckout = useCallback(() => {
+    if (!isStoreOpen) {
+      toast.show("This store is currently not accepting orders", { type: "warning" });
+      return;
+    }
+    router.push("/(user)/checkout");
+  }, [isStoreOpen, toast]);
 
   return {
     cartItems,
@@ -97,6 +113,8 @@ export const useCart = () => {
     finalAmount,
     canCheckout,
     minOrder: MIN_ORDER,
+    businessStatus,
+    isStoreOpen,
     isRewardedEnabled,
     ffValues,
     adState,

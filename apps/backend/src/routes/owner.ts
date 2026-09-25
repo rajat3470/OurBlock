@@ -290,6 +290,7 @@ router.patch("/business/taking-orders", requireAuth, async (req: AuthedRequest, 
     if (!business) return res.status(404).json({ success: false, error: "No business found" });
 
     const updated = await prisma.business.update({ where: { id: business.id }, data: { isTakingOrders } });
+    console.log("[owner/taking-orders] emitting update for business", business.id, "societyId:", updated.societyId, "isTakingOrders:", updated.isTakingOrders);
     emitBusinessUpdate(business.id, updated);
     return res.json({ success: true, data: { isTakingOrders } });
   } catch (error: any) {

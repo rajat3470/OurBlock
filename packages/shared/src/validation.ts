@@ -40,6 +40,11 @@ export const businessSchema = z.object({
 });
 
 // Product Validation
+export const productAttributeSchema = z.object({
+  name: z.string().min(1, 'Attribute name is required').max(50),
+  value: z.string().min(1, 'Attribute value is required').max(100),
+});
+
 export const productSchema = z.object({
   name: z.string().min(1, 'Product name is required').max(VALIDATION_LIMITS.PRODUCT_NAME_MAX),
   description: z.string().max(VALIDATION_LIMITS.PRODUCT_DESC_MAX).optional(),
@@ -49,6 +54,7 @@ export const productSchema = z.object({
   discount: z.number().min(0).max(100).optional(),
   stock: z.number().int().min(0, 'Stock cannot be negative'),
   imageUrls: z.array(z.string().url()).max(VALIDATION_LIMITS.MAX_IMAGES_PER_PRODUCT),
+  attributes: z.array(productAttributeSchema).max(20).optional(),
 });
 
 // Address Validation

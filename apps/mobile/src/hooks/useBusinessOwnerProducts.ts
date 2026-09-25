@@ -4,9 +4,19 @@ import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBusinessOwner } from "@hooks/useBusinessOwner";
-import { Product } from "@/types";
+import { Product, ProductAttribute } from "@/types";
 import { type ProductUnit } from "@utils/helpers";
+import {
+  type CategoryMetadata,
+  getCategoryMetadata,
+  getCategoriesForBusinessType,
+} from "@utils/categoryMetadata";
 import content from "@/content/boProducts.json";
+
+export interface ProductAttributeForm {
+  name: string;
+  values: string[];
+}
 
 export interface ProductForm {
   name: string;
@@ -22,6 +32,7 @@ export interface ProductForm {
   description: string;
   imageUri: string | null;
   additionalImageUris: string[];
+  attributes: ProductAttributeForm[];
 }
 
 const EMPTY_FORM: ProductForm = {
@@ -38,6 +49,7 @@ const EMPTY_FORM: ProductForm = {
   description: "",
   imageUri: null,
   additionalImageUris: [],
+  attributes: [],
 };
 
 const MAX_TOTAL_IMAGE_CHARS = 850_000;
@@ -84,8 +96,25 @@ function getTotalImageChars(values: string[]) {
   return values.reduce((sum, value) => sum + value.length, 0);
 }
 
-function getCategoryLabel(value: string) {
-  return content.categories.find((c) => c.value === value)?.label ?? content.modal.categoryPlaceholder;
+export type { CategoryMetadata };
+
+function getDefaultFormForBusinessType(businessCategory?: string): ProductForm {
+  const categories = getCategoriesForBusinessType(businessCategory);
+  const firstCategory = categories.find((c) => c.value !== "general" && c.value !== "other") ?? categories[0];
+  if (!firstCategory) return EMPTY_FORM;
+  return applyCategoryDefaults(EMPTY_FORM, firstCategory);
+}
+
+function applyCategoryDefaults(form: ProductForm, metadata: CategoryMetadata): ProductForm {
+  return {
+    ...form,
+    category: metadata.value,
+    unit: metadata.defaultUnit,
+    unitStep: content.defaultUnitSteps[metadata.defaultUnit],
+    isVeg: metadata.supportsDietary ? form.isVeg : true,
+    menuSection: metadata.supportsMenuSection ? form.menuSection : "",
+    attributes: metadata.supportsAttributes ? (metadata.defaultAttributes ? [...metadata.defaultAttributes] : []) : [],
+  };
 }
 
 function getApprovalMeta(status: string) {
@@ -113,12 +142,15 @@ function getApprovalMeta(status: string) {
 export const useBusinessOwnerProducts = () => {
   const {
     products,
+    businessProfile,
     isLoading,
     loadProducts,
     createProduct,
     editProduct,
     removeProductById,
   } = useBusinessOwner();
+
+  const businessCategory = businessProfile?.category;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
@@ -128,6 +160,11 @@ export const useBusinessOwnerProducts = () => {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [form, setForm] = useState<ProductForm>(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Clear validation error as soon as the user starts editing any field.
+  useEffect(() => {
+    if (formError) setFormError(null);
+  }, [form]);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const lastRefreshedAt = useRef<number>(0);
@@ -180,10 +217,10 @@ export const useBusinessOwnerProducts = () => {
   }, [products, searchQuery, statusFilter]);
 
   const resetForm = useCallback(() => {
-    setForm(EMPTY_FORM);
+    setForm(getDefaultFormForBusinessType(businessCategory));
     setEditingProductId(null);
     setFormError(null);
-  }, []);
+  }, [businessCategory]);
 
   const openCreateModal = useCallback(() => {
     resetForm();
@@ -191,6 +228,7 @@ export const useBusinessOwnerProducts = () => {
   }, [resetForm]);
 
   const openEditModal = useCallback((product: Product) => {
+    const categoryMeta = getCategoryMetadata(product.category ?? "general");
     setEditingProductId(product.id);
     setFormError(null);
     setForm({
@@ -202,14 +240,26 @@ export const useBusinessOwnerProducts = () => {
       originalPrice: product.originalPrice ? String(product.originalPrice) : "",
       stock: product.stock ?? 0,
       stockText: String(product.stock ?? 0),
-      unit: (product.unit as ProductUnit) ?? "piece",
-      unitStep: String(product.unitStep ?? 1),
+      unit: (product.unit as ProductUnit) ?? categoryMeta?.defaultUnit ?? "piece",
+      unitStep: String(product.unitStep ?? content.defaultUnitSteps[(product.unit as ProductUnit) ?? "piece"] ?? 1),
       description: product.description ?? "",
       imageUri: product.imageUrls?.[0] ?? null,
       additionalImageUris: product.imageUrls?.slice(1, 4) ?? [],
+      attributes: groupProductAttributes(product.attributes),
     });
     setShowCreateModal(true);
   }, []);
+
+  function groupProductAttributes(attrs?: ProductAttribute[]): ProductAttributeForm[] {
+    if (!attrs) return [];
+    const map = new Map<string, string[]>();
+    for (const attr of attrs) {
+      const values = map.get(attr.name) ?? [];
+      values.push(attr.value);
+      map.set(attr.name, values);
+    }
+    return Array.from(map.entries()).map(([name, values]) => ({ name, values }));
+  }
 
   const closeModal = useCallback(() => {
     if (!isSubmitting) {
@@ -354,7 +404,13 @@ export const useBusinessOwnerProducts = () => {
   }, []);
 
   const setCategory = useCallback((value: string) => {
-    setForm((p) => ({ ...p, category: value }));
+    const meta = getCategoryMetadata(value);
+    if (!meta) {
+      setForm((p) => ({ ...p, category: value }));
+      setShowCategoryDropdown(false);
+      return;
+    }
+    setForm((p) => applyCategoryDefaults({ ...p, category: value }, meta));
     setShowCategoryDropdown(false);
   }, []);
 
@@ -391,6 +447,51 @@ export const useBusinessOwnerProducts = () => {
 
   const quickAddStock = useCallback((amount: number) => {
     setForm((p) => ({ ...p, stock: p.stock + amount }));
+  }, []);
+
+  const addAttribute = useCallback(() => {
+    setForm((p) => ({ ...p, attributes: [...p.attributes, { name: "", values: [""] }] }));
+  }, []);
+
+  const removeAttribute = useCallback((index: number) => {
+    setForm((p) => ({ ...p, attributes: p.attributes.filter((_, i) => i !== index) }));
+  }, []);
+
+  const setAttributeName = useCallback((index: number, name: string) => {
+    setForm((p) => {
+      const next = [...p.attributes];
+      next[index] = { ...next[index], name };
+      return { ...p, attributes: next };
+    });
+  }, []);
+
+  const addAttributeValue = useCallback((index: number) => {
+    setForm((p) => {
+      const next = [...p.attributes];
+      next[index] = { ...next[index], values: [...next[index].values, ""] };
+      return { ...p, attributes: next };
+    });
+  }, []);
+
+  const removeAttributeValue = useCallback((attrIndex: number, valueIndex: number) => {
+    setForm((p) => {
+      const next = [...p.attributes];
+      next[attrIndex] = {
+        ...next[attrIndex],
+        values: next[attrIndex].values.filter((_, i) => i !== valueIndex),
+      };
+      return { ...p, attributes: next };
+    });
+  }, []);
+
+  const setAttributeValue = useCallback((attrIndex: number, valueIndex: number, value: string) => {
+    setForm((p) => {
+      const next = [...p.attributes];
+      const values = [...next[attrIndex].values];
+      values[valueIndex] = value;
+      next[attrIndex] = { ...next[attrIndex], values };
+      return { ...p, attributes: next };
+    });
   }, []);
 
   const handleCreate = useCallback(async () => {
@@ -446,11 +547,23 @@ export const useBusinessOwnerProducts = () => {
         return;
       }
 
-      const productData = {
+      const attributes: ProductAttribute[] = [];
+      const meta = getCategoryMetadata(form.category);
+      if (meta?.supportsAttributes) {
+        for (const attr of form.attributes) {
+          const name = attr.name.trim();
+          if (!name) continue;
+          for (const value of attr.values) {
+            if (value.trim()) attributes.push({ name, value: value.trim() });
+          }
+        }
+      }
+
+      const productData: Partial<Product> = {
         name: form.name.trim(),
         category: form.category || "general",
-        menuSection: form.menuSection.trim() || undefined,
-        isVeg: form.isVeg,
+        menuSection: meta?.supportsMenuSection ? form.menuSection.trim() || undefined : undefined,
+        isVeg: meta?.supportsDietary ? form.isVeg : undefined,
         description: form.description.trim() || undefined,
         price,
         originalPrice,
@@ -459,6 +572,7 @@ export const useBusinessOwnerProducts = () => {
         unitStep: form.unit !== "piece" ? parseFloat(form.unitStep) || undefined : undefined,
         status: "active" as const,
         imageUrls,
+        attributes: attributes.length > 0 ? attributes : undefined,
       };
       if (editingProductId) {
         await editProduct(editingProductId, productData);
@@ -541,6 +655,7 @@ export const useBusinessOwnerProducts = () => {
     refreshIfStale,
     loadProducts,
     content,
+    businessCategory,
     closeModal,
     resetForm,
     showImageOptions,
@@ -559,7 +674,14 @@ export const useBusinessOwnerProducts = () => {
     setStockText,
     quickAddStock,
     setFormField,
-    getCategoryLabel,
+    addAttribute,
+    removeAttribute,
+    setAttributeName,
+    addAttributeValue,
+    removeAttributeValue,
+    setAttributeValue,
+    getCategoryMetadata,
+    getCategoriesForBusinessType,
     getApprovalMeta,
   };
 };

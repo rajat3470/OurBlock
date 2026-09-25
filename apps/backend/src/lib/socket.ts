@@ -81,7 +81,10 @@ export function createSocketServer(httpServer: http.Server): Server {
 
     socket.on("join:society", (data: string | { societyId?: string }) => {
       const societyId = typeof data === "string" ? data : data?.societyId;
-      if (societyId) socket.join(`society:${societyId}`);
+      if (societyId) {
+        socket.join(`society:${societyId}`);
+        console.log(`[socket] user ${userId} joined society:${societyId}`);
+      }
     });
 
     socket.on("join:user-orders", (data: { userId?: string }) => {
@@ -147,8 +150,14 @@ export function emitOrderUpdate(orderId: string, order: any, previousDeliveryPar
 
 export function emitBusinessUpdate(businessId: string, business: any): void {
   if (!io) return;
+  console.log("[socket:emitBusinessUpdate] business:", businessId, "societyId:", business.societyId);
   io.to(`business:${businessId}`).emit("business:updated", business);
-  if (business.societyId) io.to(`society:${business.societyId}`).emit("businesses:society:updated", business);
+  if (business.societyId) {
+    console.log("[socket:emitBusinessUpdate] emitting to society:", business.societyId);
+    io.to(`society:${business.societyId}`).emit("businesses:society:updated", business);
+  } else {
+    console.log("[socket:emitBusinessUpdate] no societyId, skipping society emit");
+  }
 }
 
 export function emitBusinessProductsChanged(businessId: string): void {

@@ -1,21 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useAppSelector } from "@hooks/useRedux";
 import { useUserApp } from "@hooks/useUserApp";
 import { getBusinessStatus } from "@utils/businessStatus";
 import { ORDER_FEES } from "@/constants";
 import { Business, Product } from "@/types";
+import { getCategoryEmoji } from "@utils/categoryMetadata";
 import content from "@/content/home.json";
 
 export function categoryEmoji(category: string) {
-  const key = category.toLowerCase();
-  if (key.includes("grocery")) return "🛒";
-  if (key.includes("pharmacy")) return "💊";
-  if (key.includes("restaurant")) return "🍽️";
-  if (key.includes("cafe")) return "☕";
-  if (key.includes("electronics")) return "📱";
-  return "🏬";
+  return getCategoryEmoji(category);
 }
 
 export function getFirstImage(url?: string) {
@@ -44,6 +39,7 @@ export const useHomeScreen = () => {
     isLoading,
     initializeHome,
     loadMyOrders,
+    refreshBusinesses,
   } = useUserApp();
 
   const safeSocieties = Array.isArray(societies) ? societies : [];
@@ -86,10 +82,32 @@ export const useHomeScreen = () => {
     }).start();
   }, [entrance]);
 
+  const [refreshing, setRefreshing] = useState(false);
+
   useEffect(() => {
     initializeHome().catch(() => null);
     loadMyOrders().catch(() => null);
   }, [initializeHome, loadMyOrders]);
+
+  // Silently refresh business list each time the home tab gains focus so
+  // status changes (e.g. store going live/paused) are reflected promptly.
+  useFocusEffect(
+    useCallback(() => {
+      refreshBusinesses();
+    }, [refreshBusinesses])
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refreshBusinesses(),
+        loadMyOrders({ silent: true }).catch(() => {}),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshBusinesses, loadMyOrders]);
 
   const selectedSocietyName =
     safeSocieties.find((society) => society.id === selectedSocietyId)?.name ?? content.defaultSociety;
@@ -256,5 +274,7 @@ export const useHomeScreen = () => {
     getBusinessStatus,
     categoryEmoji,
     getFirstImage,
+    refreshing,
+    onRefresh,
   };
 };

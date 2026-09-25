@@ -17,8 +17,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Set EXPO_PUBLIC_SOCKET_URL in your .env to point at your Socket.io server.
 // Without this, socket connection is disabled and polling fallback remains active.
 const ENABLE_SOCKET = process.env.EXPO_PUBLIC_ENABLE_SOCKET !== "false";
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
 const RAW_SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL ?? "";
-const SOCKET_URL = RAW_SOCKET_URL.replace(/\/api\/?$/, "");
+
+// Prefer the explicit socket URL if provided, otherwise fall back to the
+// REST API base URL. Routing Socket.IO through the same /api proxy that
+// serves REST requests fixes deployments where only /api/* is forwarded
+// to the Node backend and the root /socket.io path is not exposed.
+const SOCKET_URL = RAW_SOCKET_URL || API_BASE_URL || "";
 const SOCKET_PATH = process.env.EXPO_PUBLIC_SOCKET_PATH ?? "/socket.io";
 
 type AnyHandler = (data: unknown) => void;
@@ -44,7 +50,6 @@ class SocketService {
   /** Listeners queued before the socket instance exists. */
   private buffer: BufferedListener[] = [];
   private warnedMissingConfig = false;
-  private warnedConnectError = false;
   /** Event deduplication cache to prevent processing duplicate events */
   private eventCache = new Map<string, EventCacheEntry>();
   /** Cache TTL in milliseconds */
@@ -67,7 +72,12 @@ class SocketService {
   // ─── Connection management ───────────────────────────────────────────────
 
   async connect(): Promise<void> {
-    if (this.socket?.connected) return;
+    if (this.socket?.connected) {
+      console.log("[socket] already connected, skipping");
+      return;
+    }
+
+    console.log(`[socket] connecting to ${SOCKET_URL} (path=${SOCKET_PATH})`);
 
     if (!this.isSocketConfigured()) {
       if (process.env.NODE_ENV === 'development' && !this.warnedMissingConfig) {
@@ -93,14 +103,14 @@ class SocketService {
     const socket = io(SOCKET_URL, {
       path: SOCKET_PATH,
       auth: { token },
-      // Use WebSocket only — avoids HTTP-polling overhead and latency
-      transports: ["websocket"],
+      // Prefer WebSocket but fall back to HTTP polling when a reverse proxy
+      // (nginx, Cloudflare, etc.) blocks the WebSocket upgrade handshake.
+      transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 15,
       reconnectionDelay: 500,
       reconnectionDelayMax: 10_000,
       timeout: 8_000,
-      // Enable compression for faster data transfer
       forceNew: true,
     });
 
@@ -111,19 +121,21 @@ class SocketService {
     this.buffer = [];
 
     socket.on("connect_error", (err) => {
-      // Non-fatal: app works fine without real-time updates.
-      if (process.env.NODE_ENV === 'development' && !this.warnedConnectError) {
-        this.warnedConnectError = true;
-        console.warn("[socket] connect error:", err.message);
-      }
+      // Log every error so connection failures are always visible.
+      console.warn(`[socket] connect error (${SOCKET_URL}${SOCKET_PATH}):`, err.message);
     });
 
     socket.on("connect", () => {
-      this.warnedConnectError = false;
+      console.log("[socket] connected, id:", socket.id);
       // Replay all active room subscriptions after every (re)connect
       for (const sub of this.roomSubscriptions.values()) {
+        console.log("[socket] replaying room join:", sub.event, sub.data);
         socket.emit(sub.event, sub.data);
       }
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("[socket] disconnected, reason:", reason);
     });
   }
 
@@ -219,11 +231,10 @@ class SocketService {
     const deduplicatedHandler = (data: unknown) => {
       // Skip duplicate events within cache TTL
       if (this.isDuplicateEvent(event, data)) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`[socket] deduplicated event: ${event}`);
-        }
+        console.log(`[socket] deduplicated event: ${event}`);
         return;
       }
+      console.log(`[socket] event received: ${event}`);
       typedHandler(data);
     };
 
@@ -263,6 +274,8 @@ class SocketService {
    */
   joinRoom(key: string, event: string, data?: unknown): void {
     this.roomSubscriptions.set(key, { event, data });
+    const sent = this.socket?.connected ?? false;
+    console.log(`[socket] joinRoom: ${key} (emitted=${sent})`);
     this.emit(event, data);
   }
 

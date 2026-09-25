@@ -1,4 +1,4 @@
-import { View, ScrollView, Animated } from "react-native";
+import { View, ScrollView, Animated, RefreshControl } from "react-native";
 import { useHomeScreen } from "@hooks/useHomeScreen";
 import { HomeHero } from "@components/user/home/HomeHero";
 import { CategoryTiles } from "@components/user/home/CategoryTiles";
@@ -43,6 +43,8 @@ export default function UserHome() {
     goToCart,
     goToBusiness,
     goToDish,
+    refreshing,
+    onRefresh,
   } = useHomeScreen();
 
   return (
@@ -73,6 +75,9 @@ export default function UserHome() {
           useNativeDriver: false,
         })}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#084C3D" />
+        }
       >
         {searchQuery.trim().length === 0 ? (
           <>

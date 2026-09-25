@@ -76,6 +76,10 @@ export const useProductDetail = () => {
 
   const addCurrentProductToCart = useCallback(
     (targetProduct: Product) => {
+      if (!isOrderable) {
+        toast.show("This store is currently not accepting orders", { type: "warning" });
+        return;
+      }
       if (maxCartSteps(targetProduct.stock, targetProduct.unit, targetProduct.unitStep) <= 0) {
         toast.show(content.cart.outOfStock, { type: "warning" });
         return;
@@ -96,7 +100,7 @@ export const useProductDetail = () => {
       );
       toast.show(`${targetProduct.name}${content.toasts.addedSuffix}`, { type: "success" });
     },
-    [business, dispatch, toast]
+    [business, dispatch, toast, isOrderable]
   );
 
   const handleAddToCart = useCallback(() => {

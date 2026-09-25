@@ -15,6 +15,8 @@ export default function CartScreen() {
     finalAmount,
     canCheckout,
     minOrder,
+    businessStatus,
+    isStoreOpen,
     isRewardedEnabled,
     ffValues,
     adState,
@@ -63,6 +65,13 @@ export default function CartScreen() {
                 <Ionicons name="storefront-outline" size={18} color="#084C3D" />
                 <Text style={styles.shopLabel}>{cartItems[0]?.businessName ?? content.defaultShop}</Text>
               </View>
+              {!isStoreOpen ? (
+                <View style={styles.shopStatusBadge}>
+                  <Text style={styles.shopStatusText}>
+                    {businessStatus === "closed" ? "Closed" : "Paused"}
+                  </Text>
+                </View>
+              ) : null}
             </View>
 
             {cartItems.map((item) => (
@@ -201,9 +210,11 @@ const styles = StyleSheet.create({
   browseBtn: { marginTop: 8, backgroundColor: "#F6B853", borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12 },
   browseBtnText: { fontWeight: "800", color: "#FFFFFF", fontSize: 15 },
   scroll: { paddingBottom: 200 },
-  shopRow: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#F0F0F0", marginBottom: 4 },
+  shopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 12, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#F0F0F0", marginBottom: 4 },
   shopLabelWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
   shopLabel: { fontSize: 14, fontWeight: "700", color: "#374151" },
+  shopStatusBadge: { backgroundColor: "#FEF3C7", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: "#FDE68A" },
+  shopStatusText: { fontSize: 11, fontWeight: "700", color: "#B45309" },
   itemCard: { flexDirection: "row", backgroundColor: "#FFFFFF", marginHorizontal: 16, marginTop: 12, borderRadius: 14, padding: 12, gap: 10, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
   itemImageWrap: { width: 72, height: 72, borderRadius: 10, overflow: "hidden", backgroundColor: "#F3F4F6" },
   itemImage: { width: 72, height: 72 },

@@ -57,7 +57,15 @@ export default function BusinessOwnerProducts() {
     setStockText,
     quickAddStock,
     setFormField,
-    getCategoryLabel,
+    addAttribute,
+    removeAttribute,
+    setAttributeName,
+    addAttributeValue,
+    removeAttributeValue,
+    setAttributeValue,
+    businessCategory,
+    getCategoryMetadata,
+    getCategoriesForBusinessType,
     getApprovalMeta,
   } = useBusinessOwnerProducts();
 
@@ -159,7 +167,9 @@ export default function BusinessOwnerProducts() {
         formError={formError}
         isEditing={Boolean(editingProductId)}
         showCategoryDropdown={showCategoryDropdown}
-        getCategoryLabel={getCategoryLabel}
+        businessCategory={businessCategory}
+        getCategoryMetadata={getCategoryMetadata}
+        getCategoriesForBusinessType={getCategoriesForBusinessType}
         onClose={closeModal}
         onSave={handleCreate}
         onShowImageOptions={showImageOptions}
@@ -175,6 +185,12 @@ export default function BusinessOwnerProducts() {
         onSetStockText={setStockText}
         onQuickAddStock={quickAddStock}
         onSetFormField={setFormField}
+        onAddAttribute={addAttribute}
+        onRemoveAttribute={removeAttribute}
+        onSetAttributeName={setAttributeName}
+        onAddAttributeValue={addAttributeValue}
+        onRemoveAttributeValue={removeAttributeValue}
+        onSetAttributeValue={setAttributeValue}
       />
     </View>
   );
