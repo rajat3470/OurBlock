@@ -33,7 +33,7 @@
 
     "deploy:backend": "bash scripts/deploy-backend.sh",
 
-    "android:release": "yarn workspace @mohallamitr/mobile android:release"
+    "android:release": "bash scripts/release-android.sh"
   },
   "devDependencies": {
     "patch-package": "^8.0.1",
