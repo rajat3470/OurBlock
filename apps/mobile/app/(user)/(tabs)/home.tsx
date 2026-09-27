@@ -1,5 +1,6 @@
 import { View, ScrollView, Animated, RefreshControl } from "react-native";
 import { useHomeScreen } from "@hooks/useHomeScreen";
+import { useFeatureFlags } from "@hooks/useFeatureFlags";
 import { HomeHero } from "@components/user/home/HomeHero";
 import { CategoryTiles } from "@components/user/home/CategoryTiles";
 import { HorizontalStoreRow } from "@components/user/home/HorizontalStoreRow";
@@ -11,6 +12,7 @@ import content from "@/content/home.json";
 export default function UserHome() {
   const {
     user,
+    banners,
     cartCount,
     isLoading,
     safeBusinesses,
@@ -46,6 +48,7 @@ export default function UserHome() {
     refreshing,
     onRefresh,
   } = useHomeScreen();
+  const { isNativeFeedEnabled, isHomeBannersEnabled, values: ffValues } = useFeatureFlags();
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FBF6EC" }}>
@@ -94,7 +97,9 @@ export default function UserHome() {
                 onPressStore={goToBusiness}
               />
             ) : null}
-            <PromoBanner onPress={goToBusinesses} />
+            {isHomeBannersEnabled && banners.length > 0 ? (
+              <PromoBanner banners={banners} />
+            ) : null}
             {favoriteStores.length > 0 ? (
               <HorizontalStoreRow
                 title={content.sections.favorites}
@@ -124,6 +129,8 @@ export default function UserHome() {
           cartCount={cartCount}
           goToBusiness={goToBusiness}
           goToCart={goToCart}
+          showNativeAds={isNativeFeedEnabled}
+          adEveryNthCard={ffValues.adsDensityEveryNthCard || 4}
         />
       </ScrollView>
     </View>

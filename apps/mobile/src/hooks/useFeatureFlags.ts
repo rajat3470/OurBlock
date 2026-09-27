@@ -17,5 +17,6 @@ export const useFeatureFlags = () => {
     isNativeFeedEnabled: adsMasterEnabled && values.adsNativeFeedEnabled,
     isNativeListingEnabled: adsMasterEnabled && values.adsNativeListingEnabled,
     isRewardedEnabled: adsMasterEnabled && values.adsRewardedEnabled,
+    isHomeBannersEnabled: values.homeBannersEnabled,
   };
 };

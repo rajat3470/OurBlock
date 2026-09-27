@@ -25,6 +25,7 @@ export function getFirstImage(url?: string) {
  */
 export const useHomeScreen = () => {
   const { user } = useAppSelector((state) => state.auth);
+  const banners = useAppSelector((state) => state.userApp.banners);
   const cartCount = useAppSelector((state) =>
     state.cart.items.reduce((acc, item) => acc + item.quantity, 0)
   );
@@ -239,6 +240,7 @@ export const useHomeScreen = () => {
 
   return {
     user,
+    banners,
     cartCount,
     isLoading,
     safeBusinesses,

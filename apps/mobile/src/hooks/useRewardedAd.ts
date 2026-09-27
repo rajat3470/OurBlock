@@ -1,7 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { getRewardedAdUnitId } from "../services/adService";
 
 export type RewardedAdState = "idle" | "loading" | "showing" | "error" | "unsupported";
+
+const AD_LOAD_TIMEOUT_MS = 15_000;
+const AD_SHOW_TIMEOUT_MS = 60_000;
 
 async function loadAdsModule() {
   try {
@@ -11,22 +14,26 @@ async function loadAdsModule() {
   }
 }
 
-/**
- * Loads and shows a rewarded ad.
- * Returns a promise that resolves to true if the user earned the reward,
- * or false if the ad was dismissed without reward or failed to load.
- */
 export function useRewardedAd() {
   const [adState, setAdState] = useState<RewardedAdState>("idle");
+  const resolvedRef = useRef(false);
 
   const showRewardedAd = useCallback((): Promise<boolean> => {
     return new Promise(async (resolve) => {
+      resolvedRef.current = false;
+
+      const safeResolve = (value: boolean) => {
+        if (resolvedRef.current) return;
+        resolvedRef.current = true;
+        resolve(value);
+      };
+
       setAdState("loading");
 
       const adsModule = await loadAdsModule();
       if (!adsModule) {
         setAdState("unsupported");
-        resolve(false);
+        safeResolve(false);
         return;
       }
 
@@ -38,6 +45,15 @@ export function useRewardedAd() {
 
       let earned = false;
 
+      const cleanup = () => {
+        clearTimeout(loadTimer);
+        clearTimeout(showTimer);
+        unsubEarned();
+        unsubLoaded();
+        unsubClosed();
+        unsubError();
+      };
+
       const unsubEarned = rewarded.addAdEventListener(
         RewardedAdEventType.EARNED_REWARD,
         () => { earned = true; }
@@ -46,8 +62,14 @@ export function useRewardedAd() {
       const unsubLoaded = rewarded.addAdEventListener(
         RewardedAdEventType.LOADED,
         () => {
+          clearTimeout(loadTimer);
           setAdState("showing");
           rewarded.show();
+          showTimer = setTimeout(() => {
+            setAdState("idle");
+            cleanup();
+            safeResolve(earned);
+          }, AD_SHOW_TIMEOUT_MS);
         }
       );
 
@@ -55,11 +77,8 @@ export function useRewardedAd() {
         AdEventType.CLOSED,
         () => {
           setAdState("idle");
-          unsubEarned();
-          unsubLoaded();
-          unsubClosed();
-          unsubError();
-          resolve(earned);
+          cleanup();
+          safeResolve(earned);
         }
       );
 
@@ -67,13 +86,18 @@ export function useRewardedAd() {
         AdEventType.ERROR,
         () => {
           setAdState("error");
-          unsubEarned();
-          unsubLoaded();
-          unsubClosed();
-          unsubError();
-          resolve(false);
+          cleanup();
+          safeResolve(false);
         }
       );
+
+      let loadTimer = setTimeout(() => {
+        setAdState("error");
+        cleanup();
+        safeResolve(false);
+      }, AD_LOAD_TIMEOUT_MS);
+
+      let showTimer: ReturnType<typeof setTimeout>;
 
       rewarded.load();
     });

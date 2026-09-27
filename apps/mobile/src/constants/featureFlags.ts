@@ -18,6 +18,9 @@ export interface FeatureFlags {
   adsRewardedMaxRs: number;
   adsDensityEveryNthCard: number;
   adsRewardedMaxClaimsPerDay: number;
+  platformFeeAmount: number;
+  minimumOrderAmount: number;
+  homeBannersEnabled: boolean;
 }
 
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
@@ -29,6 +32,9 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   adsRewardedMaxRs: 5,
   adsDensityEveryNthCard: 4,
   adsRewardedMaxClaimsPerDay: 1,
+  platformFeeAmount: 2,
+  minimumOrderAmount: 50,
+  homeBannersEnabled: true,
 };
 
 export const REMOTE_CONFIG_DEFAULTS: Record<string, string | number | boolean> = {

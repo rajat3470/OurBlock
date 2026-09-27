@@ -4,6 +4,7 @@ import { requireAuth, AuthedRequest } from "../middleware/auth";
 import { ORDER_FEES, ORDER_ACCEPTANCE_WINDOW_SECONDS, isPaymentOutstanding } from "../shared/constants";
 import { autoRejectIfExpired, isExpiredPending, expirePendingOrders } from "../services/orderExpiry";
 import { computeCouponDiscount } from "../services/coupons";
+import { getPlatformConfig } from "../models/index";
 import { notifyCustomer } from "../lib/notifications";
 import { onOrderCreated, onOrderStatusChanged } from "../services/orderEvents";
 import { emitOrderUpdate } from "../lib/socket";
@@ -157,7 +158,8 @@ router.post("/", requireAuth, async (req: AuthedRequest, res) => {
       return res.status(400).json({ success: false, error: `Minimum order amount is Rs. ${effectiveMinimum}. Your subtotal is Rs. ${subTotal}.` });
     }
 
-    const platformFee = PLATFORM_FEE;
+    const dbConfig = await getPlatformConfig();
+    const platformFee = dbConfig.platformFeeAmount;
     let couponDiscount = 0;
     let appliedCouponCode: string | null = null;
     let couponIdToIncrement: string | null = null;

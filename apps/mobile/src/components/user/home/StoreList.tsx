@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Business } from "@/types";
 import { getBusinessStatus } from "@utils/businessStatus";
 import { categoryEmoji, getFirstImage } from "@hooks/useHomeScreen";
+import { NativeAdCard } from "@components/NativeAdCard";
 import { StoreListSkeleton } from "@components/Skeleton";
 import content from "@/content/home.json";
 
@@ -18,6 +19,8 @@ interface StoreListProps {
   cartCount: number;
   goToBusiness: (id: string) => void;
   goToCart: () => void;
+  showNativeAds?: boolean;
+  adEveryNthCard?: number;
 }
 
 export function StoreList({
@@ -30,6 +33,8 @@ export function StoreList({
   cartCount,
   goToBusiness,
   goToCart,
+  showNativeAds = false,
+  adEveryNthCard = 4,
 }: StoreListProps) {
   const title =
     searchQuery.trim().length > 0 ? content.sections.storesSearch : content.sections.storesNear;
@@ -55,6 +60,7 @@ export function StoreList({
         </View>
       ) : (
         filteredBusinesses.map((business, index) => {
+          const shouldShowAd = showNativeAds && (index + 1) % adEveryNthCard === 0;
           const status = getBusinessStatus(business);
           const imageUrl = getFirstImage(business.bannerUrl ?? business.imageUrl);
           const eta = business.estimatedDeliveryTime ?? content.store.defaultEta;
@@ -63,6 +69,7 @@ export function StoreList({
           const extraMatchedCount = Math.max(0, matchedItems.length - 2);
 
           return (
+            <>
             <Animated.View
               key={business.id}
               style={[
@@ -167,6 +174,12 @@ export function StoreList({
                 </View>
               </TouchableOpacity>
             </Animated.View>
+            {shouldShowAd && (
+              <View key={`ad-${index}`} style={{ marginHorizontal: 16, marginTop: 12 }}>
+                <NativeAdCard />
+              </View>
+            )}
+            </>
           );
         })
       )}

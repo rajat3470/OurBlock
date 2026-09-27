@@ -12,10 +12,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { displayQuantity } from "@utils/helpers";
 import { useCheckout, PAYMENT_METHODS } from "@hooks/useCheckout";
-import { ORDER_FEES } from "@/constants";
 import content from "@/content/checkout.json";
-
-const { PLATFORM_FEE } = ORDER_FEES;
+const REWARD_CONTENT = {
+  title: "Watch a short video & save",
+  sub: "30 seconds = instant discount on this order",
+  earned: "Reward applied!",
+  savedPrefix: "You saved ₹",
+};
 
 export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
@@ -42,6 +45,12 @@ export default function CheckoutScreen() {
     handlePlaceOrder,
     goBack,
     addAddress,
+    isRewardedEnabled,
+    ffValues,
+    adState,
+    adReward,
+    handleWatchAd,
+    platformFee: PLATFORM_FEE,
   } = useCheckout();
 
   return (
@@ -251,6 +260,51 @@ export default function CheckoutScreen() {
             </View>
           )}
         </View>
+
+        {/* Rewarded Ad — watch to save */}
+        {isRewardedEnabled && !adReward && !appliedCoupon && adState !== "unsupported" && (
+          <TouchableOpacity
+            style={checkoutAdStyles.banner}
+            onPress={handleWatchAd}
+            disabled={adState === "loading" || adState === "showing"}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={["#FEF3C7", "#FDE68A"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={checkoutAdStyles.gradient}
+            >
+              <View style={checkoutAdStyles.iconWrap}>
+                <Ionicons name="play-circle-outline" size={28} color="#92400E" />
+              </View>
+              <View style={checkoutAdStyles.textWrap}>
+                <Text style={checkoutAdStyles.title}>
+                  {REWARD_CONTENT.title} ₹{ffValues.adsRewardedMinRs}–{ffValues.adsRewardedMaxRs}
+                </Text>
+                <Text style={checkoutAdStyles.sub}>{REWARD_CONTENT.sub}</Text>
+              </View>
+              {adState === "loading" ? (
+                <ActivityIndicator size="small" color="#92400E" />
+              ) : (
+                <View style={checkoutAdStyles.playBtn}>
+                  <Ionicons name="play" size={16} color="#FFFFFF" />
+                </View>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
+
+        {adReward && (
+          <View style={checkoutAdStyles.earned}>
+            <Ionicons name="checkmark-circle" size={22} color="#15803D" />
+            <View style={{ flex: 1 }}>
+              <Text style={checkoutAdStyles.earnedTitle}>
+                {REWARD_CONTENT.earned} {REWARD_CONTENT.savedPrefix}{adReward.discountAmount}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Bill details */}
         <View style={styles.section}>
@@ -526,4 +580,53 @@ const styles = StyleSheet.create({
   couponAppliedSavings: { fontSize: 11, color: "#047857", fontWeight: "600", marginTop: 1 },
   couponRemoveBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
   couponRemoveText: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
+});
+
+const checkoutAdStyles = StyleSheet.create({
+  banner: {
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(180,130,0,0.25)",
+  },
+  gradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    gap: 12,
+  },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(146,64,14,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  textWrap: { flex: 1 },
+  title: { fontSize: 14, fontWeight: "700", color: "#78350F" },
+  sub: { fontSize: 11, color: "#92400E", marginTop: 2 },
+  playBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#F6B853",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  earned: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 14,
+    backgroundColor: "#F0FDF4",
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#BBF7D0",
+  },
+  earnedTitle: { fontSize: 13, fontWeight: "700", color: "#15803D" },
 });
