@@ -13,6 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { NativeAdCard } from "@components/NativeAdCard";
+import { BannerAdStrip } from "@components/BannerAdStrip";
 import { chatService } from "@/services/chatService";
 import { MenuSkeleton } from "@components/Skeleton";
 import { PressableScale } from "@components/PressableScale";
@@ -285,6 +286,9 @@ export default function BusinessDetailScreen() {
           <Text style={styles.orderNoticeText}>{content.notices.closed}</Text>
         </View>
       ) : null}
+
+      {/* Banner ad */}
+      <BannerAdStrip />
 
       {/* Diet / bestseller filter bar */}
       {!isLoading && !error && products.length > 0 ? (

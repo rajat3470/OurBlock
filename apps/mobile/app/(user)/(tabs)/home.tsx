@@ -12,6 +12,7 @@ import content from "@/content/home.json";
 export default function UserHome() {
   const {
     user,
+    banners,
     cartCount,
     isLoading,
     safeBusinesses,
@@ -47,7 +48,7 @@ export default function UserHome() {
     refreshing,
     onRefresh,
   } = useHomeScreen();
-  const { isNativeFeedEnabled, values: ffValues } = useFeatureFlags();
+  const { isNativeFeedEnabled, isHomeBannersEnabled, values: ffValues } = useFeatureFlags();
 
   return (
     <View style={{ flex: 1, backgroundColor: "#FBF6EC" }}>
@@ -96,7 +97,9 @@ export default function UserHome() {
                 onPressStore={goToBusiness}
               />
             ) : null}
-            <PromoBanner onPress={goToBusinesses} />
+            {isHomeBannersEnabled && banners.length > 0 ? (
+              <PromoBanner banners={banners} />
+            ) : null}
             {favoriteStores.length > 0 ? (
               <HorizontalStoreRow
                 title={content.sections.favorites}

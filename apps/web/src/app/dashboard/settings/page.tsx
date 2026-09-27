@@ -15,6 +15,7 @@ interface PlatformConfig {
   adsRewardedMaxRs: number;
   adsDensityEveryNthCard: number;
   adsRewardedMaxClaimsPerDay: number;
+  homeBannersEnabled: boolean;
 }
 
 const DEFAULT_CONFIG: PlatformConfig = {
@@ -28,6 +29,7 @@ const DEFAULT_CONFIG: PlatformConfig = {
   adsRewardedMaxRs: 5,
   adsDensityEveryNthCard: 4,
   adsRewardedMaxClaimsPerDay: 1,
+  homeBannersEnabled: true,
 };
 
 function Toggle({ label, description, checked, onChange }: {
@@ -282,6 +284,16 @@ export default function SettingsPage() {
                   max={10}
                 />
               </div>
+
+              <div className="pt-3 pb-1">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Home Banners</p>
+              </div>
+              <Toggle
+                label="Dynamic Home Banners"
+                description="Show admin-managed promotional banners on the home screen carousel"
+                checked={config.homeBannersEnabled}
+                onChange={(v) => updateConfig('homeBannersEnabled', v)}
+              />
             </>
           )}
         </div>

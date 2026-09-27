@@ -44,7 +44,8 @@ export const useCart = () => {
   const MIN_ORDER = storeMin && storeMin > 0 ? storeMin : MINIMUM_ORDER;
 
   const subTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const finalAmount = subTotal + PLATFORM_FEE;
+  const rewardDiscount = adReward?.discountAmount ?? 0;
+  const finalAmount = subTotal + PLATFORM_FEE - rewardDiscount;
   const canCheckout = cartItems.length > 0 && isStoreOpen && subTotal >= MIN_ORDER;
 
   const handleWatchAd = useCallback(async () => {
@@ -107,8 +108,12 @@ export const useCart = () => {
       toast.show("This store is currently not accepting orders", { type: "warning" });
       return;
     }
-    router.push("/(user)/checkout");
-  }, [isStoreOpen, toast]);
+    if (adReward) {
+      router.push({ pathname: "/(user)/checkout", params: { rewardCode: adReward.couponCode, rewardAmount: String(adReward.discountAmount) } });
+    } else {
+      router.push("/(user)/checkout");
+    }
+  }, [isStoreOpen, toast, adReward]);
 
   return {
     cartItems,

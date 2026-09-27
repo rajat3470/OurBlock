@@ -21,7 +21,17 @@
     "backend:build": "yarn workspace @mohallamitr/backend build",
     "lint": "yarn workspaces run lint",
     "type-check": "yarn workspaces run type-check",
-    "clean": "yarn workspaces run clean && rm -rf node_modules"
+    "clean": "yarn workspaces run clean && rm -rf node_modules",
+
+    "env:local": "bash scripts/switch-env.sh local",
+    "env:int": "bash scripts/switch-env.sh int",
+    "env:prod": "bash scripts/switch-env.sh prod",
+
+    "dev:local": "bash scripts/dev.sh local",
+    "dev:int": "bash scripts/dev.sh int",
+    "dev:prod": "bash scripts/dev.sh prod",
+
+    "deploy:backend": "bash scripts/deploy-backend.sh"
   },
   "devDependencies": {
     "patch-package": "^8.0.1",

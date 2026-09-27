@@ -68,6 +68,7 @@ app.get("/feature-flags", async (_req, res) => {
         adsRewardedMaxClaimsPerDay: config.adsRewardedMaxClaimsPerDay,
         platformFeeAmount: config.platformFeeAmount,
         minimumOrderAmount: config.minimumOrderAmount,
+        homeBannersEnabled: config.homeBannersEnabled,
       },
     });
   } catch (err) {
@@ -79,6 +80,7 @@ app.get("/feature-flags", async (_req, res) => {
         adsNativeFeedEnabled: false,
         adsNativeListingEnabled: false,
         adsRewardedEnabled: false,
+        homeBannersEnabled: true,
         adsRewardedMinRs: 2,
         adsRewardedMaxRs: 5,
         adsDensityEveryNthCard: 4,
@@ -95,8 +97,8 @@ const PORT = Number(process.env.PORT) || 5001;
 async function main() {
   await connectDB();
   createSocketServer(server);
-  server.listen(PORT, () => {
-    console.log(`mohallaMitr backend listening on port ${PORT}`);
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`mohallaMitr backend listening on 0.0.0.0:${PORT}`);
     startAutoRejectOrdersJob();
   });
 }

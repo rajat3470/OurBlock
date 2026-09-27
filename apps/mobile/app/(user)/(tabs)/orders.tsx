@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import RatingModal from "@components/RatingModal";
 import RefundModal from "@components/RefundModal";
+import { BannerAdStrip } from "@components/BannerAdStrip";
 import UserOrderCard from "@components/UserOrderCard";
 import { ORDER_FILTERS, useUserOrders } from "@hooks/useUserOrders";
 import content from "@/content/orders.json";
@@ -95,6 +96,7 @@ export default function UserOrders() {
           contentContainerStyle={styles.listContent}
           onRefresh={refresh}
           refreshing={isLoading}
+          ListFooterComponent={filteredOrders.length > 0 ? <BannerAdStrip /> : null}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <View style={styles.emptyIconWrap}>

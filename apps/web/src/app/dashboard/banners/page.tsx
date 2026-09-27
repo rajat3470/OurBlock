@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import api from '@/lib/api';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import api, { getAccessToken } from '@/lib/api';
 
 interface Banner {
   id: string;
@@ -61,6 +61,8 @@ function fromDateTimeInput(value: string): string | null {
   return d.toISOString();
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:5001';
+
 export default function BannersPage() {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +74,8 @@ export default function BannersPage() {
   const [form, setForm] = useState<BannerForm>(EMPTY_FORM);
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadBanners();
@@ -193,6 +197,34 @@ export default function BannersPage() {
       setBanners((prev) => prev.filter((b) => b.id !== id));
     } else {
       alert(res.error || 'Failed to delete banner');
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setFormError('');
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const token = getAccessToken();
+      const res = await fetch(`${API_BASE_URL}/upload/banner`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: fd,
+      });
+      const data = await res.json();
+      if (data.success && data.data?.url) {
+        setForm((p) => ({ ...p, imageUrl: data.data.url }));
+      } else {
+        setFormError(data.error || 'Upload failed');
+      }
+    } catch {
+      setFormError('Failed to upload image');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -348,13 +380,34 @@ export default function BannersPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Image URL *</label>
-                <input
-                  value={form.imageUrl}
-                  onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))}
-                  required
-                  className="field"
-                />
+                <label className="block text-xs font-medium text-gray-700 mb-1">Image *</label>
+                <div className="flex gap-2">
+                  <input
+                    value={form.imageUrl}
+                    onChange={(e) => setForm((p) => ({ ...p, imageUrl: e.target.value }))}
+                    required
+                    placeholder="Paste URL or upload an image"
+                    className="field flex-1"
+                  />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="shrink-0 px-3 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 disabled:opacity-50 transition"
+                  >
+                    {uploading ? 'Uploading…' : 'Upload'}
+                  </button>
+                </div>
+                {form.imageUrl && (
+                  <img src={form.imageUrl} alt="Preview" className="mt-2 h-24 rounded-lg object-cover bg-gray-100" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

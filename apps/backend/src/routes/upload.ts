@@ -71,6 +71,41 @@ router.post(
   }
 );
 
+// --- POST /upload/banner ---
+
+router.post(
+  "/banner",
+  requireAuth,
+  upload.single("image"),
+  async (req: AuthedRequest, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ success: false, error: "No image file provided" });
+      }
+
+      const timestamp = Date.now();
+      const ext = file.mimetype.includes("png") ? "png" : "jpg";
+      const objectKey = `banners/banner_${timestamp}.${ext}`;
+
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: BUCKET,
+          Key: objectKey,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+        })
+      );
+
+      const url = `${PUBLIC_BASE_URL}/${objectKey}`;
+      return res.json({ success: true, data: { url } });
+    } catch (error: any) {
+      console.error("Error uploading banner image:", error);
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+);
+
 // --- POST /upload/delete ---
 
 router.post("/delete", requireAuth, async (req: AuthedRequest, res) => {

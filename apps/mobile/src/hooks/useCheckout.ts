@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { useAppSelector } from "@hooks/useRedux";
 import { useUserApp } from "@hooks/useUserApp";
@@ -23,6 +23,7 @@ export type PaymentTiming = "atOrder" | "atDelivery";
 
 export const useCheckout = () => {
   const toast = useToast();
+  const params = useLocalSearchParams<{ rewardCode?: string; rewardAmount?: string }>();
   const cartItems = useAppSelector((state) => state.cart.items);
   const cartBusinessId = useAppSelector((state) => state.cart.businessId);
   const { placeOrder, isLoading, businesses } = useUserApp();
@@ -42,6 +43,7 @@ export const useCheckout = () => {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const orderPlacedRef = useRef(false);
+  const rewardAppliedRef = useRef(false);
 
   const PLATFORM_FEE = ffValues.platformFeeAmount ?? ORDER_FEES.PLATFORM_FEE;
   const MINIMUM_ORDER = ffValues.minimumOrderAmount ?? ORDER_FEES.MINIMUM_ORDER;
@@ -73,6 +75,17 @@ export const useCheckout = () => {
       router.replace("/(user)/home");
     }
   }, [cartItems]);
+
+  useEffect(() => {
+    if (rewardAppliedRef.current || !params.rewardCode || !params.rewardAmount) return;
+    rewardAppliedRef.current = true;
+    const code = params.rewardCode;
+    const amount = Number(params.rewardAmount);
+    setAdReward({ couponCode: code, discountAmount: amount });
+    setCouponCode(code);
+    setAppliedCoupon({ code, discountAmount: amount });
+    toast.show(`Saved ₹${amount} with reward!`, { type: "success" });
+  }, [params.rewardCode, params.rewardAmount, toast]);
 
   const handleWatchAd = useCallback(async () => {
     const earned = await showRewardedAd();

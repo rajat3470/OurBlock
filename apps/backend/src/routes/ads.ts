@@ -14,7 +14,7 @@ router.post("/claim-reward", requireAuth, async (req: AuthedRequest, res) => {
     const maxRs = config.adsRewardedMaxRs;
 
     const today = new Date().toISOString().slice(0, 10);
-    const existingClaim = await prisma.adRewardClaim.findUnique({ where: { userId_date: { userId: uid, date: today } } });
+    const existingClaim = await prisma.adRewardClaim.findFirst({ where: { userId: uid, date: today } });
     const claimsToday = existingClaim?.count ?? 0;
 
     if (claimsToday >= maxClaims) {
@@ -41,11 +41,16 @@ router.post("/claim-reward", requireAuth, async (req: AuthedRequest, res) => {
       },
     });
 
-    await prisma.adRewardClaim.upsert({
-      where: { userId_date: { userId: uid, date: today } },
-      update: { count: claimsToday + 1, lastClaimedAt: new Date() },
-      create: { userId: uid, date: today, count: 1 },
-    });
+    if (existingClaim) {
+      await prisma.adRewardClaim.update({
+        where: { id: existingClaim.id },
+        data: { count: claimsToday + 1, lastClaimedAt: new Date() },
+      });
+    } else {
+      await prisma.adRewardClaim.create({
+        data: { userId: uid, date: today, count: 1 },
+      });
+    }
 
     return res.json({ success: true, couponCode: code, discountAmount, expiresAt: expiresAt.toISOString() });
   } catch (err) {

@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { getNativeAdUnitId } from "../services/adService";
 
-type AdLoadState = "loading" | "loaded" | "error";
+type AdModule = typeof import("react-native-google-mobile-ads");
 
 function FallbackCard() {
   return (
@@ -34,27 +34,23 @@ function FallbackCard() {
 }
 
 export function NativeAdCard({ style }: { style?: StyleProp<ViewStyle> }) {
-  const [adState, setAdState] = useState<AdLoadState>("loading");
-  const [adComponents, setAdComponents] = useState<any>(null);
-  const nativeAdRef = useRef<any>(null);
+  const [ads, setAds] = useState<AdModule | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const ads = await import("react-native-google-mobile-ads");
-        if (!cancelled) setAdComponents(ads);
+        const mod = await import("react-native-google-mobile-ads");
+        if (!cancelled) setAds(mod);
       } catch {
-        if (!cancelled) setAdState("error");
+        if (!cancelled) setFailed(true);
       }
     })();
     return () => { cancelled = true; };
   }, []);
 
-  const onAdLoaded = useCallback(() => setAdState("loaded"), []);
-  const onAdFailedToLoad = useCallback(() => setAdState("error"), []);
-
-  if (!adComponents || adState === "error") {
+  if (!ads || failed) {
     return (
       <View style={[styles.wrapper, style]}>
         <FallbackCard />
@@ -62,40 +58,23 @@ export function NativeAdCard({ style }: { style?: StyleProp<ViewStyle> }) {
     );
   }
 
-  const { NativeAdView, NativeAsset, NativeMediaView, CallToActionView } = adComponents;
+  const { BannerAd, BannerAdSize } = ads;
 
   return (
     <View style={[styles.wrapper, style]}>
-      <NativeAdView
-        ref={nativeAdRef}
-        adUnitId={getNativeAdUnitId()}
-        onAdLoaded={onAdLoaded}
-        onAdFailedToLoad={onAdFailedToLoad}
-        requestNonPersonalizedAdsOnly={false}
-      >
-        <View style={styles.nativeCard}>
-          <View style={styles.nativeTop}>
-            <View style={styles.adBadge}>
-              <Text style={styles.adBadgeText}>Ad</Text>
-            </View>
-          </View>
-
-          <NativeMediaView style={styles.mediaView} />
-
-          <View style={styles.nativeBody}>
-            <NativeAsset assetType="headline">
-              <Text style={styles.headline} numberOfLines={2} />
-            </NativeAsset>
-            <NativeAsset assetType="body">
-              <Text style={styles.subline} numberOfLines={2} />
-            </NativeAsset>
-          </View>
-
-          <CallToActionView style={styles.ctaButton}>
-            <Text style={styles.ctaText}>Learn more</Text>
-          </CallToActionView>
+      <View style={styles.adLabelRow}>
+        <View style={styles.adBadge}>
+          <Text style={styles.adBadgeText}>Ad</Text>
         </View>
-      </NativeAdView>
+      </View>
+      <View style={styles.bannerWrap}>
+        <BannerAd
+          unitId={getNativeAdUnitId()}
+          size={BannerAdSize.MEDIUM_RECTANGLE}
+          requestOptions={{ requestNonPersonalizedAdsOnly: false }}
+          onAdFailedToLoad={() => setFailed(true)}
+        />
+      </View>
     </View>
   );
 }
@@ -108,47 +87,23 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
     backgroundColor: "#FFFFFF",
   },
+  adLabelRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 10,
+    paddingTop: 6,
+    paddingBottom: 2,
+  },
+  bannerWrap: {
+    alignItems: "center",
+    paddingBottom: 6,
+  },
   fallbackCard: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 12,
     gap: 10,
-  },
-  nativeCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    overflow: "hidden",
-  },
-  nativeTop: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingHorizontal: 10,
-    paddingTop: 8,
-  },
-  mediaView: {
-    width: "100%",
-    height: 150,
-    backgroundColor: "#F3F4F6",
-  },
-  nativeBody: {
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    gap: 4,
-  },
-  ctaButton: {
-    backgroundColor: "#084C3D",
-    borderRadius: 10,
-    marginHorizontal: 12,
-    marginTop: 10,
-    marginBottom: 12,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  ctaText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#FFFFFF",
   },
   iconWrap: {
     width: 40,

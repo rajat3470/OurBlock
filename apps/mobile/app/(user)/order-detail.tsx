@@ -12,6 +12,7 @@ import { OrderStatus } from "@/types";
 import SafeAreaScreen from "@components/SafeAreaScreen";
 import SafeAreaHeader from "@components/SafeAreaHeader";
 import AcceptanceCountdown from "@components/AcceptanceCountdown";
+import { BannerAdStrip } from "@components/BannerAdStrip";
 import { useOrderDetail } from "@hooks/useOrderDetail";
 import content from "@/content/orderDetail.json";
 
@@ -214,6 +215,10 @@ export default function UserOrderDetail() {
             <Text style={styles.rejectionText}>{rejectionReason}</Text>
           </View>
         ) : null}
+
+        <View style={{ marginTop: 12 }}>
+          <BannerAdStrip />
+        </View>
       </ScrollView>
 
       {/* ── Share Footer ───────────────────────────────────────────── */}

@@ -3,26 +3,37 @@ import { Platform } from "react-native";
 const AD_UNITS = {
   REWARDED_IOS: "ca-app-pub-3723453526316266/4275584013",
   REWARDED_ANDROID: "ca-app-pub-3940256099942544/5354046379", // TODO: replace with real Android ID
-  NATIVE_IOS: "ca-app-pub-3723453526316266/6901747350",
+  NATIVE_IOS: "ca-app-pub-3723453526316266/4311153748",
   NATIVE_ANDROID: "ca-app-pub-3940256099942544/2247696110", // TODO: replace with real Android ID
+  BANNER_IOS: "ca-app-pub-3723453526316266/5680999176",
+  BANNER_ANDROID: "ca-app-pub-3940256099942544/6300978111", // TODO: replace with real Android ID
 } as const;
 
+const TEST_IDS = {
+  REWARDED_IOS: "ca-app-pub-3940256099942544/1712485313",
+  REWARDED_ANDROID: "ca-app-pub-3940256099942544/5354046379",
+  NATIVE_IOS: "ca-app-pub-3940256099942544/3986624511",
+  NATIVE_ANDROID: "ca-app-pub-3940256099942544/2247696110",
+  BANNER_IOS: "ca-app-pub-3940256099942544/2934735716",
+  BANNER_ANDROID: "ca-app-pub-3940256099942544/6300978111",
+} as const;
+
+function getUnitId(type: "REWARDED" | "NATIVE" | "BANNER"): string {
+  const platform = Platform.OS === "ios" ? "IOS" : "ANDROID";
+  const key = `${type}_${platform}` as const;
+  return __DEV__ ? TEST_IDS[key] : AD_UNITS[key];
+}
+
 export function getRewardedAdUnitId(): string {
-  if (__DEV__) {
-    return Platform.OS === "ios"
-      ? "ca-app-pub-3940256099942544/1712485313"
-      : "ca-app-pub-3940256099942544/5354046379";
-  }
-  return Platform.OS === "ios" ? AD_UNITS.REWARDED_IOS : AD_UNITS.REWARDED_ANDROID;
+  return getUnitId("REWARDED");
 }
 
 export function getNativeAdUnitId(): string {
-  if (__DEV__) {
-    return Platform.OS === "ios"
-      ? "ca-app-pub-3940256099942544/3986624511"
-      : "ca-app-pub-3940256099942544/2247696110";
-  }
-  return Platform.OS === "ios" ? AD_UNITS.NATIVE_IOS : AD_UNITS.NATIVE_ANDROID;
+  return getUnitId("NATIVE");
+}
+
+export function getBannerAdUnitId(): string {
+  return getUnitId("BANNER");
 }
 
 async function loadAdsModule() {

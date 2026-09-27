@@ -517,6 +517,7 @@ router.put("/platform-config", async (req: AuthedRequest, res) => {
       "adsRewardedMaxRs",
       "adsDensityEveryNthCard",
       "adsRewardedMaxClaimsPerDay",
+      "homeBannersEnabled",
     ];
     const updates: Record<string, any> = {};
     for (const key of allowed) {

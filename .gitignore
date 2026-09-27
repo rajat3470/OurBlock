@@ -79,9 +79,12 @@ android/keystore
 .eslintcache
 .stylelintcache
 
-# Environment
+# Environment (active env files + per-env secrets)
 .env
+.env.local
 .env.*.local
+**/envs/*.env
+!**/envs/*.env.example
 
 # Temporary files
 *.tmp

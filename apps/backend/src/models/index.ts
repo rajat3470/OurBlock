@@ -413,6 +413,7 @@ const PlatformConfigSchema = new Schema(
     adsRewardedMaxRs: { type: Number, default: 5 },
     adsDensityEveryNthCard: { type: Number, default: 4 },
     adsRewardedMaxClaimsPerDay: { type: Number, default: 1 },
+    homeBannersEnabled: { type: Boolean, default: true },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
@@ -456,6 +457,7 @@ export async function getPlatformConfig() {
     adsRewardedMaxRs: number;
     adsDensityEveryNthCard: number;
     adsRewardedMaxClaimsPerDay: number;
+    homeBannersEnabled: boolean;
   };
 }
 
