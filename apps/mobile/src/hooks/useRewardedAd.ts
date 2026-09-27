@@ -37,8 +37,8 @@ export function useRewardedAd() {
         return;
       }
 
-      const { RewardedAd, RewardedAdEventType, AdEventType, TestIds } = adsModule;
-      const adUnitId = __DEV__ ? TestIds.REWARDED : getRewardedAdUnitId();
+      const { RewardedAd, RewardedAdEventType, AdEventType } = adsModule;
+      const adUnitId = getRewardedAdUnitId();
       const rewarded = RewardedAd.createForAdRequest(adUnitId, {
         requestNonPersonalizedAdsOnly: false,
       });

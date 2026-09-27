@@ -24,10 +24,13 @@ const TEST_IDS = {
 
 type AdType = "REWARDED" | "REWARDED_INTERSTITIAL" | "NATIVE" | "BANNER";
 
+// Set to false once AdMob activates your production ad units (usually 24-48h after creation)
+const USE_TEST_ADS = true;
+
 function getUnitId(type: AdType): string {
   const platform = Platform.OS === "ios" ? "IOS" : "ANDROID";
   const key = `${type}_${platform}` as keyof typeof AD_UNITS;
-  return __DEV__ ? TEST_IDS[key] : AD_UNITS[key];
+  return (__DEV__ || USE_TEST_ADS) ? TEST_IDS[key] : AD_UNITS[key];
 }
 
 export function getRewardedAdUnitId(): string {
