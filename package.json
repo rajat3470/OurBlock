@@ -31,7 +31,9 @@
     "dev:int": "bash scripts/dev.sh int",
     "dev:prod": "bash scripts/dev.sh prod",
 
-    "deploy:backend": "bash scripts/deploy-backend.sh"
+    "deploy:backend": "bash scripts/deploy-backend.sh",
+
+    "android:release": "yarn workspace @mohallamitr/mobile android:release"
   },
   "devDependencies": {
     "patch-package": "^8.0.1",
