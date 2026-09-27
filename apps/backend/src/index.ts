@@ -50,21 +50,44 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Feature flags endpoint (replaces Firebase Remote Config)
-app.get("/feature-flags", (_req, res) => {
-  res.json({
-    success: true,
-    data: {
-      adsEnabled: process.env.FF_ADS_ENABLED === "true",
-      adsNativeFeedEnabled: process.env.FF_ADS_NATIVE_FEED_ENABLED === "true",
-      adsNativeListingEnabled: process.env.FF_ADS_NATIVE_LISTING_ENABLED === "true",
-      adsRewardedEnabled: process.env.FF_ADS_REWARDED_ENABLED === "true",
-      adsRewardedMinRs: Number(process.env.FF_ADS_REWARDED_MIN_RS) || 2,
-      adsRewardedMaxRs: Number(process.env.FF_ADS_REWARDED_MAX_RS) || 5,
-      adsDensityEveryNthCard: Number(process.env.FF_ADS_DENSITY_EVERY_NTH_CARD) || 4,
-      adsRewardedMaxClaimsPerDay: Number(process.env.FF_ADS_REWARDED_MAX_CLAIMS_PER_DAY) || 1,
-    },
-  });
+// Feature flags + platform config endpoint (reads from DB, managed via admin portal)
+app.get("/feature-flags", async (_req, res) => {
+  try {
+    const { getPlatformConfig } = await import("./models/index");
+    const config = await getPlatformConfig();
+    res.json({
+      success: true,
+      data: {
+        adsEnabled: config.adsEnabled,
+        adsNativeFeedEnabled: config.adsNativeFeedEnabled,
+        adsNativeListingEnabled: config.adsNativeListingEnabled,
+        adsRewardedEnabled: config.adsRewardedEnabled,
+        adsRewardedMinRs: config.adsRewardedMinRs,
+        adsRewardedMaxRs: config.adsRewardedMaxRs,
+        adsDensityEveryNthCard: config.adsDensityEveryNthCard,
+        adsRewardedMaxClaimsPerDay: config.adsRewardedMaxClaimsPerDay,
+        platformFeeAmount: config.platformFeeAmount,
+        minimumOrderAmount: config.minimumOrderAmount,
+      },
+    });
+  } catch (err) {
+    console.error("feature-flags error:", err);
+    res.json({
+      success: true,
+      data: {
+        adsEnabled: false,
+        adsNativeFeedEnabled: false,
+        adsNativeListingEnabled: false,
+        adsRewardedEnabled: false,
+        adsRewardedMinRs: 2,
+        adsRewardedMaxRs: 5,
+        adsDensityEveryNthCard: 4,
+        adsRewardedMaxClaimsPerDay: 1,
+        platformFeeAmount: 2,
+        minimumOrderAmount: 50,
+      },
+    });
+  }
 });
 
 const PORT = Number(process.env.PORT) || 5001;

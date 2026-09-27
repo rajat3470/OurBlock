@@ -1,5 +1,13 @@
 {
   "ios": {
-    "bundleIdentifier": "com.mohallamitr.app"
+    "bundleIdentifier": "com.mohallamitr.app",
+    "config": {
+      "googleMobileAdsAppId": "ca-app-pub-3723453526316266~2247177318"
+    }
+  },
+  "android": {
+    "config": {
+      "googleMobileAdsAppId": "ca-app-pub-xxxxxxxxxxxxxxxx~yyyyyyyyyy"
+    }
   }
 }

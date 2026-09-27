@@ -400,6 +400,23 @@ const SuspensionHistorySchema = new Schema(
   { timestamps: true }
 );
 
+const PlatformConfigSchema = new Schema(
+  {
+    _id: { type: String, default: "singleton" },
+    platformFeeAmount: { type: Number, default: 2 },
+    minimumOrderAmount: { type: Number, default: 50 },
+    adsEnabled: { type: Boolean, default: false },
+    adsNativeFeedEnabled: { type: Boolean, default: false },
+    adsNativeListingEnabled: { type: Boolean, default: false },
+    adsRewardedEnabled: { type: Boolean, default: false },
+    adsRewardedMinRs: { type: Number, default: 2 },
+    adsRewardedMaxRs: { type: Number, default: 5 },
+    adsDensityEveryNthCard: { type: Number, default: 4 },
+    adsRewardedMaxClaimsPerDay: { type: Number, default: 1 },
+  },
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
+);
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
@@ -420,6 +437,27 @@ export const ChatSession = model("ChatSession", ChatSessionSchema);
 export const Message = model("Message", MessageSchema);
 export const AdRewardClaim = model("AdRewardClaim", AdRewardClaimSchema);
 export const SuspensionHistory = model("SuspensionHistory", SuspensionHistorySchema);
+export const PlatformConfig = model("PlatformConfig", PlatformConfigSchema);
+
+export async function getPlatformConfig() {
+  let config = await PlatformConfig.findById("singleton").lean();
+  if (!config) {
+    const doc = await PlatformConfig.create({ _id: "singleton" });
+    config = doc.toObject();
+  }
+  return config as {
+    platformFeeAmount: number;
+    minimumOrderAmount: number;
+    adsEnabled: boolean;
+    adsNativeFeedEnabled: boolean;
+    adsNativeListingEnabled: boolean;
+    adsRewardedEnabled: boolean;
+    adsRewardedMinRs: number;
+    adsRewardedMaxRs: number;
+    adsDensityEveryNthCard: number;
+    adsRewardedMaxClaimsPerDay: number;
+  };
+}
 
 // Map-friendly export for route/service convenience.
 export const models = {
@@ -439,6 +477,7 @@ export const models = {
   Message,
   AdRewardClaim,
   SuspensionHistory,
+  PlatformConfig,
 };
 
 export { mongoose, Types, Connection };

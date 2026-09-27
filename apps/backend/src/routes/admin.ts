@@ -5,6 +5,7 @@ import { requireSuperAdmin } from "../middleware/superAdmin";
 import { AuthedRequest } from "../middleware/auth";
 import bcrypt from "bcryptjs";
 import { emitBusinessProductsChanged, emitBusinessUpdate } from "../lib/socket";
+import { PlatformConfig, getPlatformConfig } from "../models/index";
 
 const router = Router();
 router.use(requireSuperAdmin);
@@ -487,6 +488,51 @@ router.delete("/banners/:id", async (req, res) => {
     if (!existing) return res.status(404).json({ success: false, error: "Banner not found" });
     await prisma.homeBanner.delete({ where: { id: req.params.id } });
     return res.json({ success: true });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ─── Platform Config ──────────────────────────────────────────────────────
+
+router.get("/platform-config", async (_req, res) => {
+  try {
+    const config = await getPlatformConfig();
+    return res.json({ success: true, data: config });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.put("/platform-config", async (req: AuthedRequest, res) => {
+  try {
+    const allowed = [
+      "platformFeeAmount",
+      "minimumOrderAmount",
+      "adsEnabled",
+      "adsNativeFeedEnabled",
+      "adsNativeListingEnabled",
+      "adsRewardedEnabled",
+      "adsRewardedMinRs",
+      "adsRewardedMaxRs",
+      "adsDensityEveryNthCard",
+      "adsRewardedMaxClaimsPerDay",
+    ];
+    const updates: Record<string, any> = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) {
+        updates[key] = req.body[key];
+      }
+    }
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, error: "No valid fields to update" });
+    }
+    const config = await PlatformConfig.findByIdAndUpdate(
+      "singleton",
+      { $set: updates },
+      { new: true, upsert: true, lean: true }
+    );
+    return res.json({ success: true, data: config });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }

@@ -4,13 +4,13 @@ import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { useAppSelector } from "@hooks/useRedux";
 import { useUserApp } from "@hooks/useUserApp";
+import { useFeatureFlags } from "@hooks/useFeatureFlags";
+import { useRewardedAd } from "@hooks/useRewardedAd";
 import { userAppService } from "@services/userAppService";
 import { getBusinessStatus } from "@utils/businessStatus";
 import { Address } from "@/types";
 import { ORDER_FEES } from "@/constants";
 import content from "@/content/checkout.json";
-
-const { PLATFORM_FEE, MINIMUM_ORDER } = ORDER_FEES;
 
 export const PAYMENT_METHODS = [
   { key: "cash" as const, icon: "💵" },
@@ -21,15 +21,17 @@ export const PAYMENT_METHODS = [
 export type PaymentMethod = "cash" | "upi" | "card";
 export type PaymentTiming = "atOrder" | "atDelivery";
 
-/**
- * Encapsulates the checkout flow: address loading, coupon validation,
- * payment method selection, and order placement.
- */
 export const useCheckout = () => {
   const toast = useToast();
   const cartItems = useAppSelector((state) => state.cart.items);
   const cartBusinessId = useAppSelector((state) => state.cart.businessId);
   const { placeOrder, isLoading, businesses } = useUserApp();
+
+  const { isRewardedEnabled, values: ffValues } = useFeatureFlags();
+  const { adState, showRewardedAd } = useRewardedAd();
+  const [adReward, setAdReward] = useState<{ couponCode: string; discountAmount: number } | null>(
+    null
+  );
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
@@ -40,6 +42,9 @@ export const useCheckout = () => {
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const orderPlacedRef = useRef(false);
+
+  const PLATFORM_FEE = ffValues.platformFeeAmount ?? ORDER_FEES.PLATFORM_FEE;
+  const MINIMUM_ORDER = ffValues.minimumOrderAmount ?? ORDER_FEES.MINIMUM_ORDER;
 
   const subTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const discountAmount = appliedCoupon?.discountAmount ?? 0;
@@ -69,6 +74,36 @@ export const useCheckout = () => {
     }
   }, [cartItems]);
 
+  const handleWatchAd = useCallback(async () => {
+    const earned = await showRewardedAd();
+    if (!earned) return;
+    try {
+      const reward = await userAppService.claimAdReward();
+      setAdReward({ couponCode: reward.couponCode, discountAmount: reward.discountAmount });
+      setCouponCode(reward.couponCode);
+      // Auto-apply the earned coupon
+      if (cartBusinessId) {
+        setCouponLoading(true);
+        try {
+          const result = await userAppService.validateCoupon({
+            code: reward.couponCode,
+            businessId: cartBusinessId,
+            subTotal,
+          });
+          setAppliedCoupon({ code: result.code, discountAmount: result.discountAmount });
+          toast.show(`Saved ₹${result.discountAmount} with reward!`, { type: "success" });
+        } catch {
+          setAppliedCoupon({ code: reward.couponCode, discountAmount: reward.discountAmount });
+          toast.show(`Saved ₹${reward.discountAmount} with reward!`, { type: "success" });
+        } finally {
+          setCouponLoading(false);
+        }
+      }
+    } catch (err: any) {
+      Alert.alert("Reward", err?.message ?? "Could not claim reward. Try again.");
+    }
+  }, [showRewardedAd, cartBusinessId, subTotal, toast]);
+
   const handleApplyCoupon = useCallback(async () => {
     if (!couponCode.trim()) {
       toast.show(content.toasts.enterCoupon, { type: "warning" });
@@ -95,6 +130,7 @@ export const useCheckout = () => {
   const handleRemoveCoupon = useCallback(() => {
     setAppliedCoupon(null);
     setCouponCode("");
+    setAdReward(null);
   }, []);
 
   const handlePlaceOrder = useCallback(() => {
@@ -218,5 +254,11 @@ export const useCheckout = () => {
     handlePlaceOrder,
     goBack,
     addAddress,
+    platformFee: PLATFORM_FEE,
+    isRewardedEnabled,
+    ffValues,
+    adState,
+    adReward,
+    handleWatchAd,
   };
 };

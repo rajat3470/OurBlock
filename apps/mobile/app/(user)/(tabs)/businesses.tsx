@@ -10,7 +10,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import BusinessListCard from "@components/BusinessListCard";
+import { NativeAdCard } from "@components/NativeAdCard";
 import { useBusinessesScreen } from "@hooks/useBusinessesScreen";
+import { useFeatureFlags } from "@hooks/useFeatureFlags";
 import content from "@/content/businesses.json";
 
 export default function UserBusinesses() {
@@ -26,8 +28,19 @@ export default function UserBusinesses() {
     clearSearch,
     openBusiness,
   } = useBusinessesScreen();
+  const { isNativeFeedEnabled, values: ffValues } = useFeatureFlags();
 
   const searchActive = searchQuery.trim().length > 0;
+  const nthCard = ffValues.adsDensityEveryNthCard || 4;
+
+  type ListItem = { type: "business"; data: typeof filteredBusinesses[0] } | { type: "ad"; key: string };
+  const listData: ListItem[] = [];
+  filteredBusinesses.forEach((biz, i) => {
+    listData.push({ type: "business", data: biz });
+    if (isNativeFeedEnabled && (i + 1) % nthCard === 0) {
+      listData.push({ type: "ad", key: `ad-${i}` });
+    }
+  });
 
   return (
     <View style={styles.container}>
@@ -55,18 +68,23 @@ export default function UserBusinesses() {
       </View>
 
       <FlatList
-        data={filteredBusinesses}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <BusinessListCard
-            business={item}
-            isFavorite={favoriteBusinessIds.includes(item.id)}
-            matchedItems={productMatchesByBusiness.get(item.id) ?? []}
-            searchActive={searchActive}
-            onPress={openBusiness}
-            onToggleFavorite={toggleFavorite}
-          />
-        )}
+        data={listData}
+        keyExtractor={(item) => item.type === "business" ? item.data.id : item.key}
+        renderItem={({ item }) => {
+          if (item.type === "ad") {
+            return <NativeAdCard style={{ marginBottom: 12 }} />;
+          }
+          return (
+            <BusinessListCard
+              business={item.data}
+              isFavorite={favoriteBusinessIds.includes(item.data.id)}
+              matchedItems={productMatchesByBusiness.get(item.data.id) ?? []}
+              searchActive={searchActive}
+              onPress={openBusiness}
+              onToggleFavorite={toggleFavorite}
+            />
+          );
+        }}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={

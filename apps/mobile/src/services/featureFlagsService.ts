@@ -40,6 +40,8 @@ class FeatureFlagsService {
           adsRewardedMaxRs: asPositiveInt(raw.adsRewardedMaxRs ?? 0, DEFAULT_FEATURE_FLAGS.adsRewardedMaxRs),
           adsDensityEveryNthCard: asPositiveInt(raw.adsDensityEveryNthCard ?? 0, DEFAULT_FEATURE_FLAGS.adsDensityEveryNthCard),
           adsRewardedMaxClaimsPerDay: asPositiveInt(raw.adsRewardedMaxClaimsPerDay ?? 0, DEFAULT_FEATURE_FLAGS.adsRewardedMaxClaimsPerDay),
+          platformFeeAmount: asPositiveInt(raw.platformFeeAmount ?? 0, DEFAULT_FEATURE_FLAGS.platformFeeAmount),
+          minimumOrderAmount: asPositiveInt(raw.minimumOrderAmount ?? 0, DEFAULT_FEATURE_FLAGS.minimumOrderAmount),
         };
         if (values.adsRewardedMaxRs < values.adsRewardedMinRs) {
           values.adsRewardedMaxRs = values.adsRewardedMinRs;

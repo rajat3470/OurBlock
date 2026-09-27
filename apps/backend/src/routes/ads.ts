@@ -1,24 +1,28 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { requireAuth, AuthedRequest } from "../middleware/auth";
-import { AD_REWARD } from "../shared/constants";
+import { getPlatformConfig } from "../models/index";
 
 const router = Router();
-const { MAX_CLAIMS_PER_DAY, REWARD_MIN_RS, REWARD_MAX_RS } = AD_REWARD;
 
 router.post("/claim-reward", requireAuth, async (req: AuthedRequest, res) => {
   const uid = req.uid!;
   try {
+    const config = await getPlatformConfig();
+    const maxClaims = config.adsRewardedMaxClaimsPerDay;
+    const minRs = config.adsRewardedMinRs;
+    const maxRs = config.adsRewardedMaxRs;
+
     const today = new Date().toISOString().slice(0, 10);
     const existingClaim = await prisma.adRewardClaim.findUnique({ where: { userId_date: { userId: uid, date: today } } });
     const claimsToday = existingClaim?.count ?? 0;
 
-    if (claimsToday >= MAX_CLAIMS_PER_DAY) {
+    if (claimsToday >= maxClaims) {
       return res.status(429).json({ success: false, error: "Daily ad reward limit reached. Come back tomorrow!" });
     }
 
     const code = `ADR-${uid.slice(-6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
-    const discountAmount = Math.floor(Math.random() * (REWARD_MAX_RS - REWARD_MIN_RS + 1)) + REWARD_MIN_RS;
+    const discountAmount = Math.floor(Math.random() * (maxRs - minRs + 1)) + minRs;
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await prisma.coupon.create({
