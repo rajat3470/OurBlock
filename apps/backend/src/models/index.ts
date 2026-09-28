@@ -230,6 +230,7 @@ const OrderSchema = new Schema(
     platformFee: { type: Number, default: 0 },
     couponCode: String,
     couponDiscount: { type: Number, default: 0 },
+    paymentGatewayFee: { type: Number, default: 0 },
     totalAmount: { type: Number, required: true },
     finalAmount: { type: Number, required: true },
     addressId: String,
@@ -251,6 +252,8 @@ const OrderSchema = new Schema(
     paymentCollectedAt: Date,
     paymentCollectedBy: String,
     paymentCollectedMethod: { type: String, enum: ["cash", "card", "upi", "wallet"] },
+    cfOrderId: String,
+    paymentSessionId: String,
     rejectionReason: String,
     rejectedAt: Date,
     rejectedBy: { type: String, enum: ["business_owner", "system"] },
@@ -414,6 +417,8 @@ const PlatformConfigSchema = new Schema(
     adsDensityEveryNthCard: { type: Number, default: 4 },
     adsRewardedMaxClaimsPerDay: { type: Number, default: 1 },
     homeBannersEnabled: { type: Boolean, default: true },
+    cardFeePercent: { type: Number, default: 0 },
+    upiFeePercent: { type: Number, default: 0 },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
@@ -458,6 +463,8 @@ export async function getPlatformConfig() {
     adsDensityEveryNthCard: number;
     adsRewardedMaxClaimsPerDay: number;
     homeBannersEnabled: boolean;
+    cardFeePercent: number;
+    upiFeePercent: number;
   };
 }
 

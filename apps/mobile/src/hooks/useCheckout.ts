@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { useAppSelector } from "@hooks/useRedux";
 import { useUserApp } from "@hooks/useUserApp";
 import { useFeatureFlags } from "@hooks/useFeatureFlags";
-import { useRewardedAd } from "@hooks/useRewardedAd";
 import { userAppService } from "@services/userAppService";
+import { paymentService, CardDetails } from "@services/paymentService";
 import { getBusinessStatus } from "@utils/businessStatus";
 import { Address } from "@/types";
 import { ORDER_FEES } from "@/constants";
@@ -23,16 +23,11 @@ export type PaymentTiming = "atOrder" | "atDelivery";
 
 export const useCheckout = () => {
   const toast = useToast();
-  const params = useLocalSearchParams<{ rewardCode?: string; rewardAmount?: string }>();
   const cartItems = useAppSelector((state) => state.cart.items);
   const cartBusinessId = useAppSelector((state) => state.cart.businessId);
   const { placeOrder, isLoading, businesses } = useUserApp();
 
-  const { isRewardedEnabled, values: ffValues } = useFeatureFlags();
-  const { adState, showRewardedAd } = useRewardedAd();
-  const [adReward, setAdReward] = useState<{ couponCode: string; discountAmount: number } | null>(
-    null
-  );
+  const { values: ffValues } = useFeatureFlags();
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
@@ -42,15 +37,31 @@ export const useCheckout = () => {
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountAmount: number } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
+  const [cardDetails, setCardDetails] = useState<CardDetails>({
+    holderName: "",
+    number: "",
+    expiryMM: "",
+    expiryYY: "",
+    cvv: "",
+  });
+  const [upiId, setUpiId] = useState("");
   const orderPlacedRef = useRef(false);
-  const rewardAppliedRef = useRef(false);
 
   const PLATFORM_FEE = ffValues.platformFeeAmount ?? ORDER_FEES.PLATFORM_FEE;
   const MINIMUM_ORDER = ffValues.minimumOrderAmount ?? ORDER_FEES.MINIMUM_ORDER;
 
   const subTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const discountAmount = appliedCoupon?.discountAmount ?? 0;
-  const finalAmount = subTotal + PLATFORM_FEE - discountAmount;
+  const baseAmount = subTotal + PLATFORM_FEE - discountAmount;
+  const pgFeePercent = paymentMethod === "card"
+    ? (ffValues.cardFeePercent ?? 0)
+    : paymentMethod === "upi"
+    ? (ffValues.upiFeePercent ?? 0)
+    : 0;
+  const paymentGatewayFee = pgFeePercent > 0
+    ? Math.round(baseAmount * pgFeePercent) / 100
+    : 0;
+  const finalAmount = baseAmount + paymentGatewayFee;
 
   const loadAddresses = useCallback(async () => {
     try {
@@ -75,47 +86,6 @@ export const useCheckout = () => {
       router.replace("/(user)/home");
     }
   }, [cartItems]);
-
-  useEffect(() => {
-    if (rewardAppliedRef.current || !params.rewardCode || !params.rewardAmount) return;
-    rewardAppliedRef.current = true;
-    const code = params.rewardCode;
-    const amount = Number(params.rewardAmount);
-    setAdReward({ couponCode: code, discountAmount: amount });
-    setCouponCode(code);
-    setAppliedCoupon({ code, discountAmount: amount });
-    toast.show(`Saved ₹${amount} with reward!`, { type: "success" });
-  }, [params.rewardCode, params.rewardAmount, toast]);
-
-  const handleWatchAd = useCallback(async () => {
-    const earned = await showRewardedAd();
-    if (!earned) return;
-    try {
-      const reward = await userAppService.claimAdReward();
-      setAdReward({ couponCode: reward.couponCode, discountAmount: reward.discountAmount });
-      setCouponCode(reward.couponCode);
-      // Auto-apply the earned coupon
-      if (cartBusinessId) {
-        setCouponLoading(true);
-        try {
-          const result = await userAppService.validateCoupon({
-            code: reward.couponCode,
-            businessId: cartBusinessId,
-            subTotal,
-          });
-          setAppliedCoupon({ code: result.code, discountAmount: result.discountAmount });
-          toast.show(`Saved ₹${result.discountAmount} with reward!`, { type: "success" });
-        } catch {
-          setAppliedCoupon({ code: reward.couponCode, discountAmount: reward.discountAmount });
-          toast.show(`Saved ₹${reward.discountAmount} with reward!`, { type: "success" });
-        } finally {
-          setCouponLoading(false);
-        }
-      }
-    } catch (err: any) {
-      Alert.alert("Reward", err?.message ?? "Could not claim reward. Try again.");
-    }
-  }, [showRewardedAd, cartBusinessId, subTotal, toast]);
 
   const handleApplyCoupon = useCallback(async () => {
     if (!couponCode.trim()) {
@@ -143,7 +113,6 @@ export const useCheckout = () => {
   const handleRemoveCoupon = useCallback(() => {
     setAppliedCoupon(null);
     setCouponCode("");
-    setAdReward(null);
   }, []);
 
   const handlePlaceOrder = useCallback(() => {
@@ -193,34 +162,77 @@ export const useCheckout = () => {
           text: content.confirm.confirm,
           onPress: async () => {
             try {
-              const effectiveTiming: PaymentTiming =
-                paymentMethod === "cash" ? "atDelivery" : paymentTiming;
-              const payload = {
-                businessId: cartBusinessId,
-                items: cartItems.map((item) => ({
-                  productId: item.productId,
-                  quantity: item.quantity,
-                  price: item.price,
-                })),
-                deliveryAddress: {
-                  type: selectedAddress.type,
-                  name: selectedAddress.name,
-                  street: selectedAddress.street,
-                  landmark: selectedAddress.landmark,
-                  city: selectedAddress.city,
-                  state: selectedAddress.state,
-                  pincode: selectedAddress.pincode,
-                  phone: selectedAddress.phone,
-                  isDefault: selectedAddress.isDefault,
-                },
-                paymentMethod,
-                paymentTiming: effectiveTiming,
-                couponCode: appliedCoupon?.code,
+              const addressPayload = {
+                type: selectedAddress.type,
+                name: selectedAddress.name,
+                street: selectedAddress.street,
+                landmark: selectedAddress.landmark,
+                city: selectedAddress.city,
+                state: selectedAddress.state,
+                pincode: selectedAddress.pincode,
+                phone: selectedAddress.phone,
+                isDefault: selectedAddress.isDefault,
               };
-              orderPlacedRef.current = true;
-              await placeOrder(payload);
-              toast.show(content.toasts.orderPlaced, { type: "success", duration: 3000 });
-              router.replace("/(user)/orders");
+              const itemsPayload = cartItems.map((item) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                price: item.price,
+              }));
+
+              if (paymentMethod === "cash") {
+                // COD — direct order creation
+                const effectiveTiming: PaymentTiming = "atDelivery";
+                orderPlacedRef.current = true;
+                await placeOrder({
+                  businessId: cartBusinessId,
+                  items: itemsPayload,
+                  deliveryAddress: addressPayload,
+                  paymentMethod,
+                  paymentTiming: effectiveTiming,
+                  couponCode: appliedCoupon?.code,
+                });
+                toast.show(content.toasts.orderPlaced, { type: "success", duration: 3000 });
+                router.replace("/(user)/orders");
+              } else {
+                if (paymentMethod === "card") {
+                  const cn = cardDetails.number.replace(/\s/g, "");
+                  if (cn.length < 13 || !cardDetails.expiryMM || !cardDetails.expiryYY || cardDetails.cvv.length < 3) {
+                    toast.show("Please fill in all card details", { type: "warning" });
+                    return;
+                  }
+                }
+                if (paymentMethod === "upi" && upiId.trim() && !upiId.includes("@")) {
+                  toast.show("Enter a valid UPI ID (e.g. name@upi)", { type: "warning" });
+                  return;
+                }
+
+                const paymentOrder = await paymentService.createPaymentOrder({
+                  businessId: cartBusinessId,
+                  items: itemsPayload,
+                  deliveryAddress: addressPayload,
+                  paymentMethod,
+                  couponCode: appliedCoupon?.code,
+                });
+
+                await paymentService.startPayment(
+                  paymentOrder.paymentSessionId,
+                  paymentOrder.cfOrderId,
+                  paymentMethod,
+                  paymentMethod === "card" ? cardDetails : undefined,
+                  paymentMethod === "upi" && upiId.trim() ? upiId.trim() : undefined,
+                );
+
+                // Verify payment with backend
+                const verification = await paymentService.verifyPayment(paymentOrder.cfOrderId);
+                if (verification.paymentStatus === "completed") {
+                  orderPlacedRef.current = true;
+                  toast.show(content.toasts.orderPlaced, { type: "success", duration: 3000 });
+                  router.replace("/(user)/orders");
+                } else {
+                  toast.show("Payment is being processed. Check your orders.", { type: "warning" });
+                  router.replace("/(user)/orders");
+                }
+              }
             } catch (err: any) {
               const message = err?.response?.data?.error ?? err?.message ?? content.toasts.orderFailed;
               toast.show(message, { type: "danger" });
@@ -229,7 +241,7 @@ export const useCheckout = () => {
         },
       ]
     );
-  }, [addresses, appliedCoupon, businesses, cartBusinessId, cartItems, finalAmount, paymentMethod, paymentTiming, placeOrder, selectedAddressId, subTotal, toast]);
+  }, [addresses, appliedCoupon, businesses, cardDetails, cartBusinessId, cartItems, finalAmount, paymentMethod, paymentTiming, placeOrder, selectedAddressId, subTotal, toast, upiId]);
 
   const goBack = useCallback(() => {
     if (router.canGoBack()) {
@@ -249,10 +261,12 @@ export const useCheckout = () => {
     paymentMethod,
     setPaymentMethod: (method: PaymentMethod) => {
       setPaymentMethod(method);
-      if (method === "cash") setPaymentTiming("atDelivery");
+      setPaymentTiming(method === "cash" ? "atDelivery" : "atOrder");
     },
-    paymentTiming,
-    setPaymentTiming,
+    cardDetails,
+    setCardDetails,
+    upiId,
+    setUpiId,
     loadingAddresses,
     couponCode,
     setCouponCode,
@@ -268,10 +282,6 @@ export const useCheckout = () => {
     goBack,
     addAddress,
     platformFee: PLATFORM_FEE,
-    isRewardedEnabled,
-    ffValues,
-    adState,
-    adReward,
-    handleWatchAd,
+    paymentGatewayFee,
   };
 };

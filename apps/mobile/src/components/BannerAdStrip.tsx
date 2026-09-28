@@ -4,7 +4,9 @@ import { getBannerAdUnitId } from "../services/adService";
 
 type AdModule = typeof import("react-native-google-mobile-ads");
 
-export function BannerAdStrip() {
+type SizeKey = "BANNER" | "LARGE_BANNER" | "MEDIUM_RECTANGLE";
+
+export function BannerAdStrip({ size = "BANNER" }: { size?: SizeKey }) {
   const [ads, setAds] = useState<AdModule | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -29,7 +31,7 @@ export function BannerAdStrip() {
     <View style={styles.container}>
       <BannerAd
         unitId={getBannerAdUnitId()}
-        size={BannerAdSize.BANNER}
+        size={BannerAdSize[size]}
         requestOptions={{ requestNonPersonalizedAdsOnly: false }}
         onAdFailedToLoad={() => setFailed(true)}
       />

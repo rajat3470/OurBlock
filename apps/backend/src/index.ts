@@ -22,12 +22,18 @@ import adsRoutes from "./routes/ads";
 import chatRoutes from "./routes/chat";
 import otpRoutes from "./routes/otp";
 import uploadRoutes from "./routes/upload";
+import paymentRoutes from "./routes/payments";
 
 const app = express();
 const server = http.createServer(app);
 
 app.use(cors({ origin: process.env.CORS_ORIGIN || "*" }));
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({
+  limit: "10mb",
+  verify: (req, _res, buf) => {
+    (req as any).rawBody = buf.toString();
+  },
+}));
 
 app.use("/auth", authRoutes);
 app.use("/chat", chatRoutes);
@@ -45,6 +51,7 @@ app.use("/refunds", refundRoutes);
 app.use("/ads", adsRoutes);
 app.use("/otp", otpRoutes);
 app.use("/upload", uploadRoutes);
+app.use("/payments", paymentRoutes);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -69,6 +76,8 @@ app.get("/feature-flags", async (_req, res) => {
         platformFeeAmount: config.platformFeeAmount,
         minimumOrderAmount: config.minimumOrderAmount,
         homeBannersEnabled: config.homeBannersEnabled,
+        cardFeePercent: config.cardFeePercent,
+        upiFeePercent: config.upiFeePercent,
       },
     });
   } catch (err) {
@@ -87,6 +96,8 @@ app.get("/feature-flags", async (_req, res) => {
         adsRewardedMaxClaimsPerDay: 1,
         platformFeeAmount: 2,
         minimumOrderAmount: 50,
+        cardFeePercent: 0,
+        upiFeePercent: 0,
       },
     });
   }

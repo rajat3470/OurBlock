@@ -16,7 +16,7 @@ export async function cascadeDeleteSociety(
   const businessIds = businesses.map((b) => b.id);
 
   if (businessIds.length > 0) {
-    await prisma.orderItem.deleteMany({ where: { order: { businessId: { in: businessIds } } } });
+    // OrderItem is embedded inside Order documents, so deleting orders removes items too
     await prisma.order.deleteMany({ where: { businessId: { in: businessIds } } });
     await prisma.product.deleteMany({ where: { businessId: { in: businessIds } } });
     await prisma.coupon.deleteMany({ where: { businessId: { in: businessIds } } });

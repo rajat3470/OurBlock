@@ -4400,6 +4400,11 @@ caniuse-lite@^1.0.30001579, caniuse-lite@^1.0.30001782, caniuse-lite@^1.0.300017
   resolved "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001791.tgz"
   integrity sha512-yk0l/YSrOnFZk3UROpDLQD9+kC1l4meK/wed583AXrzoarMGJcbRi2Q4RaUYbKxYAsZ8sWmaSa/DsLmdBeI1vQ==
 
+cashfree-pg-api-contract@2.1.1, cashfree-pg-api-contract@^2.1.1:
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/cashfree-pg-api-contract/-/cashfree-pg-api-contract-2.1.1.tgz#16f6ea012dd5016899c99017cc84b1fa883ae00d"
+  integrity sha512-37n7grMsjV9M6kdFKFbb+ZKL5Vr0BZbmSZhCaq3v0CJh+l/r9qz325AA1PfMLqiZSojicVr9pYyz+klcLvigtA==
+
 chalk@^2.0.1, chalk@^2.4.2:
   version "2.4.2"
   resolved "https://registry.npmjs.org/chalk/-/chalk-2.4.2.tgz"
@@ -8930,6 +8935,13 @@ react-native-animatable@1.4.0:
   integrity sha512-DZwaDVWm2NBvBxf7I0wXKXLKb/TxDnkV53sWhCvei1pRyTX3MVFpkvdYBknNBqPrxYuAIlPxEp7gJOidIauUkw==
   dependencies:
     prop-types "^15.8.1"
+
+react-native-cashfree-pg-sdk@^2.4.0:
+  version "2.4.0"
+  resolved "https://registry.yarnpkg.com/react-native-cashfree-pg-sdk/-/react-native-cashfree-pg-sdk-2.4.0.tgz#45b607e23966eab65fb254cc5e0472c00315056f"
+  integrity sha512-69iEcL093Gq4fgHTt+u9tCl0nZVN8nRn7L6Ap5A5KS/EWdOUu3yKO7KvBcLCD0jU85cIPfQ3+8u/7LASxHghbA==
+  dependencies:
+    cashfree-pg-api-contract "2.1.1"
 
 react-native-gesture-handler@~2.30.0:
   version "2.30.1"

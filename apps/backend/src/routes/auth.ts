@@ -466,10 +466,10 @@ async function loginWithRole(req: any, res: any, expectedRole: "superAdmin" | "b
   return res.json({ user: sanitizeUser(user), tokens });
 }
 
-router.post("/superadmin/login", (req, res) => loginWithRole(req, res, "superAdmin"));
-router.post("/businessowner/login", (req, res) => loginWithRole(req, res, "businessOwner"));
-router.post("/user/login", (req, res) => loginWithRole(req, res, "user"));
-router.post("/deliverypartner/login", (req, res) => loginWithRole(req, res, "deliveryPartner"));
+router.post("/superadmin/login", (req, res, next) => loginWithRole(req, res, "superAdmin").catch(next));
+router.post("/businessowner/login", (req, res, next) => loginWithRole(req, res, "businessOwner").catch(next));
+router.post("/user/login", (req, res, next) => loginWithRole(req, res, "user").catch(next));
+router.post("/deliverypartner/login", (req, res, next) => loginWithRole(req, res, "deliveryPartner").catch(next));
 
 // ---------------------------------------------------------------------------
 // POST /auth/refresh-token

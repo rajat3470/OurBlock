@@ -20,9 +20,9 @@ export const phoneVerificationService = {
    */
   async sendVerificationCode(phoneNumber: string): Promise<ConfirmationResult> {
     const formatted = this.formatPhoneNumber(phoneNumber);
-    const res = await apiClient.post('/otp/send', { phone: formatted });
-    if (!res.data?.success) {
-      throw new Error(res.data?.error || 'Failed to send OTP');
+    const res = await apiClient.post<{ success: boolean; error?: string }>('/otp/send', { phone: formatted });
+    if (!(res as any).success) {
+      throw new Error((res as any).error || 'Failed to send OTP');
     }
     return {
       phone: formatted,
@@ -39,9 +39,9 @@ export const phoneVerificationService = {
    * @returns Success status
    */
   async verifyCode(confirmation: { phone: string }, code: string): Promise<boolean> {
-    const res = await apiClient.post('/otp/verify', { phone: confirmation.phone, code });
-    if (!res.data?.success) {
-      throw new Error(res.data?.error || 'Verification failed');
+    const res = await apiClient.post<{ success: boolean; error?: string }>('/otp/verify', { phone: confirmation.phone, code });
+    if (!(res as any).success) {
+      throw new Error((res as any).error || 'Verification failed');
     }
     return true;
   },

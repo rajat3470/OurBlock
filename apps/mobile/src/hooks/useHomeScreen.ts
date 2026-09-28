@@ -57,22 +57,6 @@ export const useHomeScreen = () => {
   const [topRowH, setTopRowH] = useState(0);
   const [infoRowH, setInfoRowH] = useState(0);
   const measured = topRowH > 0 && infoRowH > 0;
-  const collapseDistance = Math.max(1, topRowH + infoRowH);
-  const topRowHeight = scrollY.interpolate({
-    inputRange: [0, collapseDistance],
-    outputRange: [topRowH, 0],
-    extrapolate: "clamp",
-  });
-  const infoRowHeight = scrollY.interpolate({
-    inputRange: [0, collapseDistance],
-    outputRange: [infoRowH, 0],
-    extrapolate: "clamp",
-  });
-  const collapseOpacity = scrollY.interpolate({
-    inputRange: [0, collapseDistance * 0.6],
-    outputRange: [1, 0],
-    extrapolate: "clamp",
-  });
 
   useEffect(() => {
     Animated.timing(entrance, {
@@ -169,6 +153,33 @@ export const useHomeScreen = () => {
         return Number(b.rating || 0) - Number(a.rating || 0);
       });
   }, [safeBusinesses, productMatchesByBusiness, searchQuery, selectedCategory]);
+
+  // Only collapse the hero when there's enough content to scroll (3+ stores).
+  // With fewer stores, the content is shorter than the screen — collapsing
+  // during the iOS elastic bounce causes a jarring flicker.
+  const enableCollapse = measured && filteredBusinesses.length >= 3;
+  const collapseDistance = Math.max(1, topRowH + infoRowH);
+  const topRowHeight = enableCollapse
+    ? scrollY.interpolate({
+        inputRange: [0, collapseDistance],
+        outputRange: [topRowH, 0],
+        extrapolate: "clamp",
+      })
+    : topRowH;
+  const infoRowHeight = enableCollapse
+    ? scrollY.interpolate({
+        inputRange: [0, collapseDistance],
+        outputRange: [infoRowH, 0],
+        extrapolate: "clamp",
+      })
+    : infoRowH;
+  const collapseOpacity = enableCollapse
+    ? scrollY.interpolate({
+        inputRange: [0, collapseDistance * 0.6],
+        outputRange: [1, 0],
+        extrapolate: "clamp",
+      })
+    : 1;
 
   const businessNameById = useMemo(() => {
     const map = new Map<string, string>();

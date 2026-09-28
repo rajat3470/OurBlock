@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { displayQuantity } from "@utils/helpers";
 import { useCart } from "@hooks/useCart";
+import { BannerAdStrip } from "@components/BannerAdStrip";
 import content from "@/content/cart.json";
 
 export default function CartScreen() {
@@ -17,17 +18,14 @@ export default function CartScreen() {
     minOrder,
     businessStatus,
     isStoreOpen,
-    isRewardedEnabled,
-    ffValues,
-    adState,
-    adReward,
-    handleWatchAd,
+    adsEnabled,
     handleIncrease,
     handleDecrease,
     handleRemove,
     handleClearCart,
     goBack,
     goToHome,
+    goToShop,
     goToCheckout,
   } = useCart();
 
@@ -119,42 +117,15 @@ export default function CartScreen() {
               </View>
             ) : null}
 
-            {isRewardedEnabled && !adReward && adState !== "unsupported" && (
-              <TouchableOpacity
-                style={styles.adRewardBanner}
-                onPress={handleWatchAd}
-                disabled={adState === "loading" || adState === "showing"}
-                activeOpacity={0.85}
-              >
-                <LinearGradient
-                  colors={["#FEF3C7", "#FDE68A"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.adRewardGradient}
-                >
-                  <View style={styles.adRewardIconWrap}>
-                    <Ionicons name="play-circle-outline" size={26} color="#92400E" />
-                  </View>
-                  <View style={styles.adRewardTextWrap}>
-                    <Text style={styles.adRewardTitle}>{content.adReward.titlePrefix} {ffValues.adsRewardedMinRs}–{ffValues.adsRewardedMaxRs}</Text>
-                    <Text style={styles.adRewardSub}>{content.adReward.sub}</Text>
-                  </View>
-                  {adState === "loading" ? (
-                    <ActivityIndicator size="small" color="#92400E" />
-                  ) : (
-                    <Ionicons name="chevron-forward" size={18} color="#92400E" />
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity style={styles.addMoreBtn} onPress={goToShop} activeOpacity={0.8}>
+              <Ionicons name="add-circle-outline" size={18} color="#084C3D" />
+              <Text style={styles.addMoreText}>Add more items</Text>
+              <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+            </TouchableOpacity>
 
-            {adReward && (
-              <View style={styles.adRewardEarned}>
-                <Ionicons name="checkmark-circle" size={22} color="#15803D" />
-                <View style={styles.adRewardEarnedText}>
-                  <Text style={styles.adRewardEarnedTitle}>{content.adReward.earnedTitlePrefix} {adReward.discountAmount}</Text>
-                  <Text style={styles.adRewardEarnedCode}>{content.adReward.usePrefix} <Text style={styles.adRewardCode}>{adReward.couponCode}</Text> {content.adReward.useSuffix}</Text>
-                </View>
+            {adsEnabled && (
+              <View style={styles.adBannerWrap}>
+                <BannerAdStrip size="MEDIUM_RECTANGLE" />
               </View>
             )}
 
@@ -240,15 +211,7 @@ const styles = StyleSheet.create({
   checkoutBtn: { backgroundColor: "#F6B853", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 20 },
   checkoutBtnDisabled: { backgroundColor: "#D1D5DB" },
   checkoutText: { fontSize: 15, fontWeight: "800", color: "#FFFFFF" },
-  adRewardBanner: { marginHorizontal: 16, marginTop: 12, borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "rgba(180,130,0,0.2)" },
-  adRewardGradient: { flexDirection: "row", alignItems: "center", padding: 14, gap: 10 },
-  adRewardIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(146,64,14,0.1)", alignItems: "center", justifyContent: "center" },
-  adRewardTextWrap: { flex: 1 },
-  adRewardTitle: { fontSize: 13, fontWeight: "700", color: "#78350F" },
-  adRewardSub: { fontSize: 11, color: "#92400E", marginTop: 2 },
-  adRewardEarned: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 16, marginTop: 12, backgroundColor: "#F0FDF4", borderRadius: 12, padding: 14, borderWidth: 1, borderColor: "#BBF7D0" },
-  adRewardEarnedText: { flex: 1 },
-  adRewardEarnedTitle: { fontSize: 13, fontWeight: "700", color: "#15803D" },
-  adRewardEarnedCode: { fontSize: 12, color: "#0B2E22", marginTop: 2 },
-  adRewardCode: { fontWeight: "800", letterSpacing: 0.5 },
+  addMoreBtn: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 16, marginTop: 14, backgroundColor: "#FFFFFF", borderRadius: 12, padding: 14, borderWidth: 1, borderColor: "#E5E7EB" },
+  addMoreText: { flex: 1, fontSize: 14, fontWeight: "600", color: "#084C3D" },
+  adBannerWrap: { marginHorizontal: 16, marginTop: 14, borderRadius: 14, overflow: "hidden" },
 });

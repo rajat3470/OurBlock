@@ -98,5 +98,13 @@
     <false/>
     <key>GADApplicationIdentifier</key>
     <string>ca-app-pub-3723453526316266~2247177318</string>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+      <string>phonepe</string>
+      <string>tez</string>
+      <string>paytm</string>
+      <string>bhim</string>
+      <string>gpay</string>
+    </array>
   </dict>
 </plist>

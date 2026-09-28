@@ -13,12 +13,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { displayQuantity } from "@utils/helpers";
 import { useCheckout, PAYMENT_METHODS } from "@hooks/useCheckout";
 import content from "@/content/checkout.json";
-const REWARD_CONTENT = {
-  title: "Watch a short video & save",
-  sub: "30 seconds = instant discount on this order",
-  earned: "Reward applied!",
-  savedPrefix: "You saved ₹",
-};
 
 export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
@@ -29,28 +23,21 @@ export default function CheckoutScreen() {
     setSelectedAddressId,
     paymentMethod,
     setPaymentMethod,
-    paymentTiming,
-    setPaymentTiming,
+    cardDetails,
+    setCardDetails,
+    upiId,
+    setUpiId,
     loadingAddresses,
-    couponCode,
-    setCouponCode,
     appliedCoupon,
-    couponLoading,
     isLoading,
     subTotal,
     discountAmount,
     finalAmount,
-    handleApplyCoupon,
-    handleRemoveCoupon,
     handlePlaceOrder,
     goBack,
     addAddress,
-    isRewardedEnabled,
-    ffValues,
-    adState,
-    adReward,
-    handleWatchAd,
     platformFee: PLATFORM_FEE,
+    paymentGatewayFee,
   } = useCheckout();
 
   return (
@@ -183,128 +170,78 @@ export default function CheckoutScreen() {
             );
           })}
 
-          {paymentMethod !== "cash" ? (
-            <>
-              <Text style={[styles.sectionTitle, { marginTop: 16 }]}>
-                {content.payment.timingTitle}
-              </Text>
-              {(
-                [
-                  ["atOrder", content.payment.atOrder],
-                  ["atDelivery", content.payment.atDelivery],
-                ] as const
-              ).map(([key, label]) => {
-                const selected = paymentTiming === key;
-                return (
-                  <TouchableOpacity
-                    key={key}
-                    style={[styles.paymentCard, selected ? styles.paymentCardActive : null]}
-                    onPress={() => setPaymentTiming(key)}
-                  >
-                    <View style={styles.addressRadio}>
-                      <View
-                        style={[
-                          styles.radioCircle,
-                          selected ? styles.radioCircleActive : null,
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.paymentLabel}>{label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </>
-          ) : null}
-        </View>
-
-        {/* Coupon / Promo Code */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{content.sections.promoCode}</Text>
-          {appliedCoupon ? (
-            <View style={styles.couponApplied}>
-              <Ionicons name="checkmark-circle" size={18} color="#084C3D" />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.couponAppliedCode}>{appliedCoupon.code}</Text>
-                <Text style={styles.couponAppliedSavings}>
-                  {content.coupon.savePrefix} {appliedCoupon.discountAmount}{content.coupon.saveSuffix}
-                </Text>
-              </View>
-              <TouchableOpacity onPress={handleRemoveCoupon} style={styles.couponRemoveBtn}>
-                <Ionicons name="close-circle-outline" size={18} color="#6B7280" />
-                <Text style={styles.couponRemoveText}>{content.coupon.remove}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.couponRow}>
+          {paymentMethod === "card" && (
+            <View style={cardFormStyles.container}>
               <TextInput
-                style={styles.couponInput}
-                placeholder={content.coupon.placeholder}
+                style={cardFormStyles.input}
+                placeholder="Card Holder Name"
                 placeholderTextColor="#9CA3AF"
-                value={couponCode}
-                onChangeText={setCouponCode}
-                autoCapitalize="characters"
-                returnKeyType="done"
-                onSubmitEditing={handleApplyCoupon}
+                value={cardDetails.holderName}
+                onChangeText={(t) => setCardDetails((p) => ({ ...p, holderName: t }))}
+                autoCapitalize="words"
               />
-              <TouchableOpacity
-                style={[styles.couponApplyBtn, couponLoading && styles.couponApplyBtnDisabled]}
-                onPress={handleApplyCoupon}
-                disabled={couponLoading}
-              >
-                {couponLoading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.couponApplyBtnText}>{content.coupon.apply}</Text>
-                )}
-              </TouchableOpacity>
+              <TextInput
+                style={cardFormStyles.input}
+                placeholder="XXXX XXXX XXXX XXXX"
+                placeholderTextColor="#9CA3AF"
+                value={cardDetails.number}
+                onChangeText={(t) => {
+                  const digits = t.replace(/\D/g, "").slice(0, 16);
+                  const formatted = digits.replace(/(.{4})/g, "$1 ").trim();
+                  setCardDetails((p) => ({ ...p, number: formatted }));
+                }}
+                keyboardType="number-pad"
+                maxLength={19}
+              />
+              <View style={cardFormStyles.row}>
+                <TextInput
+                  style={[cardFormStyles.input, cardFormStyles.half]}
+                  placeholder="MM/YY"
+                  placeholderTextColor="#9CA3AF"
+                  value={cardDetails.expiryMM && cardDetails.expiryYY ? `${cardDetails.expiryMM}/${cardDetails.expiryYY}` : ""}
+                  onChangeText={(t) => {
+                    const digits = t.replace(/\D/g, "").slice(0, 4);
+                    setCardDetails((p) => ({
+                      ...p,
+                      expiryMM: digits.slice(0, 2),
+                      expiryYY: digits.slice(2, 4),
+                    }));
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={5}
+                />
+                <TextInput
+                  style={[cardFormStyles.input, cardFormStyles.half]}
+                  placeholder="CVV"
+                  placeholderTextColor="#9CA3AF"
+                  value={cardDetails.cvv}
+                  onChangeText={(t) => setCardDetails((p) => ({ ...p, cvv: t.replace(/\D/g, "").slice(0, 4) }))}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  secureTextEntry
+                />
+              </View>
+            </View>
+          )}
+
+          {paymentMethod === "upi" && (
+            <View style={cardFormStyles.container}>
+              <TextInput
+                style={cardFormStyles.input}
+                placeholder="UPI ID (e.g. name@oksbi)"
+                placeholderTextColor="#9CA3AF"
+                value={upiId}
+                onChangeText={setUpiId}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+              />
+              <Text style={{ fontSize: 11, color: "#6B7280", marginTop: -4 }}>
+                Leave empty to choose a UPI app instead
+              </Text>
             </View>
           )}
         </View>
-
-        {/* Rewarded Ad — watch to save */}
-        {isRewardedEnabled && !adReward && !appliedCoupon && adState !== "unsupported" && (
-          <TouchableOpacity
-            style={checkoutAdStyles.banner}
-            onPress={handleWatchAd}
-            disabled={adState === "loading" || adState === "showing"}
-            activeOpacity={0.85}
-          >
-            <LinearGradient
-              colors={["#FEF3C7", "#FDE68A"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={checkoutAdStyles.gradient}
-            >
-              <View style={checkoutAdStyles.iconWrap}>
-                <Ionicons name="play-circle-outline" size={28} color="#92400E" />
-              </View>
-              <View style={checkoutAdStyles.textWrap}>
-                <Text style={checkoutAdStyles.title}>
-                  {REWARD_CONTENT.title} ₹{ffValues.adsRewardedMinRs}–{ffValues.adsRewardedMaxRs}
-                </Text>
-                <Text style={checkoutAdStyles.sub}>{REWARD_CONTENT.sub}</Text>
-              </View>
-              {adState === "loading" ? (
-                <ActivityIndicator size="small" color="#92400E" />
-              ) : (
-                <View style={checkoutAdStyles.playBtn}>
-                  <Ionicons name="play" size={16} color="#FFFFFF" />
-                </View>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-
-        {adReward && (
-          <View style={checkoutAdStyles.earned}>
-            <Ionicons name="checkmark-circle" size={22} color="#15803D" />
-            <View style={{ flex: 1 }}>
-              <Text style={checkoutAdStyles.earnedTitle}>
-                {REWARD_CONTENT.earned} {REWARD_CONTENT.savedPrefix}{adReward.discountAmount}
-              </Text>
-            </View>
-          </View>
-        )}
 
         {/* Bill details */}
         <View style={styles.section}>
@@ -317,6 +254,12 @@ export default function CheckoutScreen() {
             <Text style={styles.billLabel}>{content.bill.platformFee}</Text>
             <Text style={styles.billValue}>{content.currency} {PLATFORM_FEE}</Text>
           </View>
+          {paymentGatewayFee > 0 && (
+            <View style={styles.billRow}>
+              <Text style={styles.billLabel}>Payment Processing Fee</Text>
+              <Text style={styles.billValue}>{content.currency} {paymentGatewayFee.toFixed(2)}</Text>
+            </View>
+          )}
           <View style={styles.billRow}>
             <Text style={styles.billLabel}>{content.bill.deliveryFee}</Text>
             <Text style={styles.billValueGreen}>{content.bill.free}</Text>
@@ -582,51 +525,20 @@ const styles = StyleSheet.create({
   couponRemoveText: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
 });
 
-const checkoutAdStyles = StyleSheet.create({
-  banner: {
-    marginHorizontal: 16,
-    marginTop: 14,
-    borderRadius: 14,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(180,130,0,0.25)",
-  },
-  gradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    gap: 12,
-  },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(146,64,14,0.1)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  textWrap: { flex: 1 },
-  title: { fontSize: 14, fontWeight: "700", color: "#78350F" },
-  sub: { fontSize: 11, color: "#92400E", marginTop: 2 },
-  playBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#F6B853",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  earned: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginHorizontal: 16,
-    marginTop: 14,
-    backgroundColor: "#F0FDF4",
+
+const cardFormStyles = StyleSheet.create({
+  container: { marginTop: 12, gap: 10 },
+  input: {
+    borderWidth: 1.5,
+    borderColor: "#E5E7EB",
     borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#BBF7D0",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+    backgroundColor: "#FAFAFA",
   },
-  earnedTitle: { fontSize: 13, fontWeight: "700", color: "#15803D" },
+  row: { flexDirection: "row", gap: 10 },
+  half: { flex: 1 },
 });

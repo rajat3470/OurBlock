@@ -21,6 +21,8 @@ export interface FeatureFlags {
   platformFeeAmount: number;
   minimumOrderAmount: number;
   homeBannersEnabled: boolean;
+  cardFeePercent: number;
+  upiFeePercent: number;
 }
 
 export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
@@ -35,6 +37,8 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   platformFeeAmount: 2,
   minimumOrderAmount: 50,
   homeBannersEnabled: true,
+  cardFeePercent: 0,
+  upiFeePercent: 0,
 };
 
 export const REMOTE_CONFIG_DEFAULTS: Record<string, string | number | boolean> = {

@@ -76,6 +76,16 @@ else
   echo -e "${YELLOW}Partially done.${NC} Some env files are missing — see warnings above."
 fi
 
+if [[ "$ENV" == "local" || "$ENV" == "int" ]]; then
+  # Auto-detect LAN IP and patch the mobile .env so it doesn't break when WiFi changes
+  LAN_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "")
+  MOBILE_ENV="${ROOT_DIR}/apps/mobile/.env"
+  if [[ -n "$LAN_IP" && -f "$MOBILE_ENV" ]]; then
+    sed -i '' "s|http://[0-9.]*:5001|http://${LAN_IP}:5001|g" "$MOBILE_ENV"
+    echo -e "  ${GREEN}✓${NC} Mobile API/Socket URLs updated to ${BOLD}${LAN_IP}${NC}"
+  fi
+fi
+
 if [[ "$ENV" == "local" ]]; then
   echo -e "${CYAN}Tip:${NC} Make sure local MongoDB and MinIO are running."
 elif [[ "$ENV" == "int" ]]; then

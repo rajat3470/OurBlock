@@ -1,4 +1,13 @@
 PODS:
+  - CashfreeAnalyticsSDK (2.3.3):
+    - CFNetworkSDK (= 2.3.3)
+  - CashfreePG (2.4.0):
+    - CashfreePGUISDK (= 2.4.0)
+  - CashfreePGCoreSDK (2.4.0):
+    - CashfreeAnalyticsSDK (= 2.3.3)
+  - CashfreePGUISDK (2.4.0):
+    - CashfreePGCoreSDK (= 2.4.0)
+  - CFNetworkSDK (2.3.3)
   - EXApplication (55.0.15):
     - ExpoModulesCore
   - EXConstants (55.0.16):
@@ -1726,6 +1735,9 @@ PODS:
     - React-RCTFBReactNativeSpec
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
+  - react-native-cashfree-pg-sdk (2.4.0):
+    - CashfreePG (= 2.4.0)
+    - React-Core
   - react-native-onesignal (5.2.14):
     - OneSignalXCFramework (= 5.2.15)
     - React (< 1.0.0, >= 0.13.0)
@@ -2626,6 +2638,7 @@ DEPENDENCIES:
   - React-logger (from `../../../node_modules/react-native/ReactCommon/logger`)
   - React-Mapbuffer (from `../../../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../../../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
+  - react-native-cashfree-pg-sdk (from `../../../node_modules/react-native-cashfree-pg-sdk`)
   - react-native-onesignal (from `../../../node_modules/react-native-onesignal`)
   - react-native-safe-area-context (from `../../../node_modules/react-native-safe-area-context`)
   - react-native-webview (from `../../../node_modules/react-native-webview`)
@@ -2675,6 +2688,11 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - CashfreeAnalyticsSDK
+    - CashfreePG
+    - CashfreePGCoreSDK
+    - CashfreePGUISDK
+    - CFNetworkSDK
     - Google-Mobile-Ads-SDK
     - GoogleUserMessagingPlatform
     - libavif
@@ -2832,6 +2850,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/react-native/ReactCommon"
   React-microtasksnativemodule:
     :path: "../../../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
+  react-native-cashfree-pg-sdk:
+    :path: "../../../node_modules/react-native-cashfree-pg-sdk"
   react-native-onesignal:
     :path: "../../../node_modules/react-native-onesignal"
   react-native-safe-area-context:
@@ -2926,6 +2946,11 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
+  CashfreeAnalyticsSDK: 11f37b2323be07bf07948bd6046b7c19e947ae07
+  CashfreePG: 9dfcc5badd0b815312e79923fca49d7e6cf1d55d
+  CashfreePGCoreSDK: 223fc3591ac75f427dc926b9df6b7c17ffa37c67
+  CashfreePGUISDK: 3cb94a859c1aba120c345fe0940685f2fc4634a7
+  CFNetworkSDK: 6a6261de10185efd4d2957583f0cbad395999cac
   EXApplication: 82a44fa8236bb644a805ee21e64054eeb01d22ea
   EXConstants: dadbeba983acc30f855a919658a2b34fbd86615d
   EXJSONUtils: 04bc3807d351331a5fe154ce1da596ec15d99169
@@ -3003,6 +3028,7 @@ SPEC CHECKSUMS:
   React-logger: 702a49dadb10a6bd63d56b297c3350b5ea552141
   React-Mapbuffer: bcd9f00a498b2981c7b390f00fd2b7cd6e0ead29
   React-microtasksnativemodule: 203b41906d627dac7d697bccba6137b630951fae
+  react-native-cashfree-pg-sdk: 97289d587ba56ad5a7db6cc4859496cd49ee9630
   react-native-onesignal: b68c981956150f288c1585889871affcef3c0b8b
   react-native-safe-area-context: 37e680fc4cace3c0030ee46e8987d24f5d3bdab2
   react-native-webview: 3e303e80cadb5f17118c8c1502aa398e9287e415

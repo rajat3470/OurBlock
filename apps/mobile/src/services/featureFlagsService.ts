@@ -43,6 +43,8 @@ class FeatureFlagsService {
           platformFeeAmount: asPositiveInt(raw.platformFeeAmount ?? 0, DEFAULT_FEATURE_FLAGS.platformFeeAmount),
           minimumOrderAmount: asPositiveInt(raw.minimumOrderAmount ?? 0, DEFAULT_FEATURE_FLAGS.minimumOrderAmount),
           homeBannersEnabled: raw.homeBannersEnabled ?? DEFAULT_FEATURE_FLAGS.homeBannersEnabled,
+          cardFeePercent: raw.cardFeePercent ?? DEFAULT_FEATURE_FLAGS.cardFeePercent,
+          upiFeePercent: raw.upiFeePercent ?? DEFAULT_FEATURE_FLAGS.upiFeePercent,
         };
         if (values.adsRewardedMaxRs < values.adsRewardedMinRs) {
           values.adsRewardedMaxRs = values.adsRewardedMinRs;

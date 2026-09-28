@@ -518,6 +518,8 @@ router.put("/platform-config", async (req: AuthedRequest, res) => {
       "adsDensityEveryNthCard",
       "adsRewardedMaxClaimsPerDay",
       "homeBannersEnabled",
+      "cardFeePercent",
+      "upiFeePercent",
     ];
     const updates: Record<string, any> = {};
     for (const key of allowed) {

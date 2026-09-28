@@ -19,9 +19,9 @@ interface HomeHeroProps {
   infoRowH: number;
   setInfoRowH: (height: number) => void;
   measured: boolean;
-  topRowHeight: Animated.AnimatedInterpolation<string | number>;
-  infoRowHeight: Animated.AnimatedInterpolation<string | number>;
-  collapseOpacity: Animated.AnimatedInterpolation<string | number>;
+  topRowHeight: Animated.AnimatedInterpolation<string | number> | number;
+  infoRowHeight: Animated.AnimatedInterpolation<string | number> | number;
+  collapseOpacity: Animated.AnimatedInterpolation<string | number> | number;
 }
 
 export function HomeHero({

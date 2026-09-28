@@ -1,12 +1,10 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { Alert } from "react-native";
 import { useToast } from "react-native-toast-notifications";
 import { router } from "expo-router";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
 import { updateQuantity, removeItem, clearCart } from "@store/slices/cartSlice";
 import { useFeatureFlags } from "@hooks/useFeatureFlags";
-import { useRewardedAd } from "@hooks/useRewardedAd";
-import { userAppService } from "@services/userAppService";
 import { getBusinessStatus } from "@utils/businessStatus";
 import { ORDER_FEES } from "@/constants";
 import content from "@/content/cart.json";
@@ -24,11 +22,7 @@ export const useCart = () => {
   const cartBusinessId = useAppSelector((state) => state.cart.businessId);
   const businesses = useAppSelector((state) => state.userApp.businesses);
 
-  const { isRewardedEnabled, values: ffValues } = useFeatureFlags();
-  const { adState, showRewardedAd } = useRewardedAd();
-  const [adReward, setAdReward] = useState<{ couponCode: string; discountAmount: number } | null>(
-    null
-  );
+  const { values: ffValues } = useFeatureFlags();
 
   const cartBusiness = useMemo(
     () => businesses.find((b) => b.id === cartBusinessId) ?? null,
@@ -44,20 +38,8 @@ export const useCart = () => {
   const MIN_ORDER = storeMin && storeMin > 0 ? storeMin : MINIMUM_ORDER;
 
   const subTotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const rewardDiscount = adReward?.discountAmount ?? 0;
-  const finalAmount = subTotal + PLATFORM_FEE - rewardDiscount;
+  const finalAmount = subTotal + PLATFORM_FEE;
   const canCheckout = cartItems.length > 0 && isStoreOpen && subTotal >= MIN_ORDER;
-
-  const handleWatchAd = useCallback(async () => {
-    const earned = await showRewardedAd();
-    if (!earned) return;
-    try {
-      const reward = await userAppService.claimAdReward();
-      setAdReward({ couponCode: reward.couponCode, discountAmount: reward.discountAmount });
-    } catch (err: any) {
-      Alert.alert(content.alerts.rewardTitle, err?.message ?? content.alerts.rewardError);
-    }
-  }, [showRewardedAd]);
 
   const handleIncrease = useCallback(
     (productId: string, current: number, max: number) => {
@@ -103,17 +85,18 @@ export const useCart = () => {
   }, []);
 
   const goToHome = useCallback(() => router.push("/(user)/home"), []);
+  const goToShop = useCallback(() => {
+    if (cartBusinessId) {
+      router.push({ pathname: "/(user)/business", params: { id: cartBusinessId } });
+    }
+  }, [cartBusinessId]);
   const goToCheckout = useCallback(() => {
     if (!isStoreOpen) {
       toast.show("This store is currently not accepting orders", { type: "warning" });
       return;
     }
-    if (adReward) {
-      router.push({ pathname: "/(user)/checkout", params: { rewardCode: adReward.couponCode, rewardAmount: String(adReward.discountAmount) } });
-    } else {
-      router.push("/(user)/checkout");
-    }
-  }, [isStoreOpen, toast, adReward]);
+    router.push("/(user)/checkout");
+  }, [isStoreOpen, toast]);
 
   return {
     cartItems,
@@ -123,17 +106,14 @@ export const useCart = () => {
     minOrder: MIN_ORDER,
     businessStatus,
     isStoreOpen,
-    isRewardedEnabled,
-    ffValues,
-    adState,
-    adReward,
-    handleWatchAd,
+    adsEnabled: ffValues.adsEnabled,
     handleIncrease,
     handleDecrease,
     handleRemove,
     handleClearCart,
     goBack,
     goToHome,
+    goToShop,
     goToCheckout,
   };
 };

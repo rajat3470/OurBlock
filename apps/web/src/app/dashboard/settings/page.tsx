@@ -7,6 +7,8 @@ import api from '@/lib/api';
 interface PlatformConfig {
   platformFeeAmount: number;
   minimumOrderAmount: number;
+  cardFeePercent: number;
+  upiFeePercent: number;
   adsEnabled: boolean;
   adsNativeFeedEnabled: boolean;
   adsNativeListingEnabled: boolean;
@@ -21,6 +23,8 @@ interface PlatformConfig {
 const DEFAULT_CONFIG: PlatformConfig = {
   platformFeeAmount: 2,
   minimumOrderAmount: 50,
+  cardFeePercent: 0,
+  upiFeePercent: 0,
   adsEnabled: false,
   adsNativeFeedEnabled: false,
   adsNativeListingEnabled: false,
@@ -193,6 +197,28 @@ export default function SettingsPage() {
                 max={1000}
                 unit="₹"
               />
+              <div className="grid grid-cols-2 gap-4">
+                <NumberField
+                  label="Card Fee"
+                  description="% charged to user for card payments"
+                  value={config.cardFeePercent}
+                  onChange={(v) => updateConfig('cardFeePercent', v)}
+                  min={0}
+                  max={10}
+                  step={0.01}
+                  unit="%"
+                />
+                <NumberField
+                  label="UPI Fee"
+                  description="% charged to user for UPI payments"
+                  value={config.upiFeePercent}
+                  onChange={(v) => updateConfig('upiFeePercent', v)}
+                  min={0}
+                  max={10}
+                  step={0.01}
+                  unit="%"
+                />
+              </div>
             </>
           )}
         </div>
