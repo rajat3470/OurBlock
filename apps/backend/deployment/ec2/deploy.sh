@@ -76,7 +76,9 @@ log "Building backend..."
 yarn workspace @mohallamitr/backend build
 
 log "Building web admin (static export)..."
-if [[ -f "$APP_DIR/apps/web/.env.production" ]]; then
+if [[ -f "$APP_DIR/apps/web/envs/prod.env" ]]; then
+    cp "$APP_DIR/apps/web/envs/prod.env" "$WEB_ENV"
+elif [[ -f "$APP_DIR/apps/web/.env.production" ]]; then
     cp "$APP_DIR/apps/web/.env.production" "$WEB_ENV"
 fi
 cd "$APP_DIR/apps/web"
