@@ -17,7 +17,6 @@ APP_DIR="${APP_DIR:-/var/www/mohallamitr}"
 BRANCH="${BRANCH:-main}"
 INFRA_DIR="$APP_DIR/apps/backend/deployment/ec2"
 BACKEND_ENV="$APP_DIR/apps/backend/.env"
-WEB_ENV="$APP_DIR/apps/web/.env.local"
 
 exec 9>"$APP_DIR/.deploy.lock"
 if ! flock -n 9; then
@@ -75,23 +74,7 @@ yarn workspace @mohallamitr/shared build
 log "Building backend..."
 yarn workspace @mohallamitr/backend build
 
-log "Building web admin (static export)..."
-if [[ -f "$APP_DIR/apps/web/envs/prod.env" ]]; then
-    cp "$APP_DIR/apps/web/envs/prod.env" "$WEB_ENV"
-elif [[ -f "$APP_DIR/apps/web/.env.production" ]]; then
-    cp "$APP_DIR/apps/web/.env.production" "$WEB_ENV"
-fi
-cd "$APP_DIR/apps/web"
-log "Starting constrained Next.js build..."
-timeout --kill-after=10s 300s env \
-    NEXT_IGNORE_INCORRECT_LOCKFILE=1 \
-    NEXT_SKIP_BUILD_CHECKS=1 \
-    NEXT_TELEMETRY_DISABLED=1 \
-    NODE_OPTIONS=--max-old-space-size=512 \
-    yarn build
-log "Web admin build completed."
-
-cd "$APP_DIR"
+log "Skipping web admin build (deploy web separately from local machine via scripts/deploy-web.sh)"
 
 # -----------------------------------------------------------------------------
 # Ensure backend env exists
