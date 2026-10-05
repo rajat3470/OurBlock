@@ -14,6 +14,7 @@ interface CreatePaymentOrderResponse {
   orderId: string;
   cfOrderId: string;
   paymentSessionId: string;
+  environment: "sandbox" | "production";
 }
 
 interface VerifyPaymentResponse {
@@ -62,6 +63,7 @@ export const paymentService = {
     method?: "upi" | "card",
     cardDetails?: CardDetails,
     upiId?: string,
+    environment?: "sandbox" | "production",
   ): Promise<boolean> {
     const modules = loadCashfreeSDK();
     if (!modules) throw new Error("Payment SDK not available. Please use a development build (not Expo Go) to test payments.");
@@ -74,7 +76,7 @@ export const paymentService = {
       CFUPI, CFUPIPayment, UPIMode,
     } = modules.contract;
 
-    const env = process.env.EXPO_PUBLIC_CASHFREE_ENV === "production"
+    const env = environment === "production"
       ? CFEnvironment.PRODUCTION
       : CFEnvironment.SANDBOX;
     const session = new CFSession(paymentSessionId, cfOrderId, env);

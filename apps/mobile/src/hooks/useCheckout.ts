@@ -220,6 +220,7 @@ export const useCheckout = () => {
                   paymentMethod,
                   paymentMethod === "card" ? cardDetails : undefined,
                   paymentMethod === "upi" && upiId.trim() ? upiId.trim() : undefined,
+                  paymentOrder.environment,
                 );
 
                 // Verify payment with backend

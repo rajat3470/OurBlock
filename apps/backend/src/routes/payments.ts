@@ -142,6 +142,7 @@ router.post("/create-order", requireAuth, async (req: AuthedRequest, res: Respon
         orderId: order.id,
         cfOrderId,
         paymentSessionId: cfOrder.payment_session_id,
+        environment: process.env.CASHFREE_ENV || "sandbox",
       },
     });
   } catch (error: any) {
