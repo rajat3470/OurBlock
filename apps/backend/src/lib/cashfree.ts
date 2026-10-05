@@ -41,21 +41,25 @@ export interface CashfreeOrderResponse {
 export async function createCashfreeOrder(
   req: CashfreeOrderRequest
 ): Promise<CashfreeOrderResponse> {
-  const body = {
-    order_id: req.orderId,
-    order_amount: req.orderAmount,
-    order_currency: "INR",
-    customer_details: {
-      customer_id: req.customerId,
-      customer_phone: req.customerPhone,
-      customer_email: req.customerEmail,
-      customer_name: req.customerName,
-    },
-    order_meta: {
-      return_url: req.returnUrl,
-      notify_url: req.notifyUrl,
-    },
+  const customerDetails: Record<string, string> = {
+    customer_id: req.customerId,
+    customer_phone: req.customerPhone,
   };
+  if (req.customerEmail) customerDetails.customer_email = req.customerEmail;
+  if (req.customerName) customerDetails.customer_name = req.customerName;
+
+  const body: Record<string, any> = {
+    order_id: req.orderId,
+    order_amount: Number(req.orderAmount.toFixed(2)),
+    order_currency: "INR",
+    customer_details: customerDetails,
+  };
+  if (req.returnUrl || req.notifyUrl) {
+    const meta: Record<string, string> = {};
+    if (req.returnUrl) meta.return_url = req.returnUrl;
+    if (req.notifyUrl) meta.notify_url = req.notifyUrl;
+    body.order_meta = meta;
+  }
 
   const res = await fetch(`${BASE_URL}/orders`, {
     method: "POST",
@@ -65,7 +69,12 @@ export async function createCashfreeOrder(
 
   const data = (await res.json()) as any;
   if (!res.ok) {
+    console.error("Cashfree create order response:", JSON.stringify(data));
     throw new Error(data.message || `Cashfree create order failed: ${res.status}`);
+  }
+  if (!data.payment_session_id) {
+    console.error("Cashfree returned no payment_session_id:", JSON.stringify(data));
+    throw new Error("Cashfree order created but no payment_session_id returned");
   }
   return data as CashfreeOrderResponse;
 }

@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ─── Configuration ─────────────────────────────────────────────────────────────
 SSH_USER="ec2-user"
-SSH_HOST="3.110.176.122"
+SSH_HOST="13.205.145.88"
 SSH_KEY="$HOME/Documents/mohallamitr-prod.pem"
 WEB_ROOT="/var/www/mohallamitr/apps/web/out"   # nginx root (see deployment/ec2/nginx.conf)
 # ───────────────────────────────────────────────────────────────────────────────

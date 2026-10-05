@@ -74,7 +74,9 @@ export const paymentService = {
       CFUPI, CFUPIPayment, UPIMode,
     } = modules.contract;
 
-    const env = __DEV__ ? CFEnvironment.SANDBOX : CFEnvironment.PRODUCTION;
+    const env = process.env.EXPO_PUBLIC_CASHFREE_ENV === "production"
+      ? CFEnvironment.PRODUCTION
+      : CFEnvironment.SANDBOX;
     const session = new CFSession(paymentSessionId, cfOrderId, env);
 
     const theme = new CFThemeBuilder()
@@ -93,7 +95,8 @@ export const paymentService = {
           resolve(true);
         },
         onError(error: any, _orderID: string) {
-          reject(new Error(error?.message || "Payment failed"));
+          const msg = error?.getMessage?.() ?? error?.message ?? "Payment failed";
+          reject(new Error(msg));
         },
       });
 
