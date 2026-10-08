@@ -50,6 +50,16 @@ export const useCheckout = () => {
   const PLATFORM_FEE = ffValues.platformFeeAmount ?? ORDER_FEES.PLATFORM_FEE;
   const MINIMUM_ORDER = ffValues.minimumOrderAmount ?? ORDER_FEES.MINIMUM_ORDER;
 
+  const isCardValid = (() => {
+    if (paymentMethod !== "card") return true;
+    const cn = cardDetails.number.replace(/\s/g, "");
+    const hasValidNumber = cn.length >= 13 && cn.length <= 16;
+    const hasValidExpiry = cardDetails.expiryMM.length === 2 && cardDetails.expiryYY.length === 2;
+    const hasValidCvv = cardDetails.cvv.length >= 3 && cardDetails.cvv.length <= 4;
+    const hasHolderName = cardDetails.holderName.trim().length >= 2;
+    return hasValidNumber && hasValidExpiry && hasValidCvv && hasHolderName;
+  })();
+
   const subTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const discountAmount = appliedCoupon?.discountAmount ?? 0;
   const baseAmount = subTotal + PLATFORM_FEE - discountAmount;
@@ -284,5 +294,6 @@ export const useCheckout = () => {
     addAddress,
     platformFee: PLATFORM_FEE,
     paymentGatewayFee,
+    isCardValid,
   };
 };

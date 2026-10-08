@@ -41,6 +41,8 @@ export interface CashfreeOrderResponse {
 export async function createCashfreeOrder(
   req: CashfreeOrderRequest
 ): Promise<CashfreeOrderResponse> {
+  console.log("[Cashfree] Creating order with env:", CASHFREE_ENV, "| APP_ID starts with:", CASHFREE_APP_ID?.slice(0, 10) + "...");
+
   const customerDetails: Record<string, string> = {
     customer_id: req.customerId,
     customer_phone: req.customerPhone,
@@ -69,9 +71,10 @@ export async function createCashfreeOrder(
 
   const data = (await res.json()) as any;
   if (!res.ok) {
-    console.error("Cashfree create order response:", JSON.stringify(data));
+    console.error("[Cashfree] Create order FAILED:", res.status, JSON.stringify(data));
     throw new Error(data.message || `Cashfree create order failed: ${res.status}`);
   }
+  console.log("[Cashfree] Order created successfully, session_id:", data.payment_session_id?.slice(0, 20) + "...");
   if (!data.payment_session_id) {
     console.error("Cashfree returned no payment_session_id:", JSON.stringify(data));
     throw new Error("Cashfree order created but no payment_session_id returned");

@@ -38,6 +38,7 @@ export default function CheckoutScreen() {
     addAddress,
     platformFee: PLATFORM_FEE,
     paymentGatewayFee,
+    isCardValid,
   } = useCheckout();
 
   return (
@@ -198,7 +199,15 @@ export default function CheckoutScreen() {
                   style={[cardFormStyles.input, cardFormStyles.half]}
                   placeholder="MM/YY"
                   placeholderTextColor="#9CA3AF"
-                  value={cardDetails.expiryMM && cardDetails.expiryYY ? `${cardDetails.expiryMM}/${cardDetails.expiryYY}` : ""}
+                  value={
+                    cardDetails.expiryMM
+                      ? cardDetails.expiryYY
+                        ? `${cardDetails.expiryMM}/${cardDetails.expiryYY}`
+                        : cardDetails.expiryMM.length === 2
+                        ? `${cardDetails.expiryMM}/`
+                        : cardDetails.expiryMM
+                      : ""
+                  }
                   onChangeText={(t) => {
                     const digits = t.replace(/\D/g, "").slice(0, 4);
                     setCardDetails((p) => ({
@@ -294,9 +303,9 @@ export default function CheckoutScreen() {
           <TouchableOpacity
             style={[
               styles.placeOrderBtn,
-              (isLoading || !selectedAddressId) ? styles.placeOrderBtnDisabled : null,
+              (isLoading || !selectedAddressId || !isCardValid) ? styles.placeOrderBtnDisabled : null,
             ]}
-            disabled={isLoading || !selectedAddressId}
+            disabled={isLoading || !selectedAddressId || !isCardValid}
             onPress={handlePlaceOrder}
           >
             {isLoading ? (

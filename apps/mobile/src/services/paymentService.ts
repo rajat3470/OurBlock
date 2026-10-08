@@ -79,6 +79,7 @@ export const paymentService = {
     const env = environment === "production"
       ? CFEnvironment.PRODUCTION
       : CFEnvironment.SANDBOX;
+    console.log("[Cashfree SDK] Starting payment with env:", environment, "| cfOrderId:", cfOrderId, "| sessionId:", paymentSessionId?.slice(0, 20) + "...");
     const session = new CFSession(paymentSessionId, cfOrderId, env);
 
     const theme = new CFThemeBuilder()
@@ -97,6 +98,7 @@ export const paymentService = {
           resolve(true);
         },
         onError(error: any, _orderID: string) {
+          console.error("[Cashfree SDK] Payment error:", JSON.stringify(error), "| orderID:", _orderID);
           const msg = error?.getMessage?.() ?? error?.message ?? "Payment failed";
           reject(new Error(msg));
         },

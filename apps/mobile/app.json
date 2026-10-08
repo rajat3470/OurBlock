@@ -28,7 +28,7 @@
         "resizeMode": "contain",
         "backgroundColor": "#084C3D"
       },
-      "buildNumber": "2"
+      "buildNumber": "3"
     },
     "android": {
       "package": "com.mohallamitr.app",
@@ -36,7 +36,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#084C3D"
       },
-
       "splash": {
         "image": "./assets/splash-icon.png",
         "resizeMode": "contain",
@@ -51,7 +50,9 @@
         "onesignal-expo-plugin",
         {
           "mode": "development",
-          "sounds": ["./assets/audio/new_order_alert.wav"]
+          "sounds": [
+            "./assets/audio/new_order_alert.wav"
+          ]
         }
       ],
       "expo-notifications",
@@ -67,7 +68,6 @@
           "imageWidth": 200
         }
       ],
-
       "./plugins/withNotificationSound",
       [
         "expo-build-properties",
