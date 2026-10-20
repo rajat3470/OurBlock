@@ -33,6 +33,8 @@
     "@hookform/resolvers": "^3.3.4",
     "@mohallamitr/shared": "1.0.0",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-firebase/app": "^27.0.0",
+    "@react-native-firebase/auth": "^27.0.0",
     "@react-navigation/bottom-tabs": "^7.15.5",
     "@react-navigation/native": "^7.1.33",
     "@react-navigation/stack": "^6.3.20",

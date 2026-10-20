@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "12846915112",
+    "project_id": "mohallamitr-13ea4",
+    "storage_bucket": "mohallamitr-13ea4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:12846915112:android:2e9ae58fe688c066cd5f1d",
+        "android_client_info": {
+          "package_name": "com.mohallamitr.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASedylnq7hkfHI9XwZRS60Ma1I_KZlzxo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
