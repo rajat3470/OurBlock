@@ -1,3 +1,19 @@
+import { View, Text, StyleSheet } from "react-native";
+
+export default function BusinessOwnerRegisterScreen() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.text}>OTP registration will replace this screen.</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: "center", alignItems: "center" },
+  text: { fontSize: 16, color: "#999" },
+});
+
+/* ── Old multi-step name/email/password registration (commented out — to be replaced by OTP flow) ──
 import { useState, useEffect } from "react";
 import {
   View,
@@ -86,7 +102,6 @@ export default function BusinessOwnerRegisterScreen() {
         const res = await societyService.getSocieties(1, 100);
         setSocieties(res.data);
       } catch {
-        /* non-fatal */
       } finally {
         setLoadingSocieties(false);
       }
@@ -554,3 +569,4 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 });
+── end old registration ── */

@@ -181,6 +181,34 @@ export const useAuth = () => {
     }
   }
 
+  const otpLogin = async (
+    phone: string,
+    code: string,
+    role: "user" | "businessOwner" | "deliveryPartner" = "user"
+  ) => {
+    dispatch(setLoading(true));
+    try {
+      const response = await authService.loginWithOTP(phone, code, role);
+      if (response) {
+        await apiClient.saveTokens(response.tokens);
+        await authStateService.saveAuth(response);
+        dispatch(setAuth(response));
+        OneSignalService.login(response.user.id, {
+          role: response.user.role,
+          businessId: (response.user as any).businessId,
+        });
+        if (response.user.email) OneSignalService.setEmail(response.user.email);
+      }
+      return response;
+    } catch (error: any) {
+      const message = extractAuthError(error, "OTP verification failed. Please try again.");
+      dispatch(setError(message));
+      throw new Error(message);
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
   const register = async (data: any, role: "superAdmin" | "businessOwner" | "user") => {
     dispatch(setLoading(true));
     try {
@@ -265,6 +293,7 @@ export const useAuth = () => {
 
   return {
     login,
+    otpLogin,
     register,
     logoutUser,
     resetPassword,

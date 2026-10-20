@@ -7,6 +7,7 @@ import { registerSchema } from "../shared/validation";
 import { normalizeRole } from "../shared/constants";
 import { notifySystem } from "../lib/notifications";
 import { ensureSocietyDemoCatalog, getSocietyProducts } from "../services/demoCatalog";
+import { sendOTP, isRateLimited, verifyOTP } from "../lib/otpStore";
 
 const router = Router();
 const BCRYPT_ROUNDS = 10;
@@ -410,6 +411,91 @@ router.get("/home-feed", requireAuth, async (req: AuthedRequest, res) => {
     return res.status(500).json({ success: false, error: error.message || "Failed to load home feed" });
   }
 });
+
+// ---------------------------------------------------------------------------
+// OTP-based login (unauthenticated)
+// ---------------------------------------------------------------------------
+
+// POST /auth/otp/send — send OTP for login (no auth required)
+router.post("/otp/send", async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ success: false, error: "Phone number is required" });
+
+    if (isRateLimited(phone)) {
+      return res.status(429).json({ success: false, error: "Too many attempts. Please try again later." });
+    }
+
+    const result = await sendOTP(phone);
+    if (!result.ok) {
+      return res.status(500).json({ success: false, error: result.error });
+    }
+
+    return res.json({ success: true, message: "OTP sent successfully" });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Shared OTP login handler — verifies OTP, finds or creates user with the given role
+async function otpLoginForRole(
+  req: any,
+  res: any,
+  expectedRole: "user" | "businessOwner" | "deliveryPartner"
+) {
+  const { phone, code } = req.body;
+  if (!phone || !code) {
+    return res.status(400).json({ success: false, error: "Phone and code are required" });
+  }
+
+  const otpResult = await verifyOTP(phone, code);
+  if (!otpResult.ok) {
+    return res.status(400).json({ success: false, error: otpResult.error });
+  }
+
+  let user = await prisma.user.findFirst({ where: { phone } });
+
+  if (user && normalizeRole(user.role) !== expectedRole) {
+    return res.status(403).json({
+      success: false,
+      error: "This phone number is registered with a different role. Please use the correct login.",
+    });
+  }
+
+  if (user && user.status === "suspended") {
+    return res.status(403).json({ success: false, error: "Your account has been suspended" });
+  }
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone,
+        passwordHash: "",
+        role: expectedRole,
+        status: "active",
+        isPhoneVerified: true,
+      },
+    });
+
+    await notifySystem(
+      user.id,
+      "Welcome to mohallaMitr!",
+      "Thank you for joining our community."
+    );
+  } else {
+    await prisma.user.update({ where: { id: user.id }, data: { isPhoneVerified: true } });
+  }
+
+  const tokens = await issueTokens(user.id, user.role);
+  return res.json({ user: sanitizeUser(user), tokens });
+}
+
+router.post("/user/otp-login", (req, res, next) => otpLoginForRole(req, res, "user").catch(next));
+router.post("/businessowner/otp-login", (req, res, next) => otpLoginForRole(req, res, "businessOwner").catch(next));
+router.post("/deliverypartner/otp-login", (req, res, next) => otpLoginForRole(req, res, "deliveryPartner").catch(next));
 
 // ---------------------------------------------------------------------------
 // Role-gated login

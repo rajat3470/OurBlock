@@ -90,13 +90,19 @@ export const useCart = () => {
       router.push({ pathname: "/(user)/business", params: { id: cartBusinessId } });
     }
   }, [cartBusinessId]);
+  const user = useAppSelector((state) => state.auth.user);
+
   const goToCheckout = useCallback(() => {
     if (!isStoreOpen) {
       toast.show("This store is currently not accepting orders", { type: "warning" });
       return;
     }
+    if (!user?.firstName) {
+      router.push({ pathname: "/(user)/complete-profile", params: { next: "checkout" } });
+      return;
+    }
     router.push("/(user)/checkout");
-  }, [isStoreOpen, toast]);
+  }, [isStoreOpen, toast, user]);
 
   return {
     cartItems,

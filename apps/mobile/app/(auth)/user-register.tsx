@@ -1,3 +1,19 @@
+import { View, Text, StyleSheet } from "react-native";
+
+export default function UserRegisterScreen() {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.text}>OTP registration will replace this screen.</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, justifyContent: "center", alignItems: "center" },
+  text: { fontSize: 16, color: "#999" },
+});
+
+/* ── Old name/email/password registration (commented out — to be replaced by OTP flow) ──
 import {
   View,
   Text,
@@ -441,3 +457,4 @@ const styles = StyleSheet.create({
     color: "#F6B853",
   },
 });
+── end old registration ── */

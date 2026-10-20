@@ -93,4 +93,21 @@ export const authService = {
   async getCurrentUser(): Promise<{ success: boolean; data: AppUser }> {
     return apiClient.get<{ success: boolean; data: AppUser }>("/auth/me");
   },
+
+  async sendLoginOTP(phone: string): Promise<{ success: boolean }> {
+    return apiClient.post("/auth/otp/send", { phone });
+  },
+
+  async loginWithOTP(
+    phone: string,
+    code: string,
+    role: "user" | "businessOwner" | "deliveryPartner" = "user"
+  ): Promise<AuthResponse> {
+    const rolePathMap = {
+      user: "user",
+      businessOwner: "businessowner",
+      deliveryPartner: "deliverypartner",
+    };
+    return apiClient.post<AuthResponse>(`/auth/${rolePathMap[role]}/otp-login`, { phone, code });
+  },
 };
