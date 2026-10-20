@@ -11,7 +11,8 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
-import { firebasePhoneAuth } from "../../src/services/firebasePhoneAuth";
+import { phoneVerificationService } from "../../src/services/phoneVerificationService";
+import { authService } from "../../src/services/authService";
 import { useAuth } from "../../src/hooks/useAuth";
 import { useAppSelector } from "../../src/hooks/useRedux";
 import { colors, fonts, brand } from "../../src/constants/theme";
@@ -28,7 +29,7 @@ export default function UserOTPLoginScreen() {
   const [loading, setLoading] = useState(false);
   const [phoneError, setPhoneError] = useState("");
 
-  const { firebaseLogin } = useAuth();
+  const { otpLogin } = useAuth();
   const { isLoading } = useAppSelector((s) => s.auth);
   const toast = useToast();
 
@@ -41,7 +42,8 @@ export default function UserOTPLoginScreen() {
 
     setLoading(true);
     try {
-      await firebasePhoneAuth.sendOTP(firebasePhoneAuth.formatPhone(phone));
+      const formatted = phoneVerificationService.formatPhoneNumber(phone);
+      await authService.sendLoginOTP(formatted);
       setStep("otp");
       toast.show("OTP sent successfully", { type: "success" });
     } catch (error: any) {
@@ -52,15 +54,15 @@ export default function UserOTPLoginScreen() {
   }, [phone, toast]);
 
   const handleVerifyOTP = useCallback(async () => {
-    if (!/^\d{6}$/.test(code)) {
+    if (!phoneVerificationService.validateOTP(code)) {
       toast.show("Please enter a valid 6-digit code", { type: "danger" });
       return;
     }
 
     setLoading(true);
     try {
-      const firebaseToken = await firebasePhoneAuth.verifyOTP(code);
-      const response = await firebaseLogin(firebaseToken, "user");
+      const formatted = phoneVerificationService.formatPhoneNumber(phone);
+      const response = await otpLogin(formatted, code);
 
       if (response?.user?.societyId) {
         router.replace("/(user)/home");
@@ -72,13 +74,14 @@ export default function UserOTPLoginScreen() {
     } finally {
       setLoading(false);
     }
-  }, [code, firebaseLogin, toast]);
+  }, [code, phone, otpLogin, toast]);
 
   const handleResend = useCallback(async () => {
     setCode("");
     setLoading(true);
     try {
-      await firebasePhoneAuth.sendOTP(firebasePhoneAuth.formatPhone(phone));
+      const formatted = phoneVerificationService.formatPhoneNumber(phone);
+      await authService.sendLoginOTP(formatted);
       toast.show("OTP resent", { type: "success" });
     } catch (error: any) {
       toast.show(error.message || "Failed to resend OTP", { type: "danger" });

@@ -7,8 +7,7 @@ import { registerSchema } from "../shared/validation";
 import { normalizeRole } from "../shared/constants";
 import { notifySystem } from "../lib/notifications";
 import { ensureSocietyDemoCatalog, getSocietyProducts } from "../services/demoCatalog";
-import { isRateLimited, recordAttempt } from "../lib/otpStore";
-import { verifyFirebaseToken } from "../lib/firebase";
+import { sendOTP, isRateLimited, verifyOTP } from "../lib/otpStore";
 
 const router = Router();
 const BCRYPT_ROUNDS = 10;
@@ -414,33 +413,45 @@ router.get("/home-feed", requireAuth, async (req: AuthedRequest, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Firebase Phone Auth login (unauthenticated)
+// OTP-based login (unauthenticated)
 // ---------------------------------------------------------------------------
 
-async function firebaseLoginForRole(
+// POST /auth/otp/send — send OTP for login (no auth required)
+router.post("/otp/send", async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) return res.status(400).json({ success: false, error: "Phone number is required" });
+
+    if (isRateLimited(phone)) {
+      return res.status(429).json({ success: false, error: "Too many attempts. Please try again later." });
+    }
+
+    const result = await sendOTP(phone);
+    if (!result.ok) {
+      return res.status(500).json({ success: false, error: result.error });
+    }
+
+    return res.json({ success: true, message: "OTP sent successfully" });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Shared OTP login handler — verifies OTP, finds or creates user with the given role
+async function otpLoginForRole(
   req: any,
   res: any,
   expectedRole: "user" | "businessOwner" | "deliveryPartner"
 ) {
-  const { firebaseToken } = req.body;
-  if (!firebaseToken) {
-    return res.status(400).json({ success: false, error: "Firebase token is required" });
+  const { phone, code } = req.body;
+  if (!phone || !code) {
+    return res.status(400).json({ success: false, error: "Phone and code are required" });
   }
 
-  let decoded;
-  try {
-    decoded = await verifyFirebaseToken(firebaseToken);
-  } catch (err: any) {
-    console.error("[Firebase] Token verification failed:", err.message);
-    return res.status(401).json({ success: false, error: "Invalid or expired token" });
+  const otpResult = await verifyOTP(phone, code);
+  if (!otpResult.ok) {
+    return res.status(400).json({ success: false, error: otpResult.error });
   }
-
-  const phone = decoded.phone_number;
-  if (!phone) {
-    return res.status(400).json({ success: false, error: "No phone number in Firebase token" });
-  }
-
-  recordAttempt(phone);
 
   let user = await prisma.user.findFirst({ where: { phone } });
 
@@ -482,9 +493,9 @@ async function firebaseLoginForRole(
   return res.json({ user: sanitizeUser(user), tokens });
 }
 
-router.post("/user/firebase-login", (req, res, next) => firebaseLoginForRole(req, res, "user").catch(next));
-router.post("/businessowner/firebase-login", (req, res, next) => firebaseLoginForRole(req, res, "businessOwner").catch(next));
-router.post("/deliverypartner/firebase-login", (req, res, next) => firebaseLoginForRole(req, res, "deliveryPartner").catch(next));
+router.post("/user/otp-login", (req, res, next) => otpLoginForRole(req, res, "user").catch(next));
+router.post("/businessowner/otp-login", (req, res, next) => otpLoginForRole(req, res, "businessOwner").catch(next));
+router.post("/deliverypartner/otp-login", (req, res, next) => otpLoginForRole(req, res, "deliveryPartner").catch(next));
 
 // ---------------------------------------------------------------------------
 // Role-gated login

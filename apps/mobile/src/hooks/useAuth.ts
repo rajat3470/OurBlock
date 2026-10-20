@@ -181,13 +181,14 @@ export const useAuth = () => {
     }
   }
 
-  const firebaseLogin = async (
-    firebaseToken: string,
+  const otpLogin = async (
+    phone: string,
+    code: string,
     role: "user" | "businessOwner" | "deliveryPartner" = "user"
   ) => {
     dispatch(setLoading(true));
     try {
-      const response = await authService.loginWithFirebase(firebaseToken, role);
+      const response = await authService.loginWithOTP(phone, code, role);
       if (response) {
         await apiClient.saveTokens(response.tokens);
         await authStateService.saveAuth(response);
@@ -200,7 +201,7 @@ export const useAuth = () => {
       }
       return response;
     } catch (error: any) {
-      const message = extractAuthError(error, "Login failed. Please try again.");
+      const message = extractAuthError(error, "OTP verification failed. Please try again.");
       dispatch(setError(message));
       throw new Error(message);
     } finally {
@@ -292,7 +293,7 @@ export const useAuth = () => {
 
   return {
     login,
-    firebaseLogin,
+    otpLogin,
     register,
     logoutUser,
     resetPassword,

@@ -19,7 +19,6 @@
     },
     "ios": {
       "bundleIdentifier": "com.mohallamitr.app",
-      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Mohalla Mitr uses your location to show nearby societies, businesses, and delivery information while you use the app."
       },
@@ -33,7 +32,6 @@
     },
     "android": {
       "package": "com.mohallamitr.app",
-      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#084C3D"
@@ -71,14 +69,10 @@
         }
       ],
       "./plugins/withNotificationSound",
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth",
       [
         "expo-build-properties",
         {
-          "ios": {
-            "useFrameworks": "static"
-          }
+          "ios": {}
         }
       ]
     ],
