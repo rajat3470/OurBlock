@@ -8,7 +8,7 @@ import { normalizeRole } from "../shared/constants";
 import { notifySystem } from "../lib/notifications";
 import { ensureSocietyDemoCatalog, getSocietyProducts } from "../services/demoCatalog";
 import { isRateLimited, recordAttempt } from "../lib/otpStore";
-import { firebaseAuth } from "../lib/firebase";
+import { verifyFirebaseToken } from "../lib/firebase";
 
 const router = Router();
 const BCRYPT_ROUNDS = 10;
@@ -429,7 +429,7 @@ async function firebaseLoginForRole(
 
   let decoded;
   try {
-    decoded = await firebaseAuth.verifyIdToken(firebaseToken);
+    decoded = await verifyFirebaseToken(firebaseToken);
   } catch (err: any) {
     console.error("[Firebase] Token verification failed:", err.message);
     return res.status(401).json({ success: false, error: "Invalid or expired token" });
