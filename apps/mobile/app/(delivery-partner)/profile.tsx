@@ -17,7 +17,7 @@ import {
   deliveryPartnerService,
   DeliveryBusiness,
 } from "@services/deliveryPartnerService";
-import { colors } from "@/constants/theme";
+import { colors, fonts } from "@/constants/theme";
 
 export default function DeliveryPartnerProfile() {
   const insets = useSafeAreaInsets();
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   heroEmoji: { fontSize: 36 },
-  heroName: { marginTop: 10, fontSize: 22, fontWeight: "800", color: "#FFF" },
+  heroName: { marginTop: 10, fontSize: 22, fontWeight: "800", fontFamily: fonts.extraBold, color: "#FFF" },
   heroEmail: { marginTop: 4, fontSize: 14, color: "rgba(255,255,255,0.9)" },
   heroPhone: { marginTop: 2, fontSize: 13, color: "rgba(255,255,255,0.85)" },
   card: {
@@ -113,10 +113,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  cardTitle: { fontSize: 12, fontWeight: "700", color: "#94A3B8", textTransform: "uppercase" },
-  shopName: { marginTop: 8, fontSize: 18, fontWeight: "800", color: colors.textPrimary },
+  cardTitle: { fontSize: 12, fontWeight: "700", fontFamily: fonts.bold, color: "#94A3B8", textTransform: "uppercase" },
+  shopName: { marginTop: 8, fontSize: 18, fontWeight: "800", fontFamily: fonts.extraBold, color: colors.textPrimary },
   cardBody: { marginTop: 6, fontSize: 13, color: "#64748B", lineHeight: 19 },
-  cardMeta: { marginTop: 6, fontSize: 13, color: "#0B2E22", fontWeight: "600" },
+  cardMeta: { marginTop: 6, fontSize: 13, color: "#0B2E22", fontWeight: "600", fontFamily: fonts.semiBold },
   logoutBtn: {
     marginHorizontal: 16,
     marginTop: 24,
@@ -125,5 +125,5 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
   },
-  logoutText: { color: "#DC2626", fontWeight: "800", fontSize: 15 },
+  logoutText: { color: "#DC2626", fontWeight: "800", fontFamily: fonts.extraBold, fontSize: 15 },
 });

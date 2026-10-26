@@ -74,10 +74,10 @@ const SocietySchema = new Schema(
 
 const UserSchema = new Schema(
   {
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    email: { type: String, required: true, unique: true, lowercase: true },
-    passwordHash: { type: String, required: true },
+    firstName: { type: String, default: "" },
+    lastName: { type: String, default: "" },
+    email: { type: String, unique: true, sparse: true, lowercase: true },
+    passwordHash: { type: String, default: "" },
     phone: { type: String, required: true, unique: true },
     role: {
       type: String,
@@ -171,7 +171,7 @@ const BusinessSchema = new Schema(
     totalReviews: { type: Number, default: 0 },
     status: { type: String, enum: ["active", "inactive", "suspended"], default: "active" },
     isVerified: { type: Boolean, default: false },
-    isTakingOrders: { type: Boolean, default: true },
+    isTakingOrders: { type: Boolean, default: false },
     minimumOrderAmount: Number,
     estimatedDeliveryTime: String,
     preparationTime: String,
@@ -182,6 +182,21 @@ const BusinessSchema = new Schema(
     suspensionReason: String,
     recentRejections: { type: Schema.Types.Mixed, default: {} },
     isDemo: { type: Boolean, default: false },
+    bankDetails: {
+      accountHolderName: String,
+      accountNumber: String,
+      ifscCode: String,
+      bankName: String,
+      upiId: String,
+      verificationStatus: {
+        type: String,
+        enum: ["pending", "verified", "rejected"],
+      },
+      verificationNote: String,
+      verifiedAt: Date,
+      submittedAt: Date,
+      cashfreeRefId: String,
+    },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

@@ -291,10 +291,42 @@ export const useAuth = () => {
     }
   };
 
+  const registerBusinessOwnerOTP = async (
+    phone: string,
+    otp: string,
+    societyId: string,
+    businessName: string,
+    businessCategory: string
+  ) => {
+    dispatch(setLoading(true));
+    try {
+      const response = await authService.registerBusinessOwnerOTP(
+        phone, otp, societyId, businessName, businessCategory
+      );
+      if (response) {
+        await apiClient.saveTokens(response.tokens);
+        await authStateService.saveAuth(response);
+        dispatch(setAuth(response));
+        OneSignalService.login(response.user.id, {
+          role: response.user.role,
+          businessId: (response.user as any).businessId,
+        });
+      }
+      return response;
+    } catch (error: any) {
+      const message = extractAuthError(error, "Registration failed. Please try again.");
+      dispatch(setError(message));
+      throw new Error(message);
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
+
   return {
     login,
     otpLogin,
     register,
+    registerBusinessOwnerOTP,
     logoutUser,
     resetPassword,
     changePassword,

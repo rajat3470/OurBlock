@@ -29,6 +29,14 @@ textarea::placeholder {
   color: #9ca3af !important;
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-dm-serif-text);
+}
+
+strong, b {
+  font-family: var(--font-dm-serif-text);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

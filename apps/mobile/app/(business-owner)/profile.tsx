@@ -1,3 +1,4 @@
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,10 +9,16 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useBusinessOwnerProfile } from "@hooks/useBusinessOwnerProfile";
+import { useAppDispatch } from "@hooks/useRedux";
+import { setUser } from "@store/slices/authSlice";
+import { userAppService } from "@services/userAppService";
+import { authStateService } from "@services/authStateService";
 import { ShopImagePicker } from "@/components/business-owner/ShopImagePicker";
 import content from "@/content/boProfile.json";
 
@@ -29,6 +36,11 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value?: 
 }
 
 export default function BusinessOwnerProfile() {
+  const dispatch = useAppDispatch();
+  const [editingName, setEditingName] = useState(false);
+  const [editFullName, setEditFullName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+
   const {
     user,
     businessProfile,
@@ -64,6 +76,33 @@ export default function BusinessOwnerProfile() {
     handleChangePassword,
   } = useBusinessOwnerProfile();
 
+  const startEditName = useCallback(() => {
+    setEditFullName(`${user?.firstName || ""} ${user?.lastName || ""}`.trim());
+    setEditingName(true);
+  }, [user]);
+
+  const handleSaveName = useCallback(async () => {
+    const parts = editFullName.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) {
+      Alert.alert("Error", "Please enter your name.");
+      return;
+    }
+    const firstName = parts[0];
+    const lastName = parts.slice(1).join(" ") || firstName;
+
+    setSavingName(true);
+    try {
+      const updatedUser = await userAppService.updateProfile({ firstName, lastName } as any);
+      dispatch(setUser(updatedUser));
+      await authStateService.updateUser(updatedUser);
+      setEditingName(false);
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to update name.");
+    } finally {
+      setSavingName(false);
+    }
+  }, [editFullName, dispatch]);
+
   return (
     <View style={styles.container}>
       <KeyboardAvoidingView
@@ -78,9 +117,36 @@ export default function BusinessOwnerProfile() {
             <View style={styles.avatarBox}>
               <Text style={styles.avatarEmoji}>{content.hero.emoji}</Text>
             </View>
-            <Text style={styles.heroName}>
-              {user?.firstName} {user?.lastName}
-            </Text>
+            {editingName ? (
+              <View style={styles.editNameRow}>
+                <TextInput
+                  style={styles.editNameInput}
+                  value={editFullName}
+                  onChangeText={setEditFullName}
+                  placeholder="Enter your full name"
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                  autoFocus
+                  autoCapitalize="words"
+                />
+                <TouchableOpacity onPress={handleSaveName} disabled={savingName} style={styles.editNameBtn}>
+                  {savingName ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="checkmark-circle" size={28} color="#4ADE80" />
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setEditingName(false)} style={styles.editNameBtn}>
+                  <Ionicons name="close-circle" size={28} color="rgba(255,255,255,0.6)" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={startEditName} style={styles.nameRow}>
+                <Text style={styles.heroName}>
+                  {user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : "Tap to add your name"}
+                </Text>
+                <Ionicons name="pencil" size={14} color="rgba(255,255,255,0.6)" style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            )}
             <Text style={styles.heroEmail}>{user?.email}</Text>
             {user?.phone ? (
               <Text style={styles.heroPhone}>{user.phone}</Text>
@@ -208,6 +274,34 @@ export default function BusinessOwnerProfile() {
             </View>
           ) : null}
 
+          {/* ── Bank Details ──────────────────────────────────────────── */}
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.sectionRow}
+              onPress={() => router.push("/(business-owner)/bank-details")}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.sectionRowIcon}>🏦</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionRowLabel}>Bank Details</Text>
+                <Text style={[
+                  styles.sectionRowSub,
+                  (businessProfile as any)?.bankDetails?.verificationStatus === "verified" && { color: "#059669" },
+                  (businessProfile as any)?.bankDetails?.verificationStatus === "rejected" && { color: "#DC2626" },
+                ]}>
+                  {(businessProfile as any)?.bankDetails?.verificationStatus === "verified"
+                    ? "Verified"
+                    : (businessProfile as any)?.bankDetails?.verificationStatus === "pending"
+                      ? "Pending verification"
+                      : (businessProfile as any)?.bankDetails?.verificationStatus === "rejected"
+                        ? "Rejected — update required"
+                        : "Not added yet"}
+                </Text>
+              </View>
+              <Text style={styles.sectionRowChevron}>›</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* ── Delivery Partners ───────────────────────────────────────── */}
           <View style={styles.section}>
             <TouchableOpacity
@@ -327,6 +421,29 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.4)",
   },
   avatarEmoji: { fontSize: 36 },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  editNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginVertical: 4,
+  },
+  editNameInput: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.5)",
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  editNameBtn: {
+    padding: 2,
+  },
   heroName: {
     fontSize: 20,
     fontWeight: "700",

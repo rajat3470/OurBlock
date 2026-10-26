@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 import RoleGate from "../../src/components/RoleGate";
 import AppTabIcon from "../../src/components/AppTabIcon";
+import { fonts } from "../../src/constants/theme";
 
 export default function DeliveryPartnerLayout() {
   return (
@@ -25,6 +26,7 @@ export default function DeliveryPartnerLayout() {
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: "600",
+            fontFamily: fonts.semiBold,
           },
         }}
       >

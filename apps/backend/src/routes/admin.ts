@@ -163,12 +163,15 @@ router.post("/business-owners", async (req, res) => {
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return res.status(400).json({ success: false, error: "Invalid email address" });
-    if (!/^[6-9]\d{9}$/.test(phone)) return res.status(400).json({ success: false, error: "Invalid phone number" });
+    const rawPhone = phone.replace(/\D/g, "");
+    const digits = rawPhone.startsWith("91") && rawPhone.length === 12 ? rawPhone.slice(2) : rawPhone;
+    if (!/^[6-9]\d{9}$/.test(digits)) return res.status(400).json({ success: false, error: "Invalid phone number" });
+    const normalizedPhone = `+91${digits}`;
 
     const society = await prisma.society.findUnique({ where: { id: societyId } });
     if (!society) return res.status(404).json({ success: false, error: "Society not found" });
 
-    const existing = await prisma.user.findFirst({ where: { OR: [{ email }, { phone }] } });
+    const existing = await prisma.user.findFirst({ where: { OR: [{ email }, { phone: normalizedPhone }] } });
     if (existing) {
       return res.status(409).json({ success: false, error: "An account with this email or phone number already exists" });
     }
@@ -177,17 +180,35 @@ router.post("/business-owners", async (req, res) => {
     const tempPassword = rawBytes.replace(/[^a-zA-Z0-9]/g, "x").slice(0, 10) + "@1";
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-    const user = await prisma.user.create({
-      data: {
-        firstName, lastName, email, phone, passwordHash,
-        role: "businessOwner", societyId,
-        status: "active", verificationStatus: "pending", mustChangePassword: true,
-      },
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          firstName, lastName, email, phone: normalizedPhone, passwordHash,
+          role: "businessOwner", societyId,
+          status: "active", verificationStatus: "pending", mustChangePassword: true,
+        },
+      });
+
+      const business = await tx.business.create({
+        data: {
+          name: `${firstName}'s Business`,
+          category: "other",
+          address: "",
+          phone: normalizedPhone,
+          email,
+          ownerId: user.id,
+          societyId,
+          status: "active",
+          isVerified: false,
+        },
+      });
+
+      return { user, business };
     });
 
     return res.status(201).json({
       success: true,
-      data: { uid: user.id, email, temporaryPassword: tempPassword, message: "Business owner account created. Share credentials securely." },
+      data: { uid: result.user.id, email, temporaryPassword: tempPassword, message: "Business owner account created. Share credentials securely." },
     });
   } catch (error: any) {
     console.error("Create business owner error:", error);
@@ -536,6 +557,69 @@ router.put("/platform-config", async (req: AuthedRequest, res) => {
       { new: true, upsert: true, lean: true }
     );
     return res.json({ success: true, data: config });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ─── Bank Verification Queue ────────────────────────────────────────────────
+router.get("/bank-verifications", async (req, res) => {
+  try {
+    const businesses = await prisma.business.findMany({
+      where: { "bankDetails.verificationStatus": "pending" } as any,
+    });
+    const result = await Promise.all(
+      businesses.map(async (b: any) => {
+        const owner = await prisma.user.findUnique({ where: { id: b.ownerId } });
+        return {
+          businessId: b.id,
+          businessName: b.name,
+          ownerName: owner ? `${owner.firstName} ${owner.lastName}`.trim() : "Unknown",
+          ownerPhone: owner?.phone,
+          bankDetails: b.bankDetails,
+        };
+      })
+    );
+    return res.json({ success: true, data: result });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post("/businesses/:id/verify-bank", async (req, res) => {
+  try {
+    const { action, note } = req.body;
+    if (!action || !["verify", "reject"].includes(action)) {
+      return res.status(400).json({ success: false, error: "action must be 'verify' or 'reject'." });
+    }
+
+    const business = await prisma.business.findUnique({ where: { id: req.params.id } });
+    if (!business) {
+      return res.status(404).json({ success: false, error: "Business not found." });
+    }
+
+    const bd = (business as any).bankDetails;
+    if (!bd) {
+      return res.status(400).json({ success: false, error: "No bank details submitted for this business." });
+    }
+
+    const updates: Record<string, any> = {
+      "bankDetails.verificationStatus": action === "verify" ? "verified" : "rejected",
+      "bankDetails.verificationNote": action === "verify"
+        ? (note || "Manually verified by admin.")
+        : (note || "Rejected by admin."),
+    };
+    if (action === "verify") {
+      updates["bankDetails.verifiedAt"] = new Date();
+    }
+
+    const updated = await prisma.business.update({
+      where: { id: req.params.id },
+      data: updates,
+    });
+
+    emitBusinessUpdate(req.params.id, updated);
+    return res.json({ success: true, message: `Bank details ${action === "verify" ? "verified" : "rejected"}.` });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }

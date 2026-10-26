@@ -110,4 +110,16 @@ export const authService = {
     };
     return apiClient.post<AuthResponse>(`/auth/${rolePathMap[role]}/otp-login`, { phone, code });
   },
+
+  async registerBusinessOwnerOTP(
+    phone: string,
+    otp: string,
+    societyId: string,
+    businessName: string,
+    businessCategory: string
+  ): Promise<AuthResponse> {
+    return apiClient.post<AuthResponse>("/auth/businessowner/otp-register", {
+      phone, otp, societyId, businessName, businessCategory,
+    });
+  },
 };

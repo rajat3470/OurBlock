@@ -16,10 +16,23 @@ interface Business {
   ownerId?: string;
   status: string;
   isVerified: boolean;
+  isTakingOrders?: boolean;
+  isDemo?: boolean;
   managementSuspended?: boolean;
   rating: number;
   totalReviews: number;
   createdAt?: any;
+  bankDetails?: {
+    accountHolderName?: string;
+    accountNumber?: string;
+    ifscCode?: string;
+    bankName?: string;
+    upiId?: string;
+    verificationStatus?: string;
+    verificationNote?: string;
+    verifiedAt?: string;
+    submittedAt?: string;
+  };
 }
 
 interface Owner {
@@ -54,7 +67,30 @@ const emptyOwner = { firstName: '', lastName: '', email: '', phone: '' };
 
 interface OwnerResult { email: string; temporaryPassword: string; }
 
-const CATEGORIES = ['Grocery', 'Restaurant', 'Pharmacy', 'Electronics', 'Fitness', 'Education', 'Services', 'Other'];
+const CATEGORIES = [
+  { value: 'grocery', label: 'Grocery / Kirana' },
+  { value: 'pharmacy', label: 'Pharmacy' },
+  { value: 'restaurant', label: 'Restaurant' },
+  { value: 'fast_food', label: 'Fast Food' },
+  { value: 'cafe', label: 'Cafe' },
+  { value: 'bakery', label: 'Bakery' },
+  { value: 'dairy', label: 'Dairy' },
+  { value: 'fruits_vegetables', label: 'Fruits & Vegetables' },
+  { value: 'meat_seafood', label: 'Meat & Seafood' },
+  { value: 'sweets_mithai', label: 'Sweets / Mithai' },
+  { value: 'electronics', label: 'Electronics' },
+  { value: 'hardware', label: 'Hardware' },
+  { value: 'toy_shop', label: 'Toy Shop' },
+  { value: 'stationery', label: 'Stationery' },
+  { value: 'flowers', label: 'Flowers' },
+  { value: 'clothing', label: 'Clothing' },
+  { value: 'fashion_accessories', label: 'Fashion Accessories' },
+  { value: 'pet_supplies', label: 'Pet Supplies' },
+  { value: 'salon', label: 'Salon' },
+  { value: 'gym', label: 'Gym' },
+  { value: 'other', label: 'Other' },
+];
+const categoryLabel = (v: string) => CATEGORIES.find((c) => c.value === v)?.label || v;
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -116,7 +152,7 @@ export default function BusinessesPage() {
   useEffect(() => { if (!loading) loadBusinesses(); }, [filterSociety]);
 
   const loadData = async () => {
-    const [bizRes, socRes] = await Promise.all([api.get('/businesses'), api.get('/societies?limit=100')]);
+    const [bizRes, socRes] = await Promise.all([api.get('/admin/businesses'), api.get('/societies?limit=100')]);
     if (bizRes.success) setBusinesses(bizRes.data || []); else setError(bizRes.error || 'Failed to load');
     if (socRes.success) setSocieties(socRes.data || []);
     setLoading(false);
@@ -146,9 +182,12 @@ export default function BusinessesPage() {
 
   const loadBusinesses = async () => {
     setLoading(true); setError('');
-    const endpoint = filterSociety ? `/businesses?societyId=${filterSociety}&status=active` : '/businesses';
-    const res = await api.get(endpoint);
-    if (res.success) setBusinesses(res.data || []); else setError(res.error || 'Failed to load');
+    const res = await api.get('/admin/businesses');
+    if (res.success) {
+      let data = res.data || [];
+      if (filterSociety) data = data.filter((b: Business) => b.societyId === filterSociety);
+      setBusinesses(data);
+    } else setError(res.error || 'Failed to load');
     setLoading(false);
   };
 
@@ -450,7 +489,27 @@ export default function BusinessesPage() {
                       <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-full shrink-0">✓ Verified</span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">{biz.category} · {biz.phone}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{categoryLabel(biz.category)} · {biz.phone}</p>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {!biz.isVerified && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Admin verification pending</span>
+                    )}
+                    {biz.isDemo && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Demo</span>
+                    )}
+                    {biz.bankDetails?.verificationStatus === 'verified' ? (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Bank verified</span>
+                    ) : biz.bankDetails?.verificationStatus === 'pending' ? (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Bank pending</span>
+                    ) : biz.bankDetails?.verificationStatus === 'rejected' ? (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Bank rejected</span>
+                    ) : !biz.isDemo ? (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">No bank details</span>
+                    ) : null}
+                    {biz.isTakingOrders && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Taking orders</span>
+                    )}
+                  </div>
                 </div>
                 <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                   biz.managementSuspended ? 'bg-orange-100 text-orange-700' :
@@ -538,7 +597,7 @@ export default function BusinessesPage() {
                 <span className="text-2xl">🏪</span>
                 <div>
                   <h2 className="text-base font-semibold text-gray-900 leading-tight">{selectedBiz.name}</h2>
-                  <p className="text-xs text-gray-500">{selectedBiz.category}</p>
+                  <p className="text-xs text-gray-500">{categoryLabel(selectedBiz.category)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -581,13 +640,16 @@ export default function BusinessesPage() {
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Category *</label>
                     <select name="category" value={editForm.category} onChange={handleBizEditChange} required className="field text-gray-900 bg-white">
-                      {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                      {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                     </select>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Phone *</label>
-                      <input name="phone" value={editForm.phone} onChange={handleBizEditChange} required className="field" />
+                      <div className="flex gap-2">
+                        <span className="inline-flex items-center px-3 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-lg">+91</span>
+                        <input name="phone" value={editForm.phone} onChange={handleBizEditChange} required className="field flex-1" />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
@@ -630,12 +692,13 @@ export default function BusinessesPage() {
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Business Details</h3>
                 <dl className="space-y-2.5">
                   <Row label="Name" value={selectedBiz.name} />
-                  <Row label="Category" value={selectedBiz.category} />
+                  <Row label="Category" value={categoryLabel(selectedBiz.category)} />
                   <Row label="Phone" value={selectedBiz.phone} />
                   {selectedBiz.email && <Row label="Email" value={selectedBiz.email} />}
                   <Row label="Address" value={selectedBiz.address} />
                   {selectedBiz.description && <Row label="Description" value={selectedBiz.description} />}
                   <Row label="Rating" value={`${selectedBiz.rating ?? 0} ⭐ (${selectedBiz.totalReviews ?? 0} reviews)`} />
+                  <Row label="Orders" value={selectedBiz.isTakingOrders ? 'Taking orders' : 'Not taking orders'} />
                   {selectedBiz.societyId && (
                     <Row label="Society" value={societies.find((s) => s.id === selectedBiz.societyId)?.name ?? selectedBiz.societyId} />
                   )}
@@ -647,6 +710,54 @@ export default function BusinessesPage() {
                     } />
                   )}
                 </dl>
+              </section>
+
+              {/* Bank Verification Status */}
+              <section>
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Bank Verification</h3>
+                {selectedBiz.bankDetails?.verificationStatus ? (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                        selectedBiz.bankDetails.verificationStatus === 'verified' ? 'bg-emerald-100 text-emerald-700' :
+                        selectedBiz.bankDetails.verificationStatus === 'rejected' ? 'bg-red-100 text-red-700' :
+                        'bg-amber-100 text-amber-700'
+                      }`}>
+                        {selectedBiz.bankDetails.verificationStatus === 'verified' ? '✓ Verified' :
+                         selectedBiz.bankDetails.verificationStatus === 'rejected' ? '✕ Rejected' :
+                         '⏳ Pending'}
+                      </span>
+                    </div>
+                    <dl className="space-y-2.5">
+                      {selectedBiz.bankDetails.accountHolderName && (
+                        <Row label="Holder" value={selectedBiz.bankDetails.accountHolderName} />
+                      )}
+                      {selectedBiz.bankDetails.accountNumber && (
+                        <Row label="Account" value={`••••${selectedBiz.bankDetails.accountNumber.slice(-4)}`} />
+                      )}
+                      {selectedBiz.bankDetails.ifscCode && (
+                        <Row label="IFSC" value={selectedBiz.bankDetails.ifscCode} />
+                      )}
+                      {selectedBiz.bankDetails.bankName && (
+                        <Row label="Bank" value={selectedBiz.bankDetails.bankName} />
+                      )}
+                      {selectedBiz.bankDetails.upiId && (
+                        <Row label="UPI" value={selectedBiz.bankDetails.upiId} />
+                      )}
+                      {selectedBiz.bankDetails.verificationNote && (
+                        <Row label="Note" value={selectedBiz.bankDetails.verificationNote} />
+                      )}
+                      {selectedBiz.bankDetails.submittedAt && (
+                        <Row label="Submitted" value={new Date(selectedBiz.bankDetails.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} />
+                      )}
+                      {selectedBiz.bankDetails.verifiedAt && (
+                        <Row label="Verified at" value={new Date(selectedBiz.bankDetails.verifiedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} />
+                      )}
+                    </dl>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">No bank details submitted yet</p>
+                )}
               </section>
 
               {/* Owner Details */}
@@ -696,7 +807,10 @@ export default function BusinessesPage() {
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Mobile *</label>
-                        <input type="tel" value={drawerOwnerForm.phone} onChange={(e) => setDrawerOwnerForm((p) => ({ ...p, phone: e.target.value }))} required maxLength={10} placeholder="10-digit number" className="field" />
+                        <div className="flex gap-2">
+                          <span className="inline-flex items-center px-3 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-lg">+91</span>
+                          <input type="tel" value={drawerOwnerForm.phone} onChange={(e) => setDrawerOwnerForm((p) => ({ ...p, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} required maxLength={10} placeholder="98765 43210" className="field flex-1" />
+                        </div>
                       </div>
                       <div className="flex gap-2 pt-1">
                         <button type="button" onClick={() => setShowDrawerOwnerForm(false)}
@@ -905,14 +1019,17 @@ export default function BusinessesPage() {
                   <label className="block text-xs font-medium text-gray-700 mb-1">Category *</label>
                   <select name="category" value={form.category} onChange={handleFormChange} required className="field text-gray-900 bg-white">
                     <option value="" disabled>Select a category…</option>
-                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Phone *</label>
-                    <input name="phone" value={form.phone} onChange={handleFormChange} required
-                      pattern="[6-9][0-9]{9}" placeholder="9876543210" className="field" />
+                    <div className="flex gap-2">
+                      <span className="inline-flex items-center px-3 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-lg">+91</span>
+                      <input name="phone" value={form.phone} onChange={(e) => handleFormChange({ target: { name: 'phone', value: e.target.value.replace(/\D/g, '').slice(0, 10) } } as any)} required
+                        pattern="[6-9][0-9]{9}" placeholder="98765 43210" className="field flex-1" />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Email <span className="text-gray-400">(optional)</span></label>
@@ -972,8 +1089,11 @@ export default function BusinessesPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Mobile Number *</label>
-                    <input name="phone" type="tel" value={ownerForm.phone} onChange={handleOwnerFormChange} required
-                      placeholder="10-digit mobile number" maxLength={10} className="field" />
+                    <div className="flex gap-2">
+                      <span className="inline-flex items-center px-3 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-lg">+91</span>
+                      <input name="phone" type="tel" value={ownerForm.phone} onChange={(e) => handleOwnerFormChange({ target: { name: 'phone', value: e.target.value.replace(/\D/g, '').slice(0, 10) } } as any)} required
+                        placeholder="98765 43210" maxLength={10} className="field flex-1" />
+                    </div>
                   </div>
                   <div className="flex justify-between gap-3 pt-2">
                     <button type="button" onClick={() => setStep('details')}

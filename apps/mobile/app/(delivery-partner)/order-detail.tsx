@@ -19,7 +19,7 @@ import {
 import { pickImageFromCamera } from "@/utils/imagePicker";
 import { Order, PaymentMethod } from "@/types";
 import { isPaymentOutstanding } from "@mohallamitr/shared";
-import { colors } from "@/constants/theme";
+import { colors, fonts } from "@/constants/theme";
 
 const COLLECT_METHODS: { key: PaymentMethod; label: string; icon: string }[] = [
   { key: "cash", label: "Cash", icon: "💵" },
@@ -285,8 +285,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  back: { fontSize: 16, fontWeight: "700", color: "#084C3D", width: 48 },
-  headerTitle: { fontSize: 16, fontWeight: "800", color: colors.textPrimary },
+  back: { fontSize: 16, fontWeight: "700", fontFamily: fonts.bold, color: "#084C3D", width: 48 },
+  headerTitle: { fontSize: 16, fontWeight: "800", fontFamily: fonts.extraBold, color: colors.textPrimary },
   content: { padding: 16, paddingBottom: 24 },
   card: {
     backgroundColor: "#FFF",
@@ -296,10 +296,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  label: { fontSize: 12, fontWeight: "700", color: "#94A3B8", textTransform: "uppercase" },
-  value: { marginTop: 6, fontSize: 16, fontWeight: "700", color: colors.textPrimary },
+  label: { fontSize: 12, fontWeight: "700", fontFamily: fonts.bold, color: "#94A3B8", textTransform: "uppercase" },
+  value: { marginTop: 6, fontSize: 16, fontWeight: "700", fontFamily: fonts.bold, color: colors.textPrimary },
   subValue: { marginTop: 4, fontSize: 13, color: "#64748B" },
-  amount: { marginTop: 6, fontSize: 24, fontWeight: "800", color: "#0B2E22" },
+  amount: { marginTop: 6, fontSize: 24, fontWeight: "800", fontFamily: fonts.extraBold, color: "#0B2E22" },
   itemLine: { marginTop: 6, fontSize: 14, color: "#334155" },
   methodRow: { flexDirection: "row", gap: 8, marginTop: 10 },
   methodChip: {
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   },
   methodChipActive: { borderColor: "#084C3D", backgroundColor: "#ECFEFF" },
   methodIcon: { fontSize: 18 },
-  methodLabel: { marginTop: 4, fontSize: 12, fontWeight: "600", color: "#64748B" },
+  methodLabel: { marginTop: 4, fontSize: 12, fontWeight: "600", fontFamily: fonts.semiBold, color: "#64748B" },
   methodLabelActive: { color: "#0B2E22" },
   proofImage: { marginTop: 10, width: "100%", height: 180, borderRadius: 12 },
   secondaryBtn: {
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
-  secondaryBtnText: { color: "#084C3D", fontWeight: "700", fontSize: 14 },
+  secondaryBtnText: { color: "#084C3D", fontWeight: "700", fontFamily: fonts.bold, fontSize: 14 },
   footer: {
     paddingHorizontal: 16,
     paddingTop: 12,
@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   completeBtn: { backgroundColor: "#084C3D" },
   btnDisabled: { opacity: 0.6 },
-  primaryBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
+  primaryBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800", fontFamily: fonts.extraBold },
   waitBanner: {
     backgroundColor: "#FFFBEB",
     borderRadius: 12,
@@ -353,6 +353,7 @@ const styles = StyleSheet.create({
     color: "#92400E",
     fontSize: 13,
     fontWeight: "600",
+    fontFamily: fonts.semiBold,
     lineHeight: 18,
     textAlign: "center",
   },

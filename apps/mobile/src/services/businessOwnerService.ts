@@ -11,6 +11,22 @@ export const businessOwnerService = {
     return res.data;
   },
 
+  async getBankDetails(): Promise<any | null> {
+    const res = await apiClient.get<ApiEnvelope<any | null>>("/owner/bank-details");
+    return res.data;
+  },
+
+  async submitBankDetails(data: {
+    accountHolderName: string;
+    accountNumber: string;
+    ifscCode: string;
+    bankName: string;
+    upiId?: string;
+  }): Promise<any> {
+    const res = await apiClient.post<ApiEnvelope<any>>("/owner/bank-details", data);
+    return res.data;
+  },
+
   async getMyProducts(
     page = 1,
     limit = 50

@@ -12,6 +12,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { displayQuantity } from "@utils/helpers";
 import { useCheckout, PAYMENT_METHODS } from "@hooks/useCheckout";
+import { fonts } from "@/constants/theme";
 import content from "@/content/checkout.json";
 
 export default function CheckoutScreen() {
@@ -339,7 +340,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.35)",
   },
-  headerTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#FFFFFF", textAlign: "center" },
+  headerTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#FFFFFF", textAlign: "center", fontFamily: fonts.bold },
   headerRight: { width: 36 },
   scroll: { paddingBottom: 32 },
   section: {
@@ -365,8 +366,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#111827",
     marginBottom: 12,
+    fontFamily: fonts.extraBold,
   },
-  addLink: { fontSize: 13, fontWeight: "700", color: "#084C3D" },
+  addLink: { fontSize: 13, fontWeight: "700", color: "#084C3D", fontFamily: fonts.bold },
   orderItemRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -381,9 +383,9 @@ const styles = StyleSheet.create({
     minWidth: 32,
     alignItems: "center",
   },
-  orderItemQtyText: { fontSize: 12, fontWeight: "800", color: "#92400E" },
-  orderItemName: { flex: 1, fontSize: 13, color: "#374151", fontWeight: "600" },
-  orderItemPrice: { fontSize: 13, fontWeight: "700", color: "#111827" },
+  orderItemQtyText: { fontSize: 12, fontWeight: "800", color: "#92400E", fontFamily: fonts.extraBold },
+  orderItemName: { flex: 1, fontSize: 13, color: "#374151", fontWeight: "600", fontFamily: fonts.semiBold },
+  orderItemPrice: { fontSize: 13, fontWeight: "700", color: "#111827", fontFamily: fonts.bold },
   noAddressWrap: { alignItems: "center", paddingVertical: 16, gap: 12 },
   noAddressText: { fontSize: 14, color: "#6B7280" },
   addAddressBtn: {
@@ -392,7 +394,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
-  addAddressBtnText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF" },
+  addAddressBtnText: { fontSize: 14, fontWeight: "700", color: "#FFFFFF", fontFamily: fonts.bold },
   addressCard: {
     flexDirection: "row",
     borderRadius: 12,
@@ -423,14 +425,14 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 2,
   },
-  addressType: { fontSize: 14, fontWeight: "700", color: "#111827" },
+  addressType: { fontSize: 14, fontWeight: "700", color: "#111827", fontFamily: fonts.bold },
   defaultBadge: {
     backgroundColor: "#C6F7E2",
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  defaultBadgeText: { fontSize: 10, fontWeight: "800", color: "#065F46" },
+  defaultBadgeText: { fontSize: 10, fontWeight: "800", color: "#065F46", fontFamily: fonts.extraBold },
   addressLine: { fontSize: 13, color: "#4B5563", lineHeight: 18 },
   addressPhone: { fontSize: 12, color: "#6B7280", marginTop: 2 },
   paymentCard: {
@@ -445,14 +447,14 @@ const styles = StyleSheet.create({
   },
   paymentCardActive: { borderColor: "#084C3D", backgroundColor: "#E4F3EA" },
   paymentIcon: { fontSize: 22 },
-  paymentLabel: { flex: 1, fontSize: 14, fontWeight: "700", color: "#111827" },
+  paymentLabel: { flex: 1, fontSize: 14, fontWeight: "700", color: "#111827", fontFamily: fonts.bold },
   comingSoonBadge: {
     backgroundColor: "#EDE9FE",
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
-  comingSoonText: { fontSize: 10, fontWeight: "700", color: "#6D28D9" },
+  comingSoonText: { fontSize: 10, fontWeight: "700", color: "#6D28D9", fontFamily: fonts.bold },
   billRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -460,11 +462,11 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   billLabel: { fontSize: 13, color: "#4B5563" },
-  billValue: { fontSize: 13, fontWeight: "600", color: "#374151" },
-  billValueGreen: { fontSize: 13, fontWeight: "700", color: "#084C3D" },
+  billValue: { fontSize: 13, fontWeight: "600", color: "#374151", fontFamily: fonts.semiBold },
+  billValueGreen: { fontSize: 13, fontWeight: "700", color: "#084C3D", fontFamily: fonts.bold },
   billDivider: { height: 1, backgroundColor: "#F3F4F6", marginVertical: 6 },
-  billLabelBold: { fontSize: 15, fontWeight: "800", color: "#111827" },
-  billValueBold: { fontSize: 15, fontWeight: "800", color: "#084C3D" },
+  billLabelBold: { fontSize: 15, fontWeight: "800", color: "#111827", fontFamily: fonts.extraBold },
+  billValueBold: { fontSize: 15, fontWeight: "800", color: "#084C3D", fontFamily: fonts.extraBold },
   bottomCta: {
     position: "absolute",
     bottom: 0,
@@ -482,7 +484,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   ctaTotalLabel: { fontSize: 12, color: "#6B7280" },
-  ctaTotalAmount: { fontSize: 20, fontWeight: "800", color: "#111827" },
+  ctaTotalAmount: { fontSize: 20, fontWeight: "800", color: "#111827", fontFamily: fonts.extraBold },
   placeOrderBtn: {
     backgroundColor: "#F6B853",
     borderRadius: 14,
@@ -492,7 +494,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   placeOrderBtnDisabled: { backgroundColor: "#D1D5DB" },
-  placeOrderText: { fontSize: 16, fontWeight: "800", color: "#FFFFFF" },
+  placeOrderText: { fontSize: 16, fontWeight: "800", color: "#FFFFFF", fontFamily: fonts.extraBold },
   couponRow: { flexDirection: "row", gap: 10, alignItems: "center" },
   couponInput: {
     flex: 1,
@@ -506,6 +508,7 @@ const styles = StyleSheet.create({
     color: "#111827",
     backgroundColor: "#FAFAFA",
     letterSpacing: 1,
+    fontFamily: fonts.bold,
   },
   couponApplyBtn: {
     backgroundColor: "#084C3D",
@@ -517,7 +520,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   couponApplyBtnDisabled: { backgroundColor: "#D1D5DB" },
-  couponApplyBtnText: { fontSize: 14, fontWeight: "800", color: "#FFFFFF" },
+  couponApplyBtnText: { fontSize: 14, fontWeight: "800", color: "#FFFFFF", fontFamily: fonts.extraBold },
   couponApplied: {
     flexDirection: "row",
     alignItems: "center",
@@ -528,10 +531,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#6EE7B7",
   },
-  couponAppliedCode: { fontSize: 13, fontWeight: "800", color: "#084C3D" },
-  couponAppliedSavings: { fontSize: 11, color: "#047857", fontWeight: "600", marginTop: 1 },
+  couponAppliedCode: { fontSize: 13, fontWeight: "800", color: "#084C3D", fontFamily: fonts.extraBold },
+  couponAppliedSavings: { fontSize: 11, color: "#047857", fontWeight: "600", marginTop: 1, fontFamily: fonts.semiBold },
   couponRemoveBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
-  couponRemoveText: { fontSize: 12, color: "#6B7280", fontWeight: "600" },
+  couponRemoveText: { fontSize: 12, color: "#6B7280", fontWeight: "600", fontFamily: fonts.semiBold },
 });
 
 
@@ -547,6 +550,7 @@ const cardFormStyles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
     backgroundColor: "#FAFAFA",
+    fontFamily: fonts.semiBold,
   },
   row: { flexDirection: "row", gap: 10 },
   half: { flex: 1 },

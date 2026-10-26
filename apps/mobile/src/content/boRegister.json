@@ -1,0 +1,36 @@
+{
+  "header": {
+    "phoneTitle": "Register your shop",
+    "phoneSubtitle": "Enter your mobile number to get started.",
+    "otpTitle": "Verify OTP",
+    "otpSubtitle": "Enter the 6-digit code sent to +91 {phone}",
+    "detailsTitle": "Tell us about your shop",
+    "detailsSubtitle": "This is what residents in your society will see."
+  },
+  "form": {
+    "shopName": "SHOP NAME",
+    "shopNamePlaceholder": "e.g. Sharma Kirana Store",
+    "category": "SHOP TYPE",
+    "society": "SOCIETY / SECTOR",
+    "societyPlaceholder": "Select your society"
+  },
+  "buttons": {
+    "sendOtp": "Send OTP",
+    "verify": "Verify & Continue",
+    "submit": "Submit Application",
+    "resend": "Resend OTP",
+    "changeNumber": "Change number"
+  },
+  "errors": {
+    "phoneInvalid": "Enter a valid 10-digit mobile number",
+    "otpInvalid": "Please enter a valid 6-digit code",
+    "shopNameRequired": "Shop name is required",
+    "categoryRequired": "Please select a shop type",
+    "societyRequired": "Please select your society"
+  },
+  "gate": {
+    "nameTitle": "Add your name",
+    "nameMessage": "Please add your name in your profile before adding products.",
+    "nameCta": "Go to Profile"
+  }
+}

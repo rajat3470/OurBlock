@@ -683,5 +683,6 @@ export const useBusinessOwnerProducts = () => {
     getCategoryMetadata,
     getCategoriesForBusinessType,
     getApprovalMeta,
+    businessProfile,
   };
 };

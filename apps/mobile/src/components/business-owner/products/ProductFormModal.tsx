@@ -18,6 +18,7 @@ import { ProductForm, type CategoryMetadata } from "@hooks/useBusinessOwnerProdu
 import { isCategoryRecommended } from "@utils/categoryMetadata";
 import { type ProductUnit } from "@utils/helpers";
 import content from "@/content/boProducts.json";
+import { fonts } from "../../../constants/theme";
 
 type ErrorField = "photo" | "name" | "price" | "mrp" | "unitStep";
 
@@ -314,7 +315,7 @@ export function ProductFormModal({
                       <Text
                         style={[
                           styles.dietChipText,
-                          form.unit === opt.value && { color: "#0B2E22", fontWeight: "700" },
+                          form.unit === opt.value && { color: "#0B2E22", fontWeight: "700", fontFamily: fonts.bold },
                         ]}
                       >
                         {opt.label}
@@ -534,7 +535,7 @@ export function ProductFormModal({
                     <Text
                       style={[
                         styles.dietChipText,
-                        form.isVeg && { color: "#0B2E22", fontWeight: "700" },
+                        form.isVeg && { color: "#0B2E22", fontWeight: "700", fontFamily: fonts.bold },
                       ]}
                     >
                       {content.modal.veg}
@@ -552,7 +553,7 @@ export function ProductFormModal({
                     <Text
                       style={[
                         styles.dietChipText,
-                        !form.isVeg && { color: "#991B1B", fontWeight: "700" },
+                        !form.isVeg && { color: "#991B1B", fontWeight: "700", fontFamily: fonts.bold },
                       ]}
                     >
                       {content.modal.nonVeg}
@@ -765,7 +766,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 14,
   },
-  formErrorText: { color: "#B91C1C", fontSize: 13, fontWeight: "600" },
+  formErrorText: { color: "#B91C1C", fontSize: 13, fontWeight: "600", fontFamily: fonts.semiBold },
   inlineError: {
     marginTop: 8,
   },
@@ -773,6 +774,7 @@ const styles = StyleSheet.create({
     color: "#B91C1C",
     fontSize: 12,
     fontWeight: "600",
+    fontFamily: fonts.semiBold,
   },
   inputError: {
     borderColor: "#EF4444",
@@ -829,6 +831,7 @@ const styles = StyleSheet.create({
     color: "#DC2626",
     fontSize: 12,
     fontWeight: "700",
+    fontFamily: fonts.bold,
   },
   attributeValuesRow: {
     flexDirection: "row",
@@ -859,6 +862,7 @@ const styles = StyleSheet.create({
     color: "#DC2626",
     fontSize: 12,
     fontWeight: "700",
+    fontFamily: fonts.bold,
   },
   addAttributeValueBtn: {
     backgroundColor: "#F0FDF4",
@@ -872,6 +876,7 @@ const styles = StyleSheet.create({
     color: "#084C3D",
     fontSize: 12,
     fontWeight: "700",
+    fontFamily: fonts.bold,
   },
   addAttributeBtn: {
     borderWidth: 1,
@@ -886,6 +891,7 @@ const styles = StyleSheet.create({
     color: "#084C3D",
     fontSize: 13,
     fontWeight: "700",
+    fontFamily: fonts.bold,
   },
   categorySearch: {
     borderBottomWidth: 1,
@@ -938,6 +944,7 @@ const styles = StyleSheet.create({
   categoryModalSectionHeaderText: {
     fontSize: 11,
     fontWeight: "700",
+    fontFamily: fonts.bold,
     color: "#64748B",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -963,10 +970,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#374151",
     fontWeight: "500",
+    fontFamily: fonts.medium,
   },
   categoryModalItemTextSelected: {
     color: "#084C3D",
     fontWeight: "700",
+    fontFamily: fonts.bold,
   },
   categoryModalHint: {
     fontSize: 12,
@@ -977,6 +986,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#084C3D",
     fontWeight: "700",
+    fontFamily: fonts.bold,
   },
   modalContainer: {
     flex: 1,
@@ -1004,10 +1014,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#64748B",
     fontWeight: "700",
+    fontFamily: fonts.bold,
   },
   modalTitle: {
     fontSize: 17,
     fontWeight: "700",
+    fontFamily: fonts.bold,
     color: "#0F172A",
   },
   modalSaveBtn: {
@@ -1024,6 +1036,7 @@ const styles = StyleSheet.create({
   modalSaveBtnText: {
     color: "#FFFFFF",
     fontWeight: "700",
+    fontFamily: fonts.bold,
     fontSize: 14,
   },
   modalScroll: {
@@ -1036,6 +1049,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontWeight: "600",
+    fontFamily: fonts.semiBold,
     color: "#374151",
     marginBottom: 8,
   },
@@ -1094,6 +1108,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 13,
     fontWeight: "600",
+    fontFamily: fonts.semiBold,
   },
   imagePlaceholder: {
     flex: 1,
@@ -1107,6 +1122,7 @@ const styles = StyleSheet.create({
   imagePlaceholderText: {
     fontSize: 15,
     fontWeight: "700",
+    fontFamily: fonts.bold,
     color: "#475569",
   },
   imagePlaceholderSub: {
@@ -1146,6 +1162,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 11,
     fontWeight: "700",
+    fontFamily: fonts.bold,
   },
   additionalAddSlot: {
     width: 88,
@@ -1163,12 +1180,14 @@ const styles = StyleSheet.create({
     fontSize: 26,
     color: "#94A3B8",
     fontWeight: "300",
+    fontFamily: fonts.regular,
     lineHeight: 30,
   },
   additionalAddText: {
     fontSize: 11,
     color: "#94A3B8",
     fontWeight: "600",
+    fontFamily: fonts.semiBold,
   },
   dropdownTrigger: {
     flexDirection: "row",
@@ -1185,6 +1204,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#0F172A",
     fontWeight: "500",
+    fontFamily: fonts.medium,
   },
   dropdownArrow: {
     fontSize: 11,
@@ -1217,11 +1237,13 @@ const styles = StyleSheet.create({
   dropdownItemTextSelected: {
     color: "#084C3D",
     fontWeight: "700",
+    fontFamily: fonts.bold,
   },
   dropdownCheck: {
     fontSize: 14,
     color: "#084C3D",
     fontWeight: "700",
+    fontFamily: fonts.bold,
   },
   priceFieldRow: {
     flexDirection: "row",
@@ -1240,6 +1262,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#6B7280",
     fontWeight: "600",
+    fontFamily: fonts.semiBold,
     marginRight: 2,
   },
   priceInput: {
@@ -1261,6 +1284,7 @@ const styles = StyleSheet.create({
     color: "#854D0E",
     fontSize: 13,
     fontWeight: "600",
+    fontFamily: fonts.semiBold,
   },
   counterRow: {
     flexDirection: "row",
@@ -1285,6 +1309,7 @@ const styles = StyleSheet.create({
   counterBtnText: {
     fontSize: 24,
     fontWeight: "700",
+    fontFamily: fonts.bold,
     color: "#084C3D",
     lineHeight: 28,
   },
@@ -1293,6 +1318,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 22,
     fontWeight: "800",
+    fontFamily: fonts.extraBold,
     color: "#0F172A",
     paddingVertical: 10,
     borderLeftWidth: 1,
@@ -1309,6 +1335,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#94A3B8",
     fontWeight: "500",
+    fontFamily: fonts.medium,
   },
   quickAddBtn: {
     paddingHorizontal: 12,
@@ -1322,6 +1349,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#084C3D",
     fontWeight: "700",
+    fontFamily: fonts.bold,
   },
   saveBtn: {
     backgroundColor: "#084C3D",
@@ -1344,6 +1372,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "800",
+    fontFamily: fonts.extraBold,
     letterSpacing: 0.3,
   },
   dietChip: {
@@ -1369,6 +1398,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#64748B",
     fontWeight: "600",
+    fontFamily: fonts.semiBold,
   },
   vegDot: {
     width: 10,
@@ -1389,5 +1419,6 @@ const styles = StyleSheet.create({
   optional: {
     color: "#94A3B8",
     fontWeight: "400",
+    fontFamily: fonts.regular,
   },
 });

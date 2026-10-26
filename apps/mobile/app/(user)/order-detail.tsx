@@ -14,6 +14,7 @@ import SafeAreaHeader from "@components/SafeAreaHeader";
 import AcceptanceCountdown from "@components/AcceptanceCountdown";
 import { BannerAdStrip } from "@components/BannerAdStrip";
 import { useOrderDetail } from "@hooks/useOrderDetail";
+import { fonts } from "@/constants/theme";
 import content from "@/content/orderDetail.json";
 
 export default function UserOrderDetail() {
@@ -252,7 +253,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 10,
     backgroundColor: "#084C3D", borderRadius: 999,
   },
-  goBackText: { color: "#FFFFFF", fontWeight: "700" },
+  goBackText: { color: "#FFFFFF", fontWeight: "700", fontFamily: fonts.bold },
 
   body: { flex: 1 },
 
@@ -263,15 +264,15 @@ const styles = StyleSheet.create({
   },
   statusEmoji: { fontSize: 28 },
   statusInfo: { flex: 1 },
-  statusLabel: { fontSize: 15, fontWeight: "700" },
-  statusPayment: { fontSize: 12, fontWeight: "500", marginTop: 2, opacity: 0.8 },
+  statusLabel: { fontSize: 15, fontWeight: "700", fontFamily: fonts.bold },
+  statusPayment: { fontSize: 12, fontWeight: "500", marginTop: 2, opacity: 0.8, fontFamily: fonts.medium },
 
   // Awaiting-confirmation card
   awaitingCard: {
     marginHorizontal: 16, marginBottom: 4, padding: 14,
     borderRadius: 16, borderWidth: 1, borderColor: "#FDE68A", backgroundColor: "#FFFBEB",
   },
-  awaitingText: { fontSize: 13, fontWeight: "600", color: "#92400E" },
+  awaitingText: { fontSize: 13, fontWeight: "600", color: "#92400E", fontFamily: fonts.semiBold },
 
   // Sections
   section: {
@@ -283,8 +284,9 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11, fontWeight: "700", color: "#94A3B8",
     textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10,
+    fontFamily: fonts.bold,
   },
-  sectionValue: { fontSize: 14, color: "#1E293B", fontWeight: "500", lineHeight: 20 },
+  sectionValue: { fontSize: 14, color: "#1E293B", fontWeight: "500", lineHeight: 20, fontFamily: fonts.medium },
   sectionSubValue: { fontSize: 13, color: "#64748B", marginTop: 2 },
 
   // Items
@@ -293,20 +295,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#FEF3C7", borderRadius: 6,
     paddingHorizontal: 7, paddingVertical: 3, minWidth: 30, alignItems: "center",
   },
-  qtyText: { fontSize: 12, fontWeight: "700", color: "#E0A030" },
-  itemName: { flex: 1, fontSize: 13, color: "#1E293B", fontWeight: "500" },
-  itemTotal: { fontSize: 13, fontWeight: "700", color: "#1E293B" },
+  qtyText: { fontSize: 12, fontWeight: "700", color: "#E0A030", fontFamily: fonts.bold },
+  itemName: { flex: 1, fontSize: 13, color: "#1E293B", fontWeight: "500", fontFamily: fonts.medium },
+  itemTotal: { fontSize: 13, fontWeight: "700", color: "#1E293B", fontFamily: fonts.bold },
 
   // Pricing
   priceRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
   priceLabel: { fontSize: 13, color: "#64748B" },
-  priceValue: { fontSize: 13, color: "#1E293B", fontWeight: "500" },
+  priceValue: { fontSize: 13, color: "#1E293B", fontWeight: "500", fontFamily: fonts.medium },
   totalRow: {
     marginTop: 8, paddingTop: 10,
     borderTopWidth: 1, borderTopColor: "#E2E8F0",
   },
-  totalLabel: { fontSize: 15, fontWeight: "700", color: "#1E293B" },
-  totalValue: { fontSize: 15, fontWeight: "800", color: "#084C3D" },
+  totalLabel: { fontSize: 15, fontWeight: "700", color: "#1E293B", fontFamily: fonts.bold },
+  totalValue: { fontSize: 15, fontWeight: "800", color: "#084C3D", fontFamily: fonts.extraBold },
 
   // Address type
   addressTypePill: {
@@ -314,7 +316,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F5F9", borderRadius: 999,
     paddingHorizontal: 10, paddingVertical: 3,
   },
-  addressTypeText: { fontSize: 11, fontWeight: "600", color: "#64748B" },
+  addressTypeText: { fontSize: 11, fontWeight: "600", color: "#64748B", fontFamily: fonts.semiBold },
 
   // Tracking
   trackRow: { flexDirection: "row", gap: 12, marginBottom: 4 },
@@ -326,13 +328,13 @@ const styles = StyleSheet.create({
   trackDotActive: { backgroundColor: "#084C3D", width: 12, height: 12, borderRadius: 6 },
   trackLine: { width: 2, flex: 1, backgroundColor: "#E2E8F0", marginTop: 4, minHeight: 20 },
   trackContent: { flex: 1, paddingBottom: 16 },
-  trackStatus: { fontSize: 13, fontWeight: "600", color: "#1E293B" },
+  trackStatus: { fontSize: 13, fontWeight: "600", color: "#1E293B", fontFamily: fonts.semiBold },
   trackTime: { fontSize: 11, color: "#94A3B8", marginTop: 2 },
   trackNote: { fontSize: 12, color: "#64748B", marginTop: 3, fontStyle: "italic" },
 
   // Rejection
   rejectionSection: { borderWidth: 1, borderColor: "#FECACA", backgroundColor: "#FEF2F2" },
-  rejectionTitle: { fontSize: 13, fontWeight: "700", color: "#DC2626", marginBottom: 6 },
+  rejectionTitle: { fontSize: 13, fontWeight: "700", color: "#DC2626", marginBottom: 6, fontFamily: fonts.bold },
   rejectionText: { fontSize: 13, color: "#7F1D1D", lineHeight: 18 },
 
   // Footer
@@ -346,5 +348,5 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
     backgroundColor: "#F6B853", borderRadius: 999, paddingVertical: 14,
   },
-  shareBtnText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+  shareBtnText: { fontSize: 15, fontWeight: "700", color: "#FFFFFF", fontFamily: fonts.bold },
 });

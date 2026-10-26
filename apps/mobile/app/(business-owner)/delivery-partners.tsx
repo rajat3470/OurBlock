@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useToast } from "react-native-toast-notifications";
 import { Ionicons } from "@expo/vector-icons";
 import { businessOwnerService } from "@services/businessOwnerService";
+import { fonts } from "../../src/constants/theme";
 import content from "@/content/boDeliveryPartners.json";
 
 type Partner = {
@@ -263,6 +264,7 @@ export default function DeliveryPartnersScreen() {
                       style={{
                         color: partner.status === "active" ? "#084C3D" : "#DC2626",
                         fontWeight: "700",
+                        fontFamily: fonts.bold,
                         fontSize: 11,
                       }}
                     >
@@ -320,6 +322,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 26,
     fontWeight: "800",
+    fontFamily: fonts.extraBold,
     color: "#FFF",
     letterSpacing: -0.3,
   },
@@ -346,7 +349,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 3,
   },
-  addBtnText: { color: "#FFF", fontWeight: "800", fontSize: 15 },
+  addBtnText: { color: "#FFF", fontWeight: "800", fontFamily: fonts.extraBold, fontSize: 15 },
   form: {
     backgroundColor: "#FFF",
     borderRadius: 16,
@@ -355,9 +358,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E2E8F0",
   },
-  formTitle: { fontSize: 16, fontWeight: "800", color: "#111827", marginBottom: 10 },
+  formTitle: { fontSize: 16, fontWeight: "800", fontFamily: fonts.extraBold, color: "#111827", marginBottom: 10 },
   field: { marginBottom: 10 },
-  fieldLabel: { fontSize: 12, fontWeight: "700", color: "#64748B", marginBottom: 4 },
+  fieldLabel: { fontSize: 12, fontWeight: "700", fontFamily: fonts.bold, color: "#64748B", marginBottom: 4 },
   input: {
     borderWidth: 1,
     borderColor: "#E2E8F0",
@@ -376,10 +379,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveBtnDisabled: { opacity: 0.6 },
-  saveBtnText: { color: "#FFF", fontWeight: "800" },
+  saveBtnText: { color: "#FFF", fontWeight: "800", fontFamily: fonts.extraBold },
   empty: { alignItems: "center", marginTop: 48, paddingHorizontal: 24 },
   emptyEmoji: { fontSize: 40, marginBottom: 8 },
-  emptyTitle: { fontSize: 17, fontWeight: "700", color: "#111827" },
+  emptyTitle: { fontSize: 17, fontWeight: "700", fontFamily: fonts.bold, color: "#111827" },
   emptySub: {
     marginTop: 6,
     fontSize: 13,
@@ -405,9 +408,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  avatarText: { fontSize: 16, fontWeight: "800", color: "#084C3D" },
+  avatarText: { fontSize: 16, fontWeight: "800", fontFamily: fonts.extraBold, color: "#084C3D" },
   cardMeta: { flex: 1, paddingRight: 8 },
-  name: { fontSize: 16, fontWeight: "800", color: "#111827" },
+  name: { fontSize: 16, fontWeight: "800", fontFamily: fonts.extraBold, color: "#111827" },
   statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   meta: { marginTop: 3, fontSize: 13, color: "#64748B" },
   toggleBtn: {
@@ -418,5 +421,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "#F1F5F9",
   },
-  toggleBtnText: { fontSize: 13, fontWeight: "700", color: "#334155" },
+  toggleBtnText: { fontSize: 13, fontWeight: "700", fontFamily: fonts.bold, color: "#334155" },
 });

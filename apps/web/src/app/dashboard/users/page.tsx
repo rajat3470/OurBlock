@@ -361,8 +361,11 @@ export default function UsersPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Mobile Number *</label>
-                  <input type="tel" value={ownerForm.phone} onChange={(e) => setOwnerForm((p) => ({ ...p, phone: e.target.value }))} required
-                    placeholder="10-digit mobile number" maxLength={10} className="field" />
+                  <div className="flex gap-2">
+                    <span className="inline-flex items-center px-3 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-lg">+91</span>
+                    <input type="tel" value={ownerForm.phone} onChange={(e) => setOwnerForm((p) => ({ ...p, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} required
+                      placeholder="98765 43210" maxLength={10} className="field flex-1" />
+                  </div>
                 </div>
                 <div className="flex justify-end gap-3 pt-2">
                   <button type="button" onClick={closeOwnerModal}

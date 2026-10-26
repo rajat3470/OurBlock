@@ -66,7 +66,9 @@ export const useBusinessOwnerDashboard = () => {
     () => (businessProfile ? getBusinessStatus(businessProfile) : null),
     [businessProfile]
   );
-  const canToggleOrders = businessProfile?.status === "active";
+  const bankVerified = (businessProfile as any)?.bankDetails?.verificationStatus === "verified";
+  const hasApprovedProduct = products.some((p) => (p.approvalStatus ?? "pending") === "approved");
+  const canToggleOrders = businessProfile?.status === "active" && businessProfile?.isVerified === true && bankVerified && hasApprovedProduct;
   const isTakingOrders = canToggleOrders && businessProfile?.isTakingOrders !== false;
 
   // Fetch everything — including orders — on mount and manual refresh.

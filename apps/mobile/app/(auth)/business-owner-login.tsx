@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
+import { Ionicons } from "@expo/vector-icons";
 import { phoneVerificationService } from "../../src/services/phoneVerificationService";
 import { authService } from "../../src/services/authService";
 import { useAuth } from "../../src/hooks/useAuth";
@@ -28,6 +29,7 @@ export default function BusinessOwnerOTPLoginScreen() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [phoneError, setPhoneError] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const { otpLogin } = useAuth();
   const { isLoading } = useAppSelector((s) => s.auth);
@@ -54,6 +56,7 @@ export default function BusinessOwnerOTPLoginScreen() {
   }, [phone, toast]);
 
   const handleVerifyOTP = useCallback(async () => {
+    setErrorMessage("");
     if (!phoneVerificationService.validateOTP(code)) {
       toast.show("Please enter a valid 6-digit code", { type: "danger" });
       return;
@@ -65,15 +68,19 @@ export default function BusinessOwnerOTPLoginScreen() {
       const response = await otpLogin(formatted, code, "businessOwner");
 
       const user = response?.user;
-      const hasRequiredDetails = user?.firstName && user?.societyId;
 
-      if (hasRequiredDetails) {
-        router.replace("/(business-owner)/dashboard");
+      if ((user as any)?.verificationStatus === "pending") {
+        router.replace("/(business-owner)/application-received");
       } else {
-        router.replace("/(auth)/business-owner-details");
+        router.replace("/(business-owner)/dashboard");
       }
     } catch (error: any) {
-      toast.show(error.message || "Verification failed", { type: "danger" });
+      const msg = error.message || "Verification failed";
+      if (msg.toLowerCase().includes("no account found")) {
+        setErrorMessage(msg);
+      } else {
+        toast.show(msg, { type: "danger" });
+      }
     } finally {
       setLoading(false);
     }
@@ -137,6 +144,13 @@ export default function BusinessOwnerOTPLoginScreen() {
                 error={phoneError}
               />
               <MmButton label="Send OTP" onPress={handleSendOTP} loading={busy} disabled={busy} />
+
+              <TouchableOpacity
+                style={styles.registerLink}
+                onPress={() => router.push("/(auth)/business-owner-register")}
+              >
+                <Text style={styles.registerLinkText}>New here? Register your shop</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.form}>
@@ -146,7 +160,7 @@ export default function BusinessOwnerOTPLoginScreen() {
                   style={styles.otpInput}
                   placeholder="------"
                   value={code}
-                  onChangeText={(v) => setCode(v.replace(/\D/g, "").slice(0, 6))}
+                  onChangeText={(v) => { setCode(v.replace(/\D/g, "").slice(0, 6)); setErrorMessage(""); }}
                   keyboardType="number-pad"
                   maxLength={6}
                   autoFocus
@@ -161,10 +175,26 @@ export default function BusinessOwnerOTPLoginScreen() {
                 <TouchableOpacity onPress={handleResend} disabled={busy}>
                   <Text style={styles.linkText}>Resend OTP</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => { setStep("phone"); setCode(""); }} disabled={busy}>
+                <TouchableOpacity onPress={() => { setStep("phone"); setCode(""); setErrorMessage(""); }} disabled={busy}>
                   <Text style={styles.linkText}>Change number</Text>
                 </TouchableOpacity>
               </View>
+
+              {errorMessage ? (
+                <View style={styles.errorBanner}>
+                  <Ionicons name="alert-circle" size={22} color="#B91C1C" style={styles.errorIcon} />
+                  <View style={styles.errorTextWrap}>
+                    <Text style={styles.errorTitle}>Account not found</Text>
+                    <Text style={styles.errorBody}>{errorMessage}</Text>
+                    <TouchableOpacity
+                      style={styles.registerCta}
+                      onPress={() => router.push("/(auth)/business-owner-register")}
+                    >
+                      <Text style={styles.registerCtaText}>Register your shop →</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : null}
             </View>
           )}
         </ScrollView>
@@ -201,8 +231,26 @@ const styles = StyleSheet.create({
     fontSize: 24, fontFamily: fonts.semiBold, letterSpacing: 8,
     textAlign: "center", color: colors.textPrimary,
   },
+  errorBanner: {
+    flexDirection: "row",
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+    borderRadius: 12,
+    padding: 14,
+    gap: 10,
+    alignItems: "flex-start",
+  },
+  errorIcon: { marginTop: 1 },
+  errorTextWrap: { flex: 1 },
+  errorTitle: { fontFamily: fonts.semiBold, fontSize: 14, color: "#B91C1C", marginBottom: 2 },
+  errorBody: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: "#991B1B" },
   otpActions: { flexDirection: "row", justifyContent: "space-between", marginTop: -4 },
   linkText: { fontFamily: fonts.semiBold, fontSize: 13, color: brand.accentDark },
+  registerLink: { alignSelf: "center", marginTop: 4 },
+  registerLinkText: { fontFamily: fonts.semiBold, fontSize: 14, color: brand.accentDark },
+  registerCta: { marginTop: 8 },
+  registerCtaText: { fontFamily: fonts.semiBold, fontSize: 13, color: brand.accentDark },
 });
 
 /* ── Old email/password login (commented out — replaced by OTP flow) ──

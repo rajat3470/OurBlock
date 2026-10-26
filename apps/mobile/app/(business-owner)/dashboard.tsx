@@ -10,9 +10,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { brand, colors, fonts } from "@/constants/theme";
 import { useBusinessOwnerDashboard } from "@hooks/useBusinessOwnerDashboard";
+import { useAppSelector } from "@hooks/useRedux";
 import content from "@/content/boDashboard.json";
+import bankContent from "@/content/boBankDetails.json";
+import registerContent from "@/content/boRegister.json";
 
 export default function BusinessOwnerDashboard() {
   const insets = useSafeAreaInsets();
@@ -38,6 +42,10 @@ export default function BusinessOwnerDashboard() {
     getOrderStatusMeta,
     timeAgo,
   } = useBusinessOwnerDashboard();
+
+  const user = useAppSelector((s) => s.auth.user);
+  const nameAdded = !!user?.firstName;
+  const bankVerified = (businessProfile as any)?.bankDetails?.verificationStatus === "verified";
 
   if (loading) {
     return (
@@ -76,6 +84,8 @@ export default function BusinessOwnerDashboard() {
                 styles.statusPill,
                 !businessProfile?.isVerified
                   ? styles.statusPending
+                  : !canToggleOrders
+                  ? styles.statusPending
                   : businessStatus === "open"
                   ? styles.statusLive
                   : styles.statusPaused,
@@ -86,7 +96,9 @@ export default function BusinessOwnerDashboard() {
                   styles.statusDot,
                   {
                     backgroundColor: !businessProfile?.isVerified
-                      ? "#3A8A5C"
+                      ? "#D97706"
+                      : !canToggleOrders
+                      ? "#D97706"
                       : businessStatus === "open"
                       ? "#3A8A5C"
                       : "#E0A030",
@@ -98,7 +110,9 @@ export default function BusinessOwnerDashboard() {
                   styles.statusText,
                   {
                     color: !businessProfile?.isVerified
-                      ? "#3A8A5C"
+                      ? "#92400E"
+                      : !canToggleOrders
+                      ? "#92400E"
                       : businessStatus === "open"
                       ? "#3A8A5C"
                       : "#92400E",
@@ -107,9 +121,13 @@ export default function BusinessOwnerDashboard() {
               >
                 {!businessProfile?.isVerified
                   ? "Verification pending"
+                  : !bankVerified
+                  ? "Bank verification needed"
+                  : !canToggleOrders
+                  ? "Add products to go live"
                   : businessStatus === "open"
                   ? "Live"
-                  : "Currently unavailable"}
+                  : "Orders off"}
               </Text>
             </View>
           </View>
@@ -121,7 +139,11 @@ export default function BusinessOwnerDashboard() {
               ]}
             >
               <Text style={[styles.pauseLabel, { color: isTakingOrders ? brand.primary : "#DC2626" }]}>
-                {isTakingOrders ? "Orders on" : "Currently unavailable"}
+                {isTakingOrders
+                  ? "Orders on"
+                  : !canToggleOrders
+                    ? "Setup incomplete"
+                    : "Orders off"}
               </Text>
               <Switch
                 value={isTakingOrders}
@@ -151,6 +173,56 @@ export default function BusinessOwnerDashboard() {
             <Text style={styles.statLabel}>Shop rating</Text>
           </View>
         </View>
+
+        {!nameAdded && (
+          <TouchableOpacity
+            style={styles.bankBanner}
+            activeOpacity={0.8}
+            onPress={() => router.push("/(business-owner)/profile")}
+          >
+            <Ionicons name="person-outline" size={20} color="#D97706" />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.bankBannerTitle}>{registerContent.gate.nameTitle}</Text>
+              <Text style={styles.bankBannerSub}>{registerContent.gate.nameMessage}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+
+        {nameAdded && (businessProfile as any)?.bankDetails?.verificationStatus !== "verified" && (
+          <TouchableOpacity
+            style={styles.bankBanner}
+            activeOpacity={0.8}
+            onPress={() => router.push("/(business-owner)/bank-details")}
+          >
+            <Ionicons
+              name="card-outline"
+              size={20}
+              color={
+                (businessProfile as any)?.bankDetails?.verificationStatus === "rejected"
+                  ? "#DC2626"
+                  : "#D97706"
+              }
+            />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={styles.bankBannerTitle}>
+                {!(businessProfile as any)?.bankDetails
+                  ? bankContent.status.notSubmitted
+                  : (businessProfile as any)?.bankDetails?.verificationStatus === "rejected"
+                    ? bankContent.status.rejected
+                    : bankContent.status.pending}
+              </Text>
+              <Text style={styles.bankBannerSub}>
+                {!(businessProfile as any)?.bankDetails
+                  ? bankContent.status.notSubmittedSub
+                  : (businessProfile as any)?.bankDetails?.verificationStatus === "rejected"
+                    ? bankContent.status.rejectedSub
+                    : bankContent.status.pendingSub}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
 
         <Text style={styles.sectionLabel}>Quick actions</Text>
         <View style={styles.quickRow}>
@@ -353,6 +425,29 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: brand.muted,
     letterSpacing: 0.3,
+  },
+  bankBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    borderRadius: 12,
+    marginHorizontal: 18,
+    marginBottom: 8,
+    padding: 14,
+  },
+  bankBannerTitle: {
+    fontFamily: fonts.uiSemiBold,
+    fontSize: 13,
+    color: "#92400E",
+    marginBottom: 1,
+  },
+  bankBannerSub: {
+    fontFamily: fonts.ui,
+    fontSize: 11,
+    lineHeight: 15,
+    color: "#78350F",
   },
   sectionLabel: {
     fontFamily: fonts.uiBold,

@@ -228,6 +228,13 @@ export default function BusinessOwnerLayout() {
             tabBarStyle: { display: "none" },
           }}
         />
+        <Tabs.Screen
+          name="bank-details"
+          options={{
+            href: null,
+            tabBarStyle: { display: "none" },
+          }}
+        />
       </Tabs>
       </View>
     </RoleGate>

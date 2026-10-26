@@ -6,6 +6,7 @@ import { autoRejectIfExpired, isExpiredPending } from "../services/orderExpiry";
 import { evaluateBlacklistRejection } from "../services/blacklist";
 import { emitBusinessProductsChanged, emitBusinessUpdate, emitOrderUpdate } from "../lib/socket";
 import { onOrderStatusChanged } from "../services/orderEvents";
+import { verifyBankAccount } from "../lib/cashfree";
 
 const router = Router();
 
@@ -21,6 +22,112 @@ router.get("/business", requireAuth, async (req: AuthedRequest, res) => {
     const business = await getOwnerBusiness(req.uid!);
     return res.json({ success: true, data: business });
   } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /owner/bank-details
+// ---------------------------------------------------------------------------
+router.get("/bank-details", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const business = await getOwnerBusiness(req.uid!);
+    if (!business) return res.json({ success: true, data: null });
+
+    const bd = (business as any).bankDetails;
+    if (!bd || !bd.accountNumber) return res.json({ success: true, data: null });
+
+    return res.json({
+      success: true,
+      data: {
+        ...bd,
+        accountNumber: "XXXX" + bd.accountNumber.slice(-4),
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /owner/bank-details
+// ---------------------------------------------------------------------------
+router.post("/bank-details", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const business = await getOwnerBusiness(req.uid!);
+    if (!business) {
+      return res.status(404).json({ success: false, error: "No business found for this owner." });
+    }
+
+    const { accountHolderName, accountNumber, ifscCode, bankName, upiId } = req.body;
+
+    if (!accountHolderName || typeof accountHolderName !== "string" || accountHolderName.trim().length < 2) {
+      return res.status(400).json({ success: false, error: "Account holder name is required (min 2 characters)." });
+    }
+    if (!accountNumber || !/^\d{9,18}$/.test(accountNumber)) {
+      return res.status(400).json({ success: false, error: "Account number must be 9-18 digits." });
+    }
+    if (!ifscCode || !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode.toUpperCase())) {
+      return res.status(400).json({ success: false, error: "Invalid IFSC code format." });
+    }
+    if (!bankName || typeof bankName !== "string" || bankName.trim().length < 2) {
+      return res.status(400).json({ success: false, error: "Bank name is required." });
+    }
+    if (upiId && !/^[\w.\-]+@[\w]+$/.test(upiId)) {
+      return res.status(400).json({ success: false, error: "Invalid UPI ID format." });
+    }
+
+    const bankDetails: Record<string, any> = {
+      accountHolderName: accountHolderName.trim(),
+      accountNumber,
+      ifscCode: ifscCode.toUpperCase(),
+      bankName: bankName.trim(),
+      upiId: upiId || null,
+      verificationStatus: "pending",
+      verificationNote: null,
+      verifiedAt: null,
+      submittedAt: new Date(),
+      cashfreeRefId: null,
+    };
+
+    // Call Cashfree Bank Account Verification API
+    const verification = await verifyBankAccount(
+      accountNumber,
+      ifscCode.toUpperCase(),
+      accountHolderName.trim(),
+      (business as any).phone
+    );
+
+    bankDetails.verificationStatus = verification.status;
+    if (verification.refId) bankDetails.cashfreeRefId = verification.refId;
+    if (verification.status === "verified") {
+      bankDetails.verifiedAt = new Date();
+      bankDetails.verificationNote = verification.nameAtBank
+        ? `Verified. Name at bank: ${verification.nameAtBank}`
+        : "Verified via Cashfree.";
+    } else if (verification.status === "rejected") {
+      bankDetails.verificationNote = verification.reason || "Verification failed.";
+    } else {
+      bankDetails.verificationNote = verification.reason || "Under manual review.";
+    }
+
+    const updated = await prisma.business.update({
+      where: { id: business.id },
+      data: { bankDetails },
+    });
+
+    const bd = (updated as any).bankDetails;
+    emitBusinessUpdate(business.id, updated);
+
+    return res.json({
+      success: true,
+      data: {
+        ...bd,
+        accountNumber: "XXXX" + bd.accountNumber.slice(-4),
+      },
+    });
+  } catch (error: any) {
+    console.error("Bank details submission error:", error);
     return res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -59,6 +166,24 @@ router.post("/products", requireAuth, async (req: AuthedRequest, res) => {
     }
     if (!business.isVerified) {
       return res.status(403).json({ success: false, error: "Your business must be verified by an admin before you can add products." });
+    }
+    if (!(business as any).isDemo) {
+      const bd = (business as any).bankDetails;
+      if (!bd || bd.verificationStatus !== "verified") {
+        return res.status(403).json({
+          success: false,
+          error: "Please add and verify your bank details before adding products.",
+          code: "BANK_NOT_VERIFIED",
+        });
+      }
+      const ownerUser = await prisma.user.findUnique({ where: { id: req.uid! } });
+      if (!ownerUser?.firstName) {
+        return res.status(403).json({
+          success: false,
+          error: "Please add your name in your profile before adding products.",
+          code: "NAME_REQUIRED",
+        });
+      }
     }
 
     const product = await prisma.product.create({
@@ -288,6 +413,21 @@ router.patch("/business/taking-orders", requireAuth, async (req: AuthedRequest, 
     if (typeof isTakingOrders !== "boolean") return res.status(400).json({ success: false, error: "isTakingOrders must be a boolean" });
     const business = await getOwnerBusiness(req.uid!);
     if (!business) return res.status(404).json({ success: false, error: "No business found" });
+
+    if (isTakingOrders && !business.isDemo) {
+      if (!business.isVerified) {
+        return res.status(403).json({ success: false, error: "Your business must be verified by admin before you can take orders." });
+      }
+      if (business.bankDetails?.verificationStatus !== "verified") {
+        return res.status(403).json({ success: false, error: "Your bank details must be verified before you can take orders." });
+      }
+      const approvedCount = await prisma.product.count({
+        where: { businessId: business.id, approvalStatus: "approved", status: "active" },
+      });
+      if (approvedCount === 0) {
+        return res.status(403).json({ success: false, error: "You need at least one approved product before you can take orders." });
+      }
+    }
 
     const updated = await prisma.business.update({ where: { id: business.id }, data: { isTakingOrders } });
     console.log("[owner/taking-orders] emitting update for business", business.id, "societyId:", updated.societyId, "isTakingOrders:", updated.isTakingOrders);

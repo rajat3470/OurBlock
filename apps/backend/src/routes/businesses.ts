@@ -9,12 +9,31 @@ const router = Router();
 router.get("/", async (req, res) => {
   try {
     const { societyId, category, status = "active" } = req.query;
-    const where: any = { status: status as string };
+    const where: any = {
+      status: status as string,
+      isVerified: true,
+    };
     if (societyId) where.societyId = societyId as string;
     if (category) where.category = category as string;
 
     const businesses = await prisma.business.findMany({ where });
-    res.json({ success: true, data: businesses });
+
+    // Only include businesses that have at least one approved product AND (bank verified OR demo)
+    const businessIds = businesses.map((b: any) => b.id);
+    const approvedProducts = businessIds.length
+      ? await prisma.product.findMany({
+          where: { businessId: { in: businessIds }, approvalStatus: "approved", status: "active" },
+          select: { businessId: true },
+        })
+      : [];
+    const hasApprovedProduct = new Set(approvedProducts.map((p: any) => p.businessId));
+    const filtered = businesses.filter((b: any) => {
+      if (!hasApprovedProduct.has(b.id)) return false;
+      if (b.isDemo) return true;
+      return b.bankDetails?.verificationStatus === "verified";
+    });
+
+    res.json({ success: true, data: filtered });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

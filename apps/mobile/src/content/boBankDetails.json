@@ -1,0 +1,50 @@
+{
+  "header": {
+    "title": "Bank Details",
+    "subtitle": "Required for receiving payments"
+  },
+  "form": {
+    "accountHolderName": "Account Holder Name",
+    "accountNumber": "Account Number",
+    "confirmAccountNumber": "Confirm Account Number",
+    "ifscCode": "IFSC Code",
+    "bankName": "Bank Name",
+    "upiId": "UPI ID (optional)",
+    "placeholders": {
+      "accountHolderName": "As per bank records",
+      "accountNumber": "Enter account number",
+      "confirmAccountNumber": "Re-enter account number",
+      "ifscCode": "e.g. SBIN0001234",
+      "bankName": "e.g. State Bank of India",
+      "upiId": "e.g. shop@upi"
+    }
+  },
+  "submit": "Submit for Verification",
+  "update": "Update Bank Details",
+  "status": {
+    "notSubmitted": "Bank details not added",
+    "notSubmittedSub": "Add your bank details to start adding products.",
+    "pending": "Verification Pending",
+    "pendingSub": "Your bank details are being verified. This usually takes a few seconds.",
+    "verified": "Bank Details Verified",
+    "verifiedSub": "You can now add products to your store.",
+    "rejected": "Verification Failed",
+    "rejectedSub": "Please update your details and resubmit."
+  },
+  "alerts": {
+    "submitSuccess": "Bank details submitted successfully.",
+    "updateSuccess": "Bank details updated. Re-verification in progress.",
+    "accountMismatch": "Account numbers do not match.",
+    "errorTitle": "Error",
+    "submitError": "Failed to submit bank details.",
+    "resubmitTitle": "Re-verification Required",
+    "resubmitMsg": "Updating bank details will require re-verification. You won't be able to add products until verified again.",
+    "resubmitConfirm": "Continue",
+    "resubmitCancel": "Cancel"
+  },
+  "gate": {
+    "title": "Bank Details Required",
+    "message": "You need to add and verify your bank details before you can add products.",
+    "cta": "Add Bank Details"
+  }
+}

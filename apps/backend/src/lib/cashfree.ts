@@ -99,6 +99,88 @@ export async function getCashfreeOrderStatus(orderId: string): Promise<{
   return data;
 }
 
+// ---------------------------------------------------------------------------
+// Bank Account Verification (penny-drop)
+// ---------------------------------------------------------------------------
+
+const VERIFICATION_BASE_URL =
+  CASHFREE_ENV === "production"
+    ? "https://api.cashfree.com/verification"
+    : "https://sandbox.cashfree.com/verification";
+
+export interface BankVerificationResult {
+  status: "verified" | "rejected" | "pending";
+  nameAtBank?: string;
+  refId?: string;
+  reason?: string;
+}
+
+export async function verifyBankAccount(
+  accountNumber: string,
+  ifsc: string,
+  accountHolderName: string,
+  phone: string
+): Promise<BankVerificationResult> {
+  try {
+    console.log("[Cashfree] Verifying bank account, IFSC:", ifsc, "ENV:", CASHFREE_ENV);
+
+    const res = await fetch(`${VERIFICATION_BASE_URL}/bank-account/sync`, {
+      method: "POST",
+      headers: {
+        "x-client-id": CASHFREE_APP_ID,
+        "x-client-secret": CASHFREE_SECRET_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        bank_account: accountNumber,
+        ifsc: ifsc,
+        name: accountHolderName,
+        phone: phone,
+      }),
+    });
+
+    const data = (await res.json()) as any;
+
+    if (!res.ok) {
+      console.error("[Cashfree] Bank verification API error:", res.status, JSON.stringify(data));
+      // In sandbox, if the API rejects (wrong credentials etc.), use test behavior
+      if (CASHFREE_ENV === "sandbox") {
+        console.log("[Cashfree] Sandbox fallback — auto-verifying bank account");
+        return { status: "verified", nameAtBank: accountHolderName, refId: "sandbox-auto" };
+      }
+      return { status: "pending", reason: data.message || `API error: ${res.status}` };
+    }
+
+    const refId = data.utr || data.ref_id || data.verification_id || "";
+
+    if (data.account_status_code === "ACCOUNT_EXISTS") {
+      console.log("[Cashfree] Bank account verified. Name at bank:", data.name_at_bank);
+      return {
+        status: "verified",
+        nameAtBank: data.name_at_bank,
+        refId,
+      };
+    }
+
+    const reason =
+      data.account_status_code === "ACCOUNT_NOT_FOUND"
+        ? "Bank account not found. Please check account number and IFSC."
+        : data.account_status_code === "IFSC_NOT_FOUND"
+          ? "Invalid IFSC code. Please verify and try again."
+          : data.message || `Verification failed: ${data.account_status_code}`;
+
+    console.log("[Cashfree] Bank verification rejected:", data.account_status_code);
+    return { status: "rejected", reason, refId };
+  } catch (error: any) {
+    console.error("[Cashfree] Bank verification exception:", error.message);
+    if (CASHFREE_ENV === "sandbox") {
+      console.log("[Cashfree] Sandbox fallback on exception — auto-verifying");
+      return { status: "verified", nameAtBank: accountHolderName, refId: "sandbox-auto" };
+    }
+    return { status: "pending", reason: "Verification service temporarily unavailable. Under manual review." };
+  }
+}
+
 export function verifyWebhookSignature(
   rawBody: string,
   timestamp: string,

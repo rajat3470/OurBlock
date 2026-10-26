@@ -9,13 +9,17 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { ProductCard } from "@/components/business-owner/products/ProductCard";
 import { ProductFormModal } from "@/components/business-owner/products/ProductFormModal";
 import { AppAlertModal } from "@/components/ui/AppAlertModal";
 import { useBusinessOwnerProducts } from "@hooks/useBusinessOwnerProducts";
+import { useAppSelector } from "@hooks/useRedux";
 import content from "@/content/boProducts.json";
-import { colors, fonts } from "@/constants/theme";
+import bankContent from "@/content/boBankDetails.json";
+import registerContent from "@/content/boRegister.json";
+import { colors, fonts, brand } from "@/constants/theme";
 
 export default function BusinessOwnerProducts() {
   const {
@@ -67,7 +71,14 @@ export default function BusinessOwnerProducts() {
     getCategoryMetadata,
     getCategoriesForBusinessType,
     getApprovalMeta,
+    businessProfile,
   } = useBusinessOwnerProducts();
+
+  const user = useAppSelector((s) => s.auth.user);
+  const nameAdded = !!user?.firstName;
+  const bankVerified = (businessProfile as any)?.bankDetails?.verificationStatus === "verified";
+  const bankStatus = (businessProfile as any)?.bankDetails?.verificationStatus ?? null;
+  const canAddProduct = nameAdded && bankVerified;
 
   useFocusEffect(
     useCallback(() => {
@@ -91,8 +102,8 @@ export default function BusinessOwnerProducts() {
           style={styles.searchInput}
         />
         <TouchableOpacity
-          style={styles.addBtn}
-          onPress={openCreateModal}
+          style={[styles.addBtn, !canAddProduct && styles.addBtnDisabled]}
+          onPress={canAddProduct ? openCreateModal : !nameAdded ? () => router.push("/(business-owner)/profile") : () => router.push("/(business-owner)/bank-details")}
         >
           <Text style={styles.addBtnText}>{content.add}</Text>
         </TouchableOpacity>
@@ -111,6 +122,42 @@ export default function BusinessOwnerProducts() {
           </TouchableOpacity>
         ))}
       </View>
+
+      {!nameAdded && (
+        <TouchableOpacity
+          style={styles.bankGate}
+          activeOpacity={0.8}
+          onPress={() => router.push("/(business-owner)/profile")}
+        >
+          <Ionicons name="person-outline" size={24} color={brand.accentDark} />
+          <View style={styles.bankGateText}>
+            <Text style={styles.bankGateTitle}>{registerContent.gate.nameTitle}</Text>
+            <Text style={styles.bankGateSub}>{registerContent.gate.nameMessage}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+      )}
+
+      {nameAdded && !bankVerified && (
+        <TouchableOpacity
+          style={styles.bankGate}
+          activeOpacity={0.8}
+          onPress={() => router.push("/(business-owner)/bank-details")}
+        >
+          <Ionicons name="card-outline" size={24} color={brand.accentDark} />
+          <View style={styles.bankGateText}>
+            <Text style={styles.bankGateTitle}>{bankContent.gate.title}</Text>
+            <Text style={styles.bankGateSub}>
+              {bankStatus === "pending"
+                ? bankContent.status.pendingSub
+                : bankStatus === "rejected"
+                  ? bankContent.status.rejectedSub
+                  : bankContent.gate.message}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+      )}
 
       {isLoading && filteredProducts.length === 0 ? (
         <View style={styles.loaderWrap}>
@@ -137,13 +184,17 @@ export default function BusinessOwnerProducts() {
             <View style={styles.emptyWrap}>
               <Text style={styles.emptyEmoji}>{content.empty.emoji}</Text>
               <Text style={styles.emptyTitle}>{content.empty.title}</Text>
-              <Text style={styles.emptySubtitle}>{content.empty.subtitle}</Text>
-              <TouchableOpacity
-                style={styles.emptyAddBtn}
-                onPress={openCreateModal}
-              >
-                <Text style={styles.emptyAddBtnText}>{content.empty.addBtn}</Text>
-              </TouchableOpacity>
+              <Text style={styles.emptySubtitle}>
+                {canAddProduct ? content.empty.subtitle : "Complete the steps above to start adding products."}
+              </Text>
+              {canAddProduct && (
+                <TouchableOpacity
+                  style={styles.emptyAddBtn}
+                  onPress={openCreateModal}
+                >
+                  <Text style={styles.emptyAddBtnText}>{content.empty.addBtn}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
         />
@@ -257,10 +308,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     justifyContent: "center",
   },
+  addBtnDisabled: {
+    opacity: 0.5,
+  },
   addBtnText: {
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "700",
+  },
+  bankGate: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    borderRadius: 12,
+    marginHorizontal: 14,
+    marginBottom: 4,
+    padding: 14,
+    gap: 12,
+  },
+  bankGateText: { flex: 1 },
+  bankGateTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 14,
+    color: "#92400E",
+    marginBottom: 2,
+  },
+  bankGateSub: {
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    lineHeight: 16,
+    color: "#78350F",
   },
   loaderWrap: {
     flex: 1,

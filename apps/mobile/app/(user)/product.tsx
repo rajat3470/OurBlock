@@ -11,6 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useProductDetail } from "@hooks/useProductDetail";
+import { fonts } from "@/constants/theme";
 import content from "@/content/product.json";
 
 export default function ProductDetailScreen() {
@@ -288,7 +289,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.35)",
   },
-  headerTitle: { flex: 1, fontSize: 15, fontWeight: "700", color: "#FFFFFF" },
+  headerTitle: { flex: 1, fontSize: 15, fontWeight: "700", color: "#FFFFFF", fontFamily: fonts.bold },
   headerRight: { width: 64 },
   cartBadgeBtn: {
     flexDirection: "row",
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.35)",
   },
-  cartBadgeText: { fontSize: 13, fontWeight: "700", color: "#FFFFFF" },
+  cartBadgeText: { fontSize: 13, fontWeight: "700", color: "#FFFFFF", fontFamily: fonts.bold },
   scroll: { paddingBottom: 16 },
   scrollView: { flex: 1 },
   imageWrap: {
@@ -327,7 +328,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  discountBadgeText: { fontSize: 12, fontWeight: "800", color: "#FFFFFF" },
+  discountBadgeText: { fontSize: 12, fontWeight: "800", color: "#FFFFFF", fontFamily: fonts.extraBold },
   thumbRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
   thumb: {
     width: 60,
@@ -343,12 +344,14 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: "#111827",
     marginBottom: 4,
+    fontFamily: fonts.extraBold,
   },
   businessName: {
     fontSize: 14,
     color: "#6B7280",
     marginBottom: 12,
     fontWeight: "600",
+    fontFamily: fonts.semiBold,
   },
   priceRow: {
     flexDirection: "row",
@@ -356,7 +359,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  price: { fontSize: 24, fontWeight: "800", color: "#084C3D" },
+  price: { fontSize: 24, fontWeight: "800", color: "#084C3D", fontFamily: fonts.extraBold },
   originalPrice: {
     fontSize: 16,
     color: "#9CA3AF",
@@ -369,7 +372,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  ratingText: { fontSize: 13, fontWeight: "700", color: "#065F46" },
+  ratingText: { fontSize: 13, fontWeight: "700", color: "#065F46", fontFamily: fonts.bold },
   stockRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -383,7 +386,7 @@ const styles = StyleSheet.create({
   },
   stockOk: { backgroundColor: "#E4F3EA" },
   stockLow: { backgroundColor: "#FEF3C7" },
-  stockText: { fontSize: 12, fontWeight: "700", color: "#374151" },
+  stockText: { fontSize: 12, fontWeight: "700", color: "#374151", fontFamily: fonts.bold },
   categoryTag: {
     fontSize: 12,
     fontWeight: "600",
@@ -393,6 +396,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
     textTransform: "capitalize",
+    fontFamily: fonts.semiBold,
   },
   descWrap: { marginBottom: 16 },
   descTitle: {
@@ -400,6 +404,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#111827",
     marginBottom: 6,
+    fontFamily: fonts.bold,
   },
   descText: { fontSize: 14, color: "#4B5563", lineHeight: 22 },
   attrsWrap: { marginBottom: 16 },
@@ -408,6 +413,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#111827",
     marginBottom: 8,
+    fontFamily: fonts.bold,
   },
   attrRow: {
     flexDirection: "row",
@@ -416,8 +422,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-  attrName: { fontSize: 13, color: "#6B7280", fontWeight: "600" },
-  attrValue: { fontSize: 13, color: "#111827", fontWeight: "700" },
+  attrName: { fontSize: 13, color: "#6B7280", fontWeight: "600", fontFamily: fonts.semiBold },
+  attrValue: { fontSize: 13, color: "#111827", fontWeight: "700", fontFamily: fonts.bold },
   priceSummaryWrap: {
     backgroundColor: "#E4F3EA",
     borderRadius: 12,
@@ -431,6 +437,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#0B2E22",
     marginBottom: 10,
+    fontFamily: fonts.bold,
   },
   priceSummaryRow: {
     flexDirection: "row",
@@ -438,14 +445,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   priceSummaryLabel: { fontSize: 13, color: "#4B5563" },
-  priceSummaryValue: { fontSize: 13, color: "#374151", fontWeight: "600" },
+  priceSummaryValue: { fontSize: 13, color: "#374151", fontWeight: "600", fontFamily: fonts.semiBold },
   priceDivider: {
     height: 1,
     backgroundColor: "#A7F3D0",
     marginVertical: 8,
   },
-  priceSummaryLabelBold: { fontSize: 14, fontWeight: "800", color: "#111827" },
-  priceSummaryValueBold: { fontSize: 14, fontWeight: "800", color: "#084C3D" },
+  priceSummaryLabelBold: { fontSize: 14, fontWeight: "800", color: "#111827", fontFamily: fonts.extraBold },
+  priceSummaryValueBold: { fontSize: 14, fontWeight: "800", color: "#084C3D", fontFamily: fonts.extraBold },
   priceNote: {
     fontSize: 11,
     color: "#9CA3AF",
@@ -474,14 +481,14 @@ const styles = StyleSheet.create({
   shopNotOrderableBtn: {
     backgroundColor: "#FEF3C7",
   },
-  outOfStockText: { fontSize: 16, fontWeight: "700", color: "#9CA3AF" },
+  outOfStockText: { fontSize: 16, fontWeight: "700", color: "#9CA3AF", fontFamily: fonts.bold },
   addToCartBtn: {
     backgroundColor: "#F6B853",
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: "center",
   },
-  addToCartText: { fontSize: 16, fontWeight: "800", color: "#FFFFFF" },
+  addToCartText: { fontSize: 16, fontWeight: "800", color: "#FFFFFF", fontFamily: fonts.extraBold },
   qtyRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   qtyControl: {
     flexDirection: "row",
@@ -499,13 +506,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#084C3D",
   },
-  qtyBtnText: { fontSize: 22, color: "#FFFFFF", fontWeight: "700" },
+  qtyBtnText: { fontSize: 22, color: "#FFFFFF", fontWeight: "700", fontFamily: fonts.bold },
   qtyCount: {
     width: 40,
     textAlign: "center",
     fontSize: 18,
     fontWeight: "800",
     color: "#0B2E22",
+    fontFamily: fonts.extraBold,
   },
   goToCartBtn: {
     flex: 1,
@@ -514,5 +522,5 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
   },
-  goToCartText: { fontSize: 15, fontWeight: "800", color: "#FFFFFF" },
+  goToCartText: { fontSize: 15, fontWeight: "800", color: "#FFFFFF", fontFamily: fonts.extraBold },
 });

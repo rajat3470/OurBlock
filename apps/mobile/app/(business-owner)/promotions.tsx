@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { gradients } from "@/constants/theme";
+import { gradients, fonts } from "@/constants/theme";
 import { useBusinessOwnerPromotions } from "@hooks/useBusinessOwnerPromotions";
 import content from "@/content/boPromotions.json";
 
@@ -312,8 +312,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  headerTitle: { fontSize: 28, fontWeight: "800", color: "#FFFFFF", letterSpacing: -0.5 },
-  headerSub: { marginTop: 4, fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: "500" },
+  headerTitle: { fontSize: 28, fontWeight: "800", fontFamily: fonts.extraBold, color: "#FFFFFF", letterSpacing: -0.5 },
+  headerSub: { marginTop: 4, fontSize: 13, color: "rgba(255,255,255,0.75)", fontWeight: "500", fontFamily: fonts.medium },
   addBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  addBtnText: { fontSize: 13, fontWeight: "700", color: "#084C3D" },
+  addBtnText: { fontSize: 13, fontWeight: "700", fontFamily: fonts.bold, color: "#084C3D" },
 
   list: { padding: 16, paddingBottom: 130 },
 
@@ -343,17 +343,17 @@ const styles = StyleSheet.create({
   couponTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   couponLeft: { flex: 1, gap: 4 },
   couponCodeWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
-  couponCode: { fontSize: 17, fontWeight: "800", color: "#0F172A", letterSpacing: 1 },
+  couponCode: { fontSize: 17, fontWeight: "800", fontFamily: fonts.extraBold, color: "#0F172A", letterSpacing: 1 },
   statusPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
-  statusPillText: { fontSize: 10, fontWeight: "700" },
-  couponDesc: { fontSize: 12, color: "#64748B", fontWeight: "500" },
+  statusPillText: { fontSize: 10, fontWeight: "700", fontFamily: fonts.bold },
+  couponDesc: { fontSize: 12, color: "#64748B", fontWeight: "500", fontFamily: fonts.medium },
   couponValueWrap: { alignItems: "flex-end", gap: 2 },
-  couponValue: { fontSize: 22, fontWeight: "800", color: "#084C3D" },
-  couponValueLabel: { fontSize: 10, color: "#64748B", fontWeight: "600" },
+  couponValue: { fontSize: 22, fontWeight: "800", fontFamily: fonts.extraBold, color: "#084C3D" },
+  couponValueLabel: { fontSize: 10, color: "#64748B", fontWeight: "600", fontFamily: fonts.semiBold },
 
   couponMeta: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   metaTag: { backgroundColor: "#F1F5F9", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
-  metaTagText: { fontSize: 11, color: "#475569", fontWeight: "600" },
+  metaTagText: { fontSize: 11, color: "#475569", fontWeight: "600", fontFamily: fonts.semiBold },
 
   deactivateBtn: {
     flexDirection: "row",
@@ -362,11 +362,11 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     paddingVertical: 4,
   },
-  deactivateBtnText: { fontSize: 12, color: "#DC2626", fontWeight: "600" },
+  deactivateBtnText: { fontSize: 12, color: "#DC2626", fontWeight: "600", fontFamily: fonts.semiBold },
 
   centerWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 80, gap: 10 },
   emptyEmoji: { fontSize: 44 },
-  emptyTitle: { fontSize: 17, fontWeight: "700", color: "#334155" },
+  emptyTitle: { fontSize: 17, fontWeight: "700", fontFamily: fonts.bold, color: "#334155" },
   emptySub: { fontSize: 13, color: "#94A3B8", textAlign: "center", paddingHorizontal: 40 },
   emptyCreateBtn: {
     marginTop: 12,
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
   },
-  emptyCreateBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 14 },
+  emptyCreateBtnText: { color: "#FFFFFF", fontWeight: "700", fontFamily: fonts.bold, fontSize: 14 },
 
   // Modal / Sheet
   overlay: { flex: 1, justifyContent: "flex-end" },
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-  sheetTitle: { fontSize: 18, fontWeight: "800", color: "#0F172A" },
+  sheetTitle: { fontSize: 18, fontWeight: "800", fontFamily: fonts.extraBold, color: "#0F172A" },
 
   formGroup: { marginBottom: 16 },
   formLabel: { fontSize: 13, fontWeight: "700", color: "#374151", marginBottom: 6 },

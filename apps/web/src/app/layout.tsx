@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { DM_Sans, DM_Serif_Text } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans' });
+const dmSerifText = DM_Serif_Text({ weight: '400', subsets: ['latin'], variable: '--font-dm-serif-text' });
 
 export const metadata: Metadata = {
   title: 'mohallaMitr - Super Admin Dashboard',
@@ -16,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={`${dmSans.variable} ${dmSerifText.variable} font-sans`}>{children}</body>
     </html>
   );
 }

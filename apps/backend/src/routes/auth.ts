@@ -142,6 +142,79 @@ router.post("/businessowner/register", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /auth/businessowner/otp-register — register via OTP (minimal fields)
+// ---------------------------------------------------------------------------
+router.post("/businessowner/otp-register", async (req, res) => {
+  try {
+    const { phone, otp, societyId, businessName, businessCategory } = req.body;
+
+    if (!phone || !otp || !societyId || !businessName || !businessCategory) {
+      return res.status(400).json({
+        success: false,
+        error: "phone, otp, societyId, businessName and businessCategory are all required",
+      });
+    }
+
+    const otpOk = verifyOTP(phone, otp);
+    if (!otpOk) {
+      return res.status(401).json({ success: false, error: "Invalid or expired OTP" });
+    }
+
+    const society = await prisma.society.findUnique({ where: { id: societyId } });
+    if (!society) return res.status(404).json({ success: false, error: "Society not found" });
+
+    const existing = await prisma.user.findFirst({ where: { phone } });
+    if (existing) {
+      return res.status(409).json({ success: false, error: "An account with this phone number already exists" });
+    }
+
+    const passwordHash = await bcrypt.hash("otp-registered", BCRYPT_ROUNDS);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          firstName: "",
+          lastName: "",
+          phone,
+          passwordHash,
+          role: "businessOwner",
+          societyId,
+          status: "active",
+          verificationStatus: "pending",
+          isPhoneVerified: true,
+          mustChangePassword: false,
+        },
+      });
+
+      const business = await tx.business.create({
+        data: {
+          name: businessName,
+          category: businessCategory,
+          address: "",
+          phone,
+          ownerId: user.id,
+          societyId,
+          status: "active",
+          isVerified: false,
+          isTakingOrders: false,
+        },
+      });
+
+      return { user, business };
+    });
+
+    const tokens = await issueTokens(result.user.id, "businessOwner");
+    return res.status(201).json({
+      success: true,
+      user: { ...sanitizeUser(result.user), businessId: result.business.id },
+      tokens,
+    });
+  } catch (error: any) {
+    return res.status(400).json({ success: false, error: error.message || "Registration failed" });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /auth/user/register — resident self-registration
 // ---------------------------------------------------------------------------
 router.post("/user/register", async (req, res) => {
@@ -347,9 +420,20 @@ router.get("/home-feed", requireAuth, async (req: AuthedRequest, res) => {
 
     await ensureSocietyDemoCatalog(societyId);
 
-    const businesses = await prisma.business.findMany({ where: { societyId, status: "active" } });
+    const allBusinesses = await prisma.business.findMany({
+      where: { societyId, status: "active", isVerified: true },
+    });
+    const allBusinessIds = allBusinesses.map((b) => b.id);
+    const products = await getSocietyProducts(allBusinessIds);
+
+    // Only show businesses that have at least one approved product AND (bank verified OR demo)
+    const bizWithApprovedProduct = new Set(products.map((p) => p.businessId));
+    const businesses = allBusinesses.filter((b) => {
+      if (!bizWithApprovedProduct.has(b.id)) return false;
+      if ((b as any).isDemo) return true;
+      return (b as any).bankDetails?.verificationStatus === "verified";
+    });
     const businessIds = businesses.map((b) => b.id);
-    const products = await getSocietyProducts(businessIds);
 
     const activeOrderStatuses = new Set(["pending", "confirmed", "preparing", "ready", "outForDelivery"]);
     const orders = await prisma.order.findMany({ where: { userId: req.uid }, take: 100 });
@@ -453,7 +537,25 @@ async function otpLoginForRole(
     return res.status(400).json({ success: false, error: otpResult.error });
   }
 
+  // Try exact match first, then alternate format (handles legacy records stored without +91)
   let user = await prisma.user.findFirst({ where: { phone } });
+  if (!user) {
+    let altPhone = phone;
+    if (phone.startsWith("+91") && phone.length === 13) {
+      altPhone = phone.slice(3); // +919779850058 → 9779850058
+    } else if (/^[6-9]\d{9}$/.test(phone)) {
+      altPhone = `+91${phone}`; // 9779850058 → +919779850058
+    }
+    if (altPhone !== phone) {
+      user = await prisma.user.findFirst({ where: { phone: altPhone } });
+      if (user) {
+        // Normalize the stored phone to E.164 for future lookups
+        const e164 = phone.startsWith("+91") ? phone : `+91${phone}`;
+        await prisma.user.update({ where: { id: user.id }, data: { phone: e164 } });
+        user.phone = e164;
+      }
+    }
+  }
 
   if (user && normalizeRole(user.role) !== expectedRole) {
     return res.status(403).json({
@@ -466,15 +568,25 @@ async function otpLoginForRole(
     return res.status(403).json({ success: false, error: "Your account has been suspended" });
   }
 
+  if (!user && expectedRole === "deliveryPartner") {
+    return res.status(404).json({
+      success: false,
+      error: "No account found with this phone number. Please contact your business owner to register.",
+    });
+  }
+
+  if (!user && expectedRole === "businessOwner") {
+    return res.status(404).json({
+      success: false,
+      error: "No account found with this phone number. Please contact the mohallaMitr admin team to register.",
+    });
+  }
+
   if (!user) {
     user = await prisma.user.create({
       data: {
-        firstName: "",
-        lastName: "",
-        email: "",
         phone,
-        passwordHash: "",
-        role: expectedRole,
+        role: "user",
         status: "active",
         isPhoneVerified: true,
       },
