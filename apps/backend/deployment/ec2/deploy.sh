@@ -128,4 +128,4 @@ fi
 pm2 save
 
 log "Deployment complete."
-log "Health check: curl -f http://localhost:5001/health"
+log "Health check: curl -f http://13.205.145.88/health"

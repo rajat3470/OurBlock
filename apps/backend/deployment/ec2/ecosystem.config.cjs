@@ -16,10 +16,13 @@ module.exports = {
       instances: 1,
       exec_mode: "fork",
       env: {
+        NODE_ENV: "development",
+        PORT: 5001,
+      },
+      env_production: {
         NODE_ENV: "production",
         PORT: 5001,
       },
-      // The backend entrypoint imports 'dotenv/config', which loads ./.env from cwd.
       log_file: "/var/log/pm2/mohallamitr-backend.log",
       error_file: "/var/log/pm2/mohallamitr-backend-error.log",
       out_file: "/var/log/pm2/mohallamitr-backend-out.log",
@@ -39,6 +42,9 @@ module.exports = {
       instances: 1,
       exec_mode: "fork",
       env: {
+        NODE_ENV: "development",
+      },
+      env_production: {
         NODE_ENV: "production",
       },
       log_file: "/var/log/pm2/mohallamitr-web.log",
