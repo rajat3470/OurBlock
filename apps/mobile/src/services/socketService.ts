@@ -12,7 +12,7 @@
  */
 
 import { io, Socket } from "socket.io-client";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { apiClient } from "./apiClient";
 
 // Set EXPO_PUBLIC_SOCKET_URL in your .env to point at your Socket.io server.
 // Without this, socket connection is disabled and polling fallback remains active.
@@ -89,7 +89,7 @@ class SocketService {
       return;
     }
 
-    const token = await AsyncStorage.getItem("accessToken");
+    const token = await apiClient.ensureValidToken();
     // Skip for mock tokens used in dev / demo mode.
     if (!token || token.startsWith("mock-")) return;
 
@@ -163,7 +163,7 @@ class SocketService {
     if (this.socket?.connected) return;
     if (!this.isSocketConfigured()) return;
 
-    const token = await AsyncStorage.getItem("accessToken");
+    const token = await apiClient.ensureValidToken();
     if (!token || token.startsWith("mock-")) return;
 
     if (this.socket) {
