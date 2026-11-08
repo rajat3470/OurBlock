@@ -7,6 +7,7 @@ import { evaluateBlacklistRejection } from "../services/blacklist";
 import { emitBusinessProductsChanged, emitBusinessUpdate, emitOrderUpdate } from "../lib/socket";
 import { onOrderStatusChanged } from "../services/orderEvents";
 import { verifyBankAccount } from "../lib/cashfree";
+import { Order as OrderModel, Product as ProductModel } from "../models";
 
 const router = Router();
 
@@ -196,7 +197,7 @@ router.post("/products", requireAuth, async (req: AuthedRequest, res) => {
         approvalNote: null,
       },
     });
-    emitBusinessProductsChanged(business.id, { product });
+    emitBusinessProductsChanged(business.id, { product, societyId: business.societyId });
     return res.status(201).json({ success: true, data: product });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
@@ -217,7 +218,7 @@ router.put("/products/:id", requireAuth, async (req: AuthedRequest, res) => {
 
     const { businessId: _ignored, ...safeBody } = req.body;
     const updated = await prisma.product.update({ where: { id: req.params.id }, data: { ...safeBody, businessId: business.id } });
-    emitBusinessProductsChanged(business.id, { product: updated });
+    emitBusinessProductsChanged(business.id, { product: updated, societyId: business.societyId });
     return res.json({ success: true, data: updated });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
@@ -237,7 +238,7 @@ router.delete("/products/:id", requireAuth, async (req: AuthedRequest, res) => {
     if (product.businessId !== business.id) return res.status(403).json({ success: false, error: "Product does not belong to your business" });
 
     await prisma.product.delete({ where: { id: req.params.id } });
-    emitBusinessProductsChanged(business.id, { deletedProductId: req.params.id });
+    emitBusinessProductsChanged(business.id, { deletedProductId: req.params.id, societyId: business.societyId });
     return res.json({ success: true, message: "Product deleted successfully" });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
@@ -608,18 +609,46 @@ router.get("/stats", requireAuth, async (req: AuthedRequest, res) => {
 
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
+    const bizId = business.id;
 
-    const [totalProducts, totalOrders, pendingOrders, lowStockProducts, todayDelivered] = await Promise.all([
-      prisma.product.count({ where: { businessId: business.id } }),
-      prisma.order.count({ where: { businessId: business.id } }),
-      prisma.order.count({ where: { businessId: business.id, status: "pending" } }),
-      prisma.product.count({ where: { businessId: business.id, stock: { lte: 5 } } }),
-      prisma.order.findMany({ where: { businessId: business.id, status: "delivered", createdAt: { gte: startOfToday } }, take: 100 }),
+    const [orderStats, productStats] = await Promise.all([
+      OrderModel.aggregate([
+        { $match: { businessId: bizId } },
+        {
+          $facet: {
+            total: [{ $count: "n" }],
+            pending: [{ $match: { status: "pending" } }, { $count: "n" }],
+            todayRevenue: [
+              { $match: { status: "delivered", createdAt: { $gte: startOfToday } } },
+              { $group: { _id: null, sum: { $sum: { $ifNull: ["$finalAmount", "$totalAmount"] } } } },
+            ],
+          },
+        },
+      ]),
+      ProductModel.aggregate([
+        { $match: { businessId: bizId } },
+        {
+          $facet: {
+            total: [{ $count: "n" }],
+            lowStock: [{ $match: { stock: { $lte: 5 } } }, { $count: "n" }],
+          },
+        },
+      ]),
     ]);
 
-    const todayRevenue = todayDelivered.reduce((sum, o) => sum + Number(o.finalAmount ?? o.totalAmount ?? 0), 0);
+    const os = orderStats[0] || {};
+    const ps = productStats[0] || {};
 
-    return res.json({ success: true, data: { totalProducts, totalOrders, pendingOrders, lowStockProducts, todayRevenue } });
+    return res.json({
+      success: true,
+      data: {
+        totalProducts: ps.total?.[0]?.n ?? 0,
+        totalOrders: os.total?.[0]?.n ?? 0,
+        pendingOrders: os.pending?.[0]?.n ?? 0,
+        lowStockProducts: ps.lowStock?.[0]?.n ?? 0,
+        todayRevenue: os.todayRevenue?.[0]?.sum ?? 0,
+      },
+    });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }

@@ -2,6 +2,7 @@ import http from "http";
 import { Server, Socket } from "socket.io";
 import { verifyAccessToken } from "./jwt";
 import { prisma } from "./prisma";
+import { cache } from "./cache";
 
 // ---------------------------------------------------------------------------
 // Socket.IO real-time layer — provides per-user, per-order, per-business and
@@ -155,6 +156,7 @@ export function emitBusinessUpdate(businessId: string, business: any): void {
   if (business.societyId) {
     console.log("[socket:emitBusinessUpdate] emitting to society:", business.societyId);
     io.to(`society:${business.societyId}`).emit("businesses:society:updated", business);
+    cache.invalidate(`society-feed:${business.societyId}`);
   } else {
     console.log("[socket:emitBusinessUpdate] no societyId, skipping society emit");
   }
@@ -162,7 +164,7 @@ export function emitBusinessUpdate(businessId: string, business: any): void {
 
 export function emitBusinessProductsChanged(
   businessId: string,
-  options?: { product?: any; deletedProductId?: string },
+  options?: { product?: any; deletedProductId?: string; societyId?: string },
 ): void {
   if (!io) return;
   io.to(`business:${businessId}`).emit("business:products:changed", {
@@ -170,6 +172,9 @@ export function emitBusinessProductsChanged(
     product: options?.product,
     deletedProductId: options?.deletedProductId,
   });
+  if (options?.societyId) {
+    cache.invalidate(`society-feed:${options.societyId}`);
+  }
 }
 
 export function emitToUser(userId: string, event: string, data: any): void {

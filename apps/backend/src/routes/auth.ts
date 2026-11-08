@@ -6,8 +6,10 @@ import { requireAuth, AuthedRequest } from "../middleware/auth";
 import { registerSchema } from "../shared/validation";
 import { normalizeRole } from "../shared/constants";
 import { notifySystem } from "../lib/notifications";
-import { ensureSocietyDemoCatalog, getSocietyProducts } from "../services/demoCatalog";
+import { ensureSocietyDemoCatalog } from "../services/demoCatalog";
 import { sendOTP, isRateLimited, verifyOTP } from "../lib/otpStore";
+import { cache } from "../lib/cache";
+import { Business, Product, HomeBanner, Order } from "../models";
 
 const router = Router();
 const BCRYPT_ROUNDS = 10;
@@ -409,35 +411,64 @@ router.post("/verify-phone", requireAuth, async (req: AuthedRequest, res) => {
 // ---------------------------------------------------------------------------
 // GET /auth/home-feed
 // ---------------------------------------------------------------------------
-router.get("/home-feed", requireAuth, async (req: AuthedRequest, res) => {
-  try {
-    const user = await prisma.user.findUnique({ where: { id: req.uid } });
-    if (!user) return res.status(404).json({ success: false, error: "User not found" });
 
-    const requestedSocietyId = typeof req.query.societyId === "string" ? req.query.societyId : undefined;
-    const societyId = requestedSocietyId || user.societyId;
-    if (!societyId) return res.status(400).json({ success: false, error: "Society not selected for user" });
+const ACTIVE_ORDER_STATUSES = ["pending", "confirmed", "preparing", "ready", "outForDelivery"] as const;
+const SOCIETY_FEED_TTL_MS = 60_000;
+const BANNERS_TTL_MS = 120_000;
 
-    await ensureSocietyDemoCatalog(societyId);
+interface SocietyFeedCache {
+  businesses: any[];
+  products: any[];
+  categories: { key: string; count: number }[];
+  featuredProducts: any[];
+  topRatedBusinesses: any[];
+  offerProducts: any[];
+}
 
-    const allBusinesses = await prisma.business.findMany({
-      where: { societyId, status: "active", isVerified: true },
-    });
-    const allBusinessIds = allBusinesses.map((b) => b.id);
-    const products = await getSocietyProducts(allBusinessIds);
+async function getSocietyFeed(societyId: string): Promise<SocietyFeedCache> {
+  return cache.get(`society-feed:${societyId}`, SOCIETY_FEED_TTL_MS, async () => {
+    const bizDocs = await Business.aggregate([
+      { $match: { societyId, status: "active", isVerified: true } },
+      {
+        $lookup: {
+          from: "products",
+          let: { bizId: { $toString: "$_id" } },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$businessId", "$$bizId"] },
+                status: "active",
+                $or: [{ isVerified: true }, { approvalStatus: "approved" }],
+              },
+            },
+          ],
+          as: "approvedProducts",
+        },
+      },
+      { $addFields: { hasApprovedProduct: { $gt: [{ $size: "$approvedProducts" }, 0] } } },
+      { $match: { hasApprovedProduct: true } },
+      {
+        $match: {
+          $or: [
+            { isDemo: true },
+            { "bankDetails.verificationStatus": "verified" },
+          ],
+        },
+      },
+    ]);
 
-    // Only show businesses that have at least one approved product AND (bank verified OR demo)
-    const bizWithApprovedProduct = new Set(products.map((p) => p.businessId));
-    const businesses = allBusinesses.filter((b) => {
-      if (!bizWithApprovedProduct.has(b.id)) return false;
-      if ((b as any).isDemo) return true;
-      return (b as any).bankDetails?.verificationStatus === "verified";
-    });
-    const businessIds = businesses.map((b) => b.id);
+    const businesses: any[] = [];
+    const products: any[] = [];
 
-    const activeOrderStatuses = new Set(["pending", "confirmed", "preparing", "ready", "outForDelivery"]);
-    const orders = await prisma.order.findMany({ where: { userId: req.uid }, take: 100 });
-    const activeOrders = orders.filter((o) => activeOrderStatuses.has(o.status)).length;
+    for (const biz of bizDocs) {
+      const bizObj = { ...biz, id: String(biz._id) };
+      delete bizObj.approvedProducts;
+      delete bizObj.hasApprovedProduct;
+      businesses.push(bizObj);
+      for (const p of biz.approvedProducts) {
+        products.push({ ...p, id: String(p._id) });
+      }
+    }
 
     const categoryMap = new Map<string, number>();
     businesses.forEach((b) => {
@@ -456,40 +487,71 @@ router.get("/home-feed", requireAuth, async (req: AuthedRequest, res) => {
       })
       .slice(0, 20);
 
-    const topRatedBusinesses = [...businesses].sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0)).slice(0, 10);
-    const offerProducts = featuredProducts.filter((p) => Number(p.discount || 0) > 0).slice(0, 10);
+    const topRatedBusinesses = [...businesses]
+      .sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0))
+      .slice(0, 10);
 
+    const offerProducts = featuredProducts
+      .filter((p) => Number(p.discount || 0) > 0)
+      .slice(0, 10);
+
+    return { businesses, products, categories, featuredProducts, topRatedBusinesses, offerProducts };
+  });
+}
+
+async function getActiveBanners(societyId: string): Promise<any[]> {
+  return cache.get(`banners:${societyId}`, BANNERS_TTL_MS, async () => {
     const nowMs = Date.now();
-    const banners = await prisma.homeBanner.findMany({ where: { isActive: true } });
-    const filteredBanners = banners
+    const banners = await HomeBanner.find({ isActive: true }).lean();
+    return banners
       .filter((banner) => {
         const targetSociety = String(banner.societyId || "global");
         if (targetSociety !== "global" && targetSociety !== societyId) return false;
-        if (banner.startAt && nowMs < banner.startAt.getTime()) return false;
-        if (banner.endAt && nowMs > banner.endAt.getTime()) return false;
+        if (banner.startAt && nowMs < new Date(banner.startAt).getTime()) return false;
+        if (banner.endAt && nowMs > new Date(banner.endAt).getTime()) return false;
         return true;
       })
       .sort((a, b) => {
-        const orderA = a.sortOrder ?? 100;
-        const orderB = b.sortOrder ?? 100;
+        const orderA = (a as any).sortOrder ?? 100;
+        const orderB = (b as any).sortOrder ?? 100;
         if (orderA !== orderB) return orderA - orderB;
-        return b.updatedAt.getTime() - a.updatedAt.getTime();
+        return new Date(b.updatedAt!).getTime() - new Date(a.updatedAt!).getTime();
       })
-      .slice(0, 6);
+      .slice(0, 6)
+      .map((b) => ({ ...b, id: String(b._id) }));
+  });
+}
+
+router.get("/home-feed", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.uid } });
+    if (!user) return res.status(404).json({ success: false, error: "User not found" });
+
+    const requestedSocietyId = typeof req.query.societyId === "string" ? req.query.societyId : undefined;
+    const societyId = requestedSocietyId || user.societyId;
+    if (!societyId) return res.status(400).json({ success: false, error: "Society not selected for user" });
+
+    await ensureSocietyDemoCatalog(societyId);
+
+    const [feed, banners, activeOrders] = await Promise.all([
+      getSocietyFeed(societyId),
+      getActiveBanners(societyId),
+      Order.countDocuments({ userId: req.uid, status: { $in: ACTIVE_ORDER_STATUSES } }),
+    ]);
 
     return res.json({
       societyId,
       stats: {
-        totalBusinesses: businesses.length,
+        totalBusinesses: feed.businesses.length,
         activeOrders,
         favoriteCount: user.favoriteBusinesses?.length ?? 0,
       },
-      categories,
-      businesses,
-      featuredProducts,
-      topRatedBusinesses,
-      offerProducts,
-      banners: filteredBanners,
+      categories: feed.categories,
+      businesses: feed.businesses,
+      featuredProducts: feed.featuredProducts,
+      topRatedBusinesses: feed.topRatedBusinesses,
+      offerProducts: feed.offerProducts,
+      banners,
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message || "Failed to load home feed" });

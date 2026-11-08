@@ -104,8 +104,14 @@ fi
 cd "$APP_DIR"
 
 # -----------------------------------------------------------------------------
-# Reload Nginx config
+# Ensure Nginx config is installed and reload
 # -----------------------------------------------------------------------------
+NGINX_CONF="/etc/nginx/conf.d/mohallamitr.conf"
+if [[ ! -f "$NGINX_CONF" ]] || ! diff -q "$INFRA_DIR/nginx.conf" "$NGINX_CONF" &>/dev/null; then
+    log "Installing/updating Nginx config..."
+    sudo cp "$INFRA_DIR/nginx.conf" "$NGINX_CONF"
+fi
+
 log "Reloading Nginx..."
 sudo nginx -t
 if sudo systemctl is-active --quiet nginx; then
