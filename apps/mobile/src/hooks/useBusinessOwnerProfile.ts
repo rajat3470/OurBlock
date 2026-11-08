@@ -37,10 +37,6 @@ export const useBusinessOwnerProfile = () => {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    loadBusinessProfile().catch(() => null);
-  }, [loadBusinessProfile]);
-
-  useEffect(() => {
     if (businessProfile) {
       setSettingsMinOrder(String(businessProfile.minimumOrderAmount ?? ""));
       setSettingsDeliveryTime(businessProfile.estimatedDeliveryTime ?? "");

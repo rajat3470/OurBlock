@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
@@ -7,6 +7,8 @@ import { useBusinessOwner } from "@hooks/useBusinessOwner";
 import { getBusinessStatus } from "@utils/businessStatus";
 import { OrderStatus } from "@/types";
 import content from "@/content/boDashboard.json";
+
+const FOCUS_REFRESH_MIN_INTERVAL_MS = 30_000;
 
 type StatusStyle = { color: string; bg: string; emoji: string; labelKey: keyof typeof content.statusLabels };
 
@@ -61,6 +63,7 @@ export const useBusinessOwnerDashboard = () => {
   } = useBusinessOwner();
   const [refreshing, setRefreshing] = useState(false);
   const [toggleLoading, setToggleLoading] = useState(false);
+  const lastFocusRefreshRef = useRef(0);
 
   const businessStatus = useMemo(
     () => (businessProfile ? getBusinessStatus(businessProfile) : null),
@@ -91,11 +94,11 @@ export const useBusinessOwnerDashboard = () => {
     loadAll();
   }, [loadAll]);
 
-  // Silently reload orders each time the dashboard tab gains focus so
-  // the counts and recent-orders section stay current even if the socket
-  // was temporarily disconnected.
   useFocusEffect(
     useCallback(() => {
+      const now = Date.now();
+      if (now - lastFocusRefreshRef.current < FOCUS_REFRESH_MIN_INTERVAL_MS) return;
+      lastFocusRefreshRef.current = now;
       loadOrders({ silent: true }).catch(() => {});
     }, [loadOrders])
   );

@@ -189,6 +189,10 @@ export const useBusinessOwnerProducts = () => {
   );
 
   useEffect(() => {
+    if (products.length > 0) {
+      markRefreshed();
+      return;
+    }
     loadProducts()
       .then(markRefreshed)
       .catch(() => null);
