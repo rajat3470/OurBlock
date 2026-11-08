@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,8 @@ import {
 } from "@services/deliveryPartnerService";
 import { colors, fonts } from "@/constants/theme";
 
+const FOCUS_REFRESH_MIN_INTERVAL_MS = 30_000;
+
 export default function DeliveryPartnerProfile() {
   const insets = useSafeAreaInsets();
   const { logoutUser } = useAuth();
@@ -26,6 +28,7 @@ export default function DeliveryPartnerProfile() {
   const [business, setBusiness] = useState<DeliveryBusiness | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const lastFocusRefreshRef = useRef(0);
 
   const load = useCallback(async (isRefresh = false) => {
     try {
@@ -43,6 +46,9 @@ export default function DeliveryPartnerProfile() {
 
   useFocusEffect(
     useCallback(() => {
+      const now = Date.now();
+      if (now - lastFocusRefreshRef.current < FOCUS_REFRESH_MIN_INTERVAL_MS) return;
+      lastFocusRefreshRef.current = now;
       load();
     }, [load])
   );

@@ -2,6 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { requireAuth, AuthedRequest } from "../middleware/auth";
+import { createPresignedUploadUrl } from "../lib/storage";
 
 const router = Router();
 
@@ -105,6 +106,31 @@ router.post(
     }
   }
 );
+
+// --- POST /upload/presigned ---
+
+const ALLOWED_PREFIXES = ["products", "users", "businesses", "banners"];
+
+router.post("/presigned", requireAuth, async (req: AuthedRequest, res) => {
+  try {
+    const { prefix, contentType } = req.body;
+    if (!prefix || typeof prefix !== "string") {
+      return res.status(400).json({ success: false, error: "Missing prefix (e.g. 'products')" });
+    }
+    const basePrefix = prefix.split("/")[0];
+    if (!ALLOWED_PREFIXES.includes(basePrefix)) {
+      return res.status(400).json({ success: false, error: `Invalid prefix. Allowed: ${ALLOWED_PREFIXES.join(", ")}` });
+    }
+
+    const result = await createPresignedUploadUrl(
+      prefix,
+      contentType || "image/jpeg",
+    );
+    return res.json({ success: true, data: result });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // --- POST /upload/delete ---
 

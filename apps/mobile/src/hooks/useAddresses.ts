@@ -45,14 +45,19 @@ export const useAddresses = () => {
 
   const handleSetDefault = useCallback(
     async (addressId: string) => {
+      const prev = addresses;
+      setAddresses((cur) =>
+        cur.map((a) => ({ ...a, isDefault: a.id === addressId })),
+      );
+      dataCache.invalidate("addresses");
       try {
         await userAppService.setDefaultAddress(addressId);
-        fetchAddresses(true);
       } catch (error: any) {
+        setAddresses(prev);
         toast.show(error?.message || content.list.errors.setDefault, { type: "danger" });
       }
     },
-    [fetchAddresses, toast]
+    [addresses, toast]
   );
 
   const handleDelete = useCallback(
@@ -63,17 +68,20 @@ export const useAddresses = () => {
           text: content.list.deleteConfirm.confirm,
           style: "destructive",
           onPress: async () => {
+            const prev = addresses;
+            setAddresses((cur) => cur.filter((a) => a.id !== addressId));
+            dataCache.invalidate("addresses");
             try {
               await userAppService.deleteAddress(addressId);
-              fetchAddresses(true);
             } catch (error: any) {
+              setAddresses(prev);
               toast.show(error?.message || content.list.errors.delete, { type: "danger" });
             }
           },
         },
       ]);
     },
-    [fetchAddresses, toast]
+    [addresses, toast]
   );
 
   const goToAdd = useCallback(() => router.push("/(user)/add-address"), []);

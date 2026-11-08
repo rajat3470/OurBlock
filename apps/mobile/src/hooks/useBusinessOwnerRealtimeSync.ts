@@ -1,11 +1,12 @@
 import { useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
 import { subscribeToOrdersByBusiness } from "@services/orderSyncService";
-import { setBusinessProfile, setOrders, setProducts, upsertOrder } from "@store/slices/businessOwnerSlice";
+import { addProduct, setBusinessProfile, setOrders, setProducts, removeProduct, updateProduct, upsertOrder } from "@store/slices/businessOwnerSlice";
 import { hasPendingWrite } from "@services/pendingWrites";
 import { businessOwnerService } from "@services/businessOwnerService";
-import { subscribeToBusiness, subscribeToBusinessProducts } from "@services/businessSyncService";
+import { subscribeToBusiness, subscribeToBusinessProducts, type ProductChangeEvent } from "@services/businessSyncService";
 import { socketService } from "@services/socketService";
+import { store } from "@store/index";
 
 const REFRESH_MIN_INTERVAL_MS = 30_000;
 
@@ -41,11 +42,19 @@ export function useBusinessOwnerRealtimeSync() {
       if (hasPendingWrite(business.id)) return;
       dispatch(setBusinessProfile(business));
     });
-    const unsubscribeProducts = subscribeToBusinessProducts(businessId, () => {
-      businessOwnerService
-        .getMyProducts()
-        .then((response) => dispatch(setProducts(response.data)))
-        .catch(() => {});
+    const unsubscribeProducts = subscribeToBusinessProducts(businessId, (event: ProductChangeEvent) => {
+      if (event.deletedProductId) {
+        dispatch(removeProduct(event.deletedProductId));
+      } else if (event.product) {
+        const products = store.getState().businessOwner.products;
+        const exists = products.some((p) => p.id === event.product!.id);
+        dispatch(exists ? updateProduct(event.product) : addProduct(event.product));
+      } else {
+        businessOwnerService
+          .getMyProducts()
+          .then((response) => dispatch(setProducts(response.data)))
+          .catch(() => {});
+      }
     });
     const unsubscribeReconnect = socketService.on("connect", refreshBusinessData);
 

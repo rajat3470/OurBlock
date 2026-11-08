@@ -160,9 +160,16 @@ export function emitBusinessUpdate(businessId: string, business: any): void {
   }
 }
 
-export function emitBusinessProductsChanged(businessId: string): void {
+export function emitBusinessProductsChanged(
+  businessId: string,
+  options?: { product?: any; deletedProductId?: string },
+): void {
   if (!io) return;
-  io.to(`business:${businessId}`).emit("business:products:changed", { businessId });
+  io.to(`business:${businessId}`).emit("business:products:changed", {
+    businessId,
+    product: options?.product,
+    deletedProductId: options?.deletedProductId,
+  });
 }
 
 export function emitToUser(userId: string, event: string, data: any): void {

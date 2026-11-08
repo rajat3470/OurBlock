@@ -196,7 +196,7 @@ router.post("/products", requireAuth, async (req: AuthedRequest, res) => {
         approvalNote: null,
       },
     });
-    emitBusinessProductsChanged(business.id);
+    emitBusinessProductsChanged(business.id, { product });
     return res.status(201).json({ success: true, data: product });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
@@ -217,7 +217,7 @@ router.put("/products/:id", requireAuth, async (req: AuthedRequest, res) => {
 
     const { businessId: _ignored, ...safeBody } = req.body;
     const updated = await prisma.product.update({ where: { id: req.params.id }, data: { ...safeBody, businessId: business.id } });
-    emitBusinessProductsChanged(business.id);
+    emitBusinessProductsChanged(business.id, { product: updated });
     return res.json({ success: true, data: updated });
   } catch (error: any) {
     return res.status(400).json({ success: false, error: error.message });
@@ -237,7 +237,7 @@ router.delete("/products/:id", requireAuth, async (req: AuthedRequest, res) => {
     if (product.businessId !== business.id) return res.status(403).json({ success: false, error: "Product does not belong to your business" });
 
     await prisma.product.delete({ where: { id: req.params.id } });
-    emitBusinessProductsChanged(business.id);
+    emitBusinessProductsChanged(business.id, { deletedProductId: req.params.id });
     return res.json({ success: true, message: "Product deleted successfully" });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
