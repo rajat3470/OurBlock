@@ -3,6 +3,7 @@ import { Alert } from "react-native";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { userAppService } from "@services/userAppService";
+import { dataCache } from "@services/dataCache";
 import { Address } from "@/types";
 import content from "@/content/addresses.json";
 
@@ -16,9 +17,14 @@ export const useAddresses = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchAddresses = useCallback(async () => {
+  const fetchAddresses = useCallback(async (skipCache = false) => {
     try {
-      const data = await userAppService.getAddresses();
+      if (skipCache) dataCache.invalidate("addresses");
+      const data = await dataCache.get(
+        "addresses",
+        2 * 60 * 1000,
+        () => userAppService.getAddresses(),
+      );
       setAddresses(data);
     } catch (error: any) {
       toast.show(error?.message || content.list.errors.load, { type: "danger" });
@@ -34,14 +40,14 @@ export const useAddresses = () => {
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchAddresses();
+    fetchAddresses(true);
   }, [fetchAddresses]);
 
   const handleSetDefault = useCallback(
     async (addressId: string) => {
       try {
         await userAppService.setDefaultAddress(addressId);
-        fetchAddresses();
+        fetchAddresses(true);
       } catch (error: any) {
         toast.show(error?.message || content.list.errors.setDefault, { type: "danger" });
       }
@@ -59,7 +65,7 @@ export const useAddresses = () => {
           onPress: async () => {
             try {
               await userAppService.deleteAddress(addressId);
-              fetchAddresses();
+              fetchAddresses(true);
             } catch (error: any) {
               toast.show(error?.message || content.list.errors.delete, { type: "danger" });
             }

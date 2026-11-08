@@ -5,17 +5,11 @@ import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { authStateService } from "@services/authStateService";
 import { userAppService } from "@services/userAppService";
-import { featureFlagsService } from "@services/featureFlagsService";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
 import { useAuth } from "@hooks/useAuth";
 import { useFeatureFlags } from "@hooks/useFeatureFlags";
 import { setUser } from "@store/slices/authSlice";
-import {
-  setFeatureFlagsError,
-  setFlags,
-  setLocalOverride,
-  setRefreshing,
-} from "@store/slices/featureFlagsSlice";
+import { setLocalOverride } from "@store/slices/featureFlagsSlice";
 import type { FeatureFlags } from "@/constants/featureFlags";
 import content from "@/content/profile.json";
 
@@ -34,19 +28,8 @@ export const useUserProfile = () => {
   const [devDrawerVisible, setDevDrawerVisible] = useState(false);
 
   const handleRefreshFeatureFlags = useCallback(async () => {
-    dispatch(setRefreshing(true));
-    try {
-      const snapshot = await featureFlagsService.refresh();
-      dispatch(setFlags(snapshot));
-      dispatch(setFeatureFlagsError(null));
-      toast.show(content.toasts.flagsRefreshed, { type: "success" });
-    } catch (error: any) {
-      dispatch(setFeatureFlagsError(error?.message || content.toasts.flagsRefreshError));
-      toast.show(error?.message || content.toasts.flagsRefreshError, { type: "danger" });
-    } finally {
-      dispatch(setRefreshing(false));
-    }
-  }, [dispatch, toast]);
+    toast.show("Feature flags are managed via backend defaults", { type: "normal" });
+  }, [toast]);
 
   const handlePickProfilePhoto = useCallback(async () => {
     if (!user?.id) return;

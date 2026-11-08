@@ -9,6 +9,8 @@ import { Business, Product } from "@/types";
 import { getCategoryEmoji } from "@utils/categoryMetadata";
 import content from "@/content/home.json";
 
+const FOCUS_REFRESH_MIN_INTERVAL_MS = 30_000;
+
 export function categoryEmoji(category: string) {
   return getCategoryEmoji(category);
 }
@@ -68,16 +70,18 @@ export const useHomeScreen = () => {
   }, [entrance]);
 
   const [refreshing, setRefreshing] = useState(false);
+  const lastFocusRefreshRef = useRef(0);
 
   useEffect(() => {
     initializeHome().catch(() => null);
     loadMyOrders().catch(() => null);
   }, [initializeHome, loadMyOrders]);
 
-  // Silently refresh business list each time the home tab gains focus so
-  // status changes (e.g. store going live/paused) are reflected promptly.
   useFocusEffect(
     useCallback(() => {
+      const now = Date.now();
+      if (now - lastFocusRefreshRef.current < FOCUS_REFRESH_MIN_INTERVAL_MS) return;
+      lastFocusRefreshRef.current = now;
       refreshBusinesses();
     }, [refreshBusinesses])
   );

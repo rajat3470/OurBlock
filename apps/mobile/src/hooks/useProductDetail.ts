@@ -40,7 +40,11 @@ export const useProductDetail = () => {
 
     let active = true;
     const localProduct = featuredProducts.find((p) => p.id === productId);
-    if (localProduct) setProduct(localProduct);
+    if (localProduct) {
+      setProduct(localProduct);
+      setIsLoading(false);
+      return;
+    }
 
     const fetchProduct = async () => {
       try {
@@ -48,7 +52,7 @@ export const useProductDetail = () => {
         const latestProduct = await userAppService.getProductById(productId);
         if (active) setProduct(latestProduct);
       } catch {
-        if (active && !localProduct) setProduct(null);
+        if (active) setProduct(null);
       } finally {
         if (active) setIsLoading(false);
       }

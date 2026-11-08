@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
-import { useAppSelector } from "@hooks/useRedux";
+import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
 import { useUserApp } from "@hooks/useUserApp";
 import { useFeatureFlags } from "@hooks/useFeatureFlags";
+import { clearCart } from "@store/slices/cartSlice";
 import { userAppService } from "@services/userAppService";
+import { dataCache } from "@services/dataCache";
 import { paymentService, CardDetails } from "@services/paymentService";
 import { getBusinessStatus } from "@utils/businessStatus";
 import { Address } from "@/types";
@@ -23,6 +25,7 @@ export type PaymentTiming = "atOrder" | "atDelivery";
 
 export const useCheckout = () => {
   const toast = useToast();
+  const dispatch = useAppDispatch();
   const cartItems = useAppSelector((state) => state.cart.items);
   const cartBusinessId = useAppSelector((state) => state.cart.businessId);
   const { placeOrder, isLoading, businesses } = useUserApp();
@@ -76,7 +79,11 @@ export const useCheckout = () => {
   const loadAddresses = useCallback(async () => {
     try {
       setLoadingAddresses(true);
-      const data = await userAppService.getAddresses();
+      const data = await dataCache.get(
+        "addresses",
+        2 * 60 * 1000,
+        () => userAppService.getAddresses(),
+      );
       setAddresses(data);
       const def = data.find((a) => a.isDefault) ?? data[0];
       if (def) setSelectedAddressId(def.id);
@@ -237,9 +244,12 @@ export const useCheckout = () => {
                 const verification = await paymentService.verifyPayment(paymentOrder.cfOrderId);
                 if (verification.paymentStatus === "completed") {
                   orderPlacedRef.current = true;
+                  dispatch(clearCart());
                   toast.show(content.toasts.orderPlaced, { type: "success", duration: 3000 });
                   router.replace("/(user)/orders");
                 } else {
+                  orderPlacedRef.current = true;
+                  dispatch(clearCart());
                   toast.show("Payment is being processed. Check your orders.", { type: "warning" });
                   router.replace("/(user)/orders");
                 }
