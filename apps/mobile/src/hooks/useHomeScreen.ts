@@ -241,6 +241,7 @@ export const useHomeScreen = () => {
 
   const goToBusinesses = useCallback(() => router.push("/(user)/(tabs)/businesses"), []);
   const goToAddresses = useCallback(() => router.push("/(user)/(tabs)/addresses"), []);
+  const goToChangeSociety = useCallback(() => router.push("/(user)/change-society"), []);
   const goToProfile = useCallback(() => router.push("/(user)/profile"), []);
   const goToCart = useCallback(() => router.push("/(user)/cart"), []);
   const goToBusiness = useCallback((id: string) => {
@@ -284,6 +285,7 @@ export const useHomeScreen = () => {
     minimumOrder: ORDER_FEES.MINIMUM_ORDER,
     goToBusinesses,
     goToAddresses,
+    goToChangeSociety,
     goToProfile,
     goToCart,
     goToBusiness,

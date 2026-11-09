@@ -1,14 +1,25 @@
 import { apiClient } from "./apiClient";
 import { Society, PaginatedResponse } from "@/types";
 
+export interface AreaInfo {
+  city: string;
+  state: string;
+  societyCount: number;
+}
+
 export const societyService = {
+  async getAreas(): Promise<{ success: boolean; data: AreaInfo[] }> {
+    return apiClient.get("/societies/areas");
+  },
+
   async getSocieties(
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    city?: string
   ): Promise<PaginatedResponse<Society>> {
-    return apiClient.get(
-      `/societies?page=${page}&limit=${limit}`
-    );
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (city) params.set("city", city);
+    return apiClient.get(`/societies?${params.toString()}`);
   },
 
   async getSocietyById(id: string): Promise<Society> {

@@ -176,7 +176,7 @@ export default function BusinessOwnerProfile() {
                 <InfoRow icon="🏷️" label={content.business.rows.name}  value={businessProfile.name} />
                 <InfoRow icon="🗂️" label={content.business.rows.category}       value={businessProfile.category} />
                 <InfoRow icon="📝" label={content.business.rows.description}    value={businessProfile.description} />
-                <InfoRow icon="📍" label={content.business.rows.address}        value={businessProfile.address} />
+                <InfoRow icon="📍" label={content.business.rows.address}        value={[businessProfile.address, (businessProfile as any).society?.city, (businessProfile as any).society?.state, (businessProfile as any).society?.pincode].filter(Boolean).join(", ")} />
                 <InfoRow icon="📞" label={content.business.rows.phone}          value={businessProfile.phone} />
                 <InfoRow icon="✉️"  label={content.business.rows.email}          value={businessProfile.email} />
                 <InfoRow icon="⭐" label={content.business.rows.rating}         value={businessProfile.rating ? content.business.ratingValue.replace("{rating}", String(businessProfile.rating)).replace("{reviews}", String(businessProfile.totalReviews ?? 0)) : null} />

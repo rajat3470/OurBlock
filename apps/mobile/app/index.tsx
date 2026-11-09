@@ -19,6 +19,9 @@ export default function IndexScreen() {
   }, []);
 
   if (isAuthenticated && user?.role) {
+    if (user.role === "user" && !user.societyId) {
+      return <Redirect href="/(user)/change-society" />;
+    }
     return <Redirect href={getDefaultRoute(true, user.role, appTarget)} />;
   }
 

@@ -110,17 +110,16 @@ export const useUserApp = () => {
   );
 
   const initializeHome = useCallback(async () => {
-    const societies = await loadSocieties();
-    const preferredSocietyId =
-      authUserSocietyId ?? state.selectedSocietyId ?? societies?.[0]?.id;
+    await loadSocieties();
+    const preferredSocietyId = authUserSocietyId ?? state.selectedSocietyId;
+
+    if (!preferredSocietyId) return;
 
     if (authUserSocietyId && authUserSocietyId !== state.selectedSocietyId) {
       dispatch(setSelectedSocietyId(authUserSocietyId));
     }
 
-    if (preferredSocietyId) {
-      await selectSociety(preferredSocietyId);
-    }
+    await selectSociety(preferredSocietyId);
   }, [authUserSocietyId, dispatch, loadSocieties, selectSociety, state.selectedSocietyId]);
 
   const placeOrder = useCallback(

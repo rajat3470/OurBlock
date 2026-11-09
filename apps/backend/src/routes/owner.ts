@@ -21,7 +21,13 @@ async function getOwnerBusiness(uid: string) {
 router.get("/business", requireAuth, async (req: AuthedRequest, res) => {
   try {
     const business = await getOwnerBusiness(req.uid!);
-    return res.json({ success: true, data: business });
+    if (!business) return res.json({ success: true, data: null });
+
+    let society = null;
+    if (business.societyId) {
+      society = await prisma.society.findUnique({ where: { id: business.societyId } });
+    }
+    return res.json({ success: true, data: { ...business, society } });
   } catch (error: any) {
     return res.status(500).json({ success: false, error: error.message });
   }
