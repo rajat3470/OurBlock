@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { businessOwnerService } from "@services/businessOwnerService";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import content from "@/content/boPromotions.json";
 
 export interface Coupon {
@@ -60,6 +60,7 @@ function getUsageLabel(count: number, limit?: number | null) {
  * create modal, refresh, activation/deactivation, and formatting helpers.
  */
 export const useBusinessOwnerPromotions = () => {
+  const showAlert = useAppAlert();
   const insets = useSafeAreaInsets();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(false);
@@ -88,15 +89,15 @@ export const useBusinessOwnerPromotions = () => {
   const handleCreate = useCallback(async () => {
     const val = parseFloat(form.value);
     if (!form.code.trim()) {
-      Alert.alert(content.alerts.missingCodeTitle, content.alerts.missingCodeMsg);
+      showAlert({ title: content.alerts.missingCodeTitle, message: content.alerts.missingCodeMsg, variant: "warning" });
       return;
     }
     if (!val || val <= 0) {
-      Alert.alert(content.alerts.invalidValueTitle, content.alerts.invalidValueMsg);
+      showAlert({ title: content.alerts.invalidValueTitle, message: content.alerts.invalidValueMsg, variant: "warning" });
       return;
     }
     if (form.type === "percentage" && val > 80) {
-      Alert.alert(content.alerts.tooHighTitle, content.alerts.tooHighMsg);
+      showAlert({ title: content.alerts.tooHighTitle, message: content.alerts.tooHighMsg, variant: "warning" });
       return;
     }
 
@@ -117,17 +118,18 @@ export const useBusinessOwnerPromotions = () => {
       await loadCoupons();
     } catch (err: any) {
       const msg = err?.response?.data?.error ?? err?.message ?? content.alerts.createErrorFallback;
-      Alert.alert(content.alerts.errorTitle, msg);
+      showAlert({ title: content.alerts.errorTitle, message: msg, variant: "error" });
     } finally {
       setSubmitting(false);
     }
-  }, [form, loadCoupons]);
+  }, [form, loadCoupons, showAlert]);
 
   const handleDeactivate = useCallback((coupon: Coupon) => {
-    Alert.alert(
-      content.alerts.deactivateTitle,
-      content.alerts.deactivateMsg.replace("{code}", coupon.code),
-      [
+    showAlert({
+      title: content.alerts.deactivateTitle,
+      message: content.alerts.deactivateMsg.replace("{code}", coupon.code),
+      variant: "destructive",
+      buttons: [
         { text: content.alerts.cancel, style: "cancel" },
         {
           text: content.alerts.deactivateAction,
@@ -137,13 +139,13 @@ export const useBusinessOwnerPromotions = () => {
               await businessOwnerService.deleteCoupon(coupon.id);
               await loadCoupons();
             } catch {
-              Alert.alert(content.alerts.errorTitle, content.alerts.deactivateError);
+              showAlert({ title: content.alerts.errorTitle, message: content.alerts.deactivateError, variant: "error" });
             }
           },
         },
-      ]
-    );
-  }, [loadCoupons]);
+      ],
+    });
+  }, [loadCoupons, showAlert]);
 
   const setFormField = useCallback(<K extends keyof CouponForm>(field: K, value: CouponForm[K]) => {
     setForm((p) => ({ ...p, [field]: value }));

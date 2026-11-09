@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Share } from "react-native";
+import { Share } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBusinessOwner } from "@hooks/useBusinessOwner";
@@ -10,6 +10,7 @@ import {
   effectiveOrderStatus,
   toMillis,
 } from "@utils/orderAcceptance";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import content from "@/content/boOrderDetail.json";
 
 type PartnerOption = {
@@ -137,6 +138,7 @@ export function buildInvoiceText(order: Order, brandName = "mohallaMitr"): strin
  * navigation.
  */
 export const useBusinessOwnerOrderDetail = () => {
+  const showAlert = useAppAlert();
   const insets = useSafeAreaInsets();
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const { orders, changeOrderStatus } = useBusinessOwner();
@@ -196,7 +198,7 @@ export const useBusinessOwnerOrderDetail = () => {
     if (next === OrderStatus.OUT_FOR_DELIVERY) {
       deliveryPartnerId = selectedPartnerId ?? order.assignedDeliveryPartnerId ?? undefined;
       if (!deliveryPartnerId) {
-        Alert.alert(content.alerts.partnerRequiredTitle, content.alerts.partnerRequiredMsg);
+        showAlert({ title: content.alerts.partnerRequiredTitle, message: content.alerts.partnerRequiredMsg, variant: "warning" });
         return;
       }
     }
@@ -213,19 +215,20 @@ export const useBusinessOwnerOrderDetail = () => {
       const httpStatus = (err as any)?.response?.status;
       if (code === "ACCEPTANCE_WINDOW_EXPIRED" || code === "ORDER_NOT_PENDING" || httpStatus === 409) {
         setDetailExpired(true);
-        Alert.alert(content.alerts.expiredTitle, content.alerts.expiredMsg);
+        showAlert({ title: content.alerts.expiredTitle, message: content.alerts.expiredMsg, variant: "warning" });
       } else if (code === "DELIVERY_PARTNER_REQUIRED") {
-        Alert.alert(content.alerts.partnerRequiredTitle, content.alerts.partnerRequiredMsg);
+        showAlert({ title: content.alerts.partnerRequiredTitle, message: content.alerts.partnerRequiredMsg, variant: "warning" });
       } else {
-        Alert.alert(
-          content.alerts.errorTitle,
-          (err as any)?.response?.data?.error ?? content.alerts.advanceFail
-        );
+        showAlert({
+          title: content.alerts.errorTitle,
+          message: (err as any)?.response?.data?.error ?? content.alerts.advanceFail,
+          variant: "error",
+        });
       }
     } finally {
       setAdvancing(false);
     }
-  }, [changeOrderStatus, order, selectedPartnerId]);
+  }, [changeOrderStatus, order, selectedPartnerId, showAlert]);
 
   const handleAssignPartner = useCallback((partnerId: string | null) => {
     setSelectedPartnerId(partnerId);

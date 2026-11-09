@@ -8,10 +8,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import { Ionicons } from "@expo/vector-icons";
 import { phoneVerificationService } from "../../src/services/phoneVerificationService";
 import { authService } from "../../src/services/authService";
@@ -65,6 +65,7 @@ export default function BusinessOwnerRegisterScreen() {
   const { registerBusinessOwnerOTP } = useAuth();
   const { isLoading } = useAppSelector((s) => s.auth);
   const toast = useToast();
+  const showAlert = useAppAlert();
 
   useEffect(() => {
     (async () => {
@@ -151,10 +152,7 @@ export default function BusinessOwnerRegisterScreen() {
       );
       router.replace("/(business-owner)/application-received");
     } catch (error: any) {
-      Alert.alert(
-        "Registration Failed",
-        error.message || "Please try again."
-      );
+      showAlert({ title: "Registration Failed", message: error.message || "Please try again.", variant: "error" });
     } finally {
       setLoading(false);
     }

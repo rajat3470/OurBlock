@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { useAppSelector } from "@hooks/useRedux";
 import { useBusinessOwner } from "@hooks/useBusinessOwner";
 import { getBusinessStatus } from "@utils/businessStatus";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import { OrderStatus } from "@/types";
 import content from "@/content/boDashboard.json";
 
@@ -45,6 +45,7 @@ export function timeAgo(date: Date | string): string {
 }
 
 export const useBusinessOwnerDashboard = () => {
+  const showAlert = useAppAlert();
   const router = useRouter();
   const { user } = useAppSelector((state) => state.auth);
   const {
@@ -121,12 +122,12 @@ export const useBusinessOwnerDashboard = () => {
         const fallback = businessProfile?.isVerified
           ? content.toggleAlert.failVerified
           : content.toggleAlert.failPending;
-        Alert.alert(content.toggleAlert.title, apiMsg || fallback);
+        showAlert({ title: content.toggleAlert.title, message: apiMsg || fallback, variant: "error" });
       } finally {
         setToggleLoading(false);
       }
     },
-    [businessProfile?.isVerified, toggleLoading, toggleTakingOrders]
+    [businessProfile?.isVerified, showAlert, toggleLoading, toggleTakingOrders]
   );
 
   const approvedProducts = products.filter((p) => (p.approvalStatus ?? "pending") === "approved").length;

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert } from "react-native";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { useUserApp } from "@hooks/useUserApp";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import { addItem, clearCart } from "@store/slices/cartSlice";
 import { effectiveOrderStatus } from "@utils/orderAcceptance";
 import { Order, OrderStatus } from "@/types";
@@ -51,6 +51,7 @@ export const useUserOrders = () => {
   const cartBusinessId = useAppSelector((state) => state.cart.businessId);
   const suspendedBusinessIds = useSuspendedBusinessIds();
   const toast = useToast();
+  const showAlert = useAppAlert();
   const [ratingOrder, setRatingOrder] = useState<Order | null>(null);
   const [refundOrder, setRefundOrder] = useState<Order | null>(null);
 
@@ -79,15 +80,20 @@ export const useUserOrders = () => {
       };
 
       if (cartBusinessId && cartBusinessId !== bizId) {
-        Alert.alert(content.alerts.replaceTitle, content.alerts.replaceMessage, [
-          { text: content.alerts.keepCart, style: "cancel" },
-          { text: content.alerts.reorder, style: "destructive", onPress: doReorder },
-        ]);
+        showAlert({
+          title: content.alerts.replaceTitle,
+          message: content.alerts.replaceMessage,
+          variant: "destructive",
+          buttons: [
+            { text: content.alerts.keepCart, style: "cancel" },
+            { text: content.alerts.reorder, style: "destructive", onPress: doReorder },
+          ],
+        });
       } else {
         doReorder();
       }
     },
-    [cartBusinessId, dispatch]
+    [cartBusinessId, dispatch, showAlert]
   );
 
   useEffect(() => {
@@ -130,20 +136,25 @@ export const useUserOrders = () => {
 
   const handleCancel = useCallback(
     (orderId: string) => {
-      Alert.alert(content.alerts.cancelTitle, content.alerts.cancelMessage, [
-        { text: content.alerts.cancelNo, style: "cancel" },
-        {
-          text: content.alerts.cancelYes,
-          style: "destructive",
-          onPress: () => {
-            cancelOrder(orderId)
-              .then(() => refresh())
-              .catch(() => null);
+      showAlert({
+        title: content.alerts.cancelTitle,
+        message: content.alerts.cancelMessage,
+        variant: "destructive",
+        buttons: [
+          { text: content.alerts.cancelNo, style: "cancel" },
+          {
+            text: content.alerts.cancelYes,
+            style: "destructive",
+            onPress: () => {
+              cancelOrder(orderId)
+                .then(() => refresh())
+                .catch(() => null);
+            },
           },
-        },
-      ]);
+        ],
+      });
     },
-    [cancelOrder, refresh]
+    [cancelOrder, refresh, showAlert]
   );
 
   const openOrderDetail = useCallback(

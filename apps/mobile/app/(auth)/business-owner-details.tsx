@@ -7,9 +7,9 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from "react-native";
 import { router } from "expo-router";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import { useAuth } from "../../src/hooks/useAuth";
 import { userAppService } from "../../src/services/userAppService";
 import { authStateService } from "../../src/services/authStateService";
@@ -38,6 +38,7 @@ const BUSINESS_CATEGORIES = [
 ];
 
 export default function BusinessOwnerDetailsScreen() {
+  const showAlert = useAppAlert();
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
   const { register } = useAuth();
@@ -154,10 +155,7 @@ export default function BusinessOwnerDetailsScreen() {
         await authStateService.updateUser(updatedUser);
         router.replace("/(business-owner)/dashboard");
       } catch (updateErr: any) {
-        Alert.alert(
-          "Registration Failed",
-          err?.response?.data?.error || err?.message || "Please try again."
-        );
+        showAlert({ title: "Registration Failed", message: err?.response?.data?.error || err?.message || "Please try again.", variant: "error" });
       }
     } finally {
       setIsLoading(false);

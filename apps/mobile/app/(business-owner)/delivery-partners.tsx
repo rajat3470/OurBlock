@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -17,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useToast } from "react-native-toast-notifications";
 import { Ionicons } from "@expo/vector-icons";
 import { businessOwnerService } from "@services/businessOwnerService";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import { fonts } from "../../src/constants/theme";
 import content from "@/content/boDeliveryPartners.json";
 
@@ -44,6 +44,7 @@ function extractError(e: any, fallback: string) {
 export default function DeliveryPartnersScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const showAlert = useAppAlert();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -108,10 +109,11 @@ export default function DeliveryPartnersScreen() {
 
   const toggleStatus = (partner: Partner) => {
     const next = partner.status === "active" ? "inactive" : "active";
-    Alert.alert(
-      next === "inactive" ? "Deactivate partner?" : "Activate partner?",
-      `${partner.firstName} ${partner.lastName}`,
-      [
+    showAlert({
+      title: next === "inactive" ? "Deactivate partner?" : "Activate partner?",
+      message: `${partner.firstName} ${partner.lastName}`,
+      variant: next === "inactive" ? "destructive" : "confirm",
+      buttons: [
         { text: "Cancel", style: "cancel" },
         {
           text: next === "inactive" ? content.actions.deactivate : content.actions.activate,
@@ -129,8 +131,8 @@ export default function DeliveryPartnersScreen() {
             }
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   return (

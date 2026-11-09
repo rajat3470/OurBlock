@@ -13,6 +13,7 @@ import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import * as SplashScreen from "expo-splash-screen";
 import { store } from "../src/store/index";
+import { AppAlertProvider } from "../src/components/ui/AppAlertProvider";
 import { useAppDispatch, useAppSelector } from "../src/hooks/useRedux";
 import { logout, setAuth, setHydrated, setTokens } from "../src/store/slices/authSlice";
 import { authStateService } from "../src/services/authStateService";
@@ -329,7 +330,9 @@ function RootLayout() {
       <AuthBootstrap>
         <SafeAreaProvider>
           <ToastProviderWithSafeArea>
-            <Stack screenOptions={{ headerShown: false }} />
+            <AppAlertProvider>
+              <Stack screenOptions={{ headerShown: false }} />
+            </AppAlertProvider>
           </ToastProviderWithSafeArea>
         </SafeAreaProvider>
       </AuthBootstrap>

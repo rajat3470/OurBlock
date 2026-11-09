@@ -9,7 +9,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +19,7 @@ import { setUser } from "@store/slices/authSlice";
 import { userAppService } from "@services/userAppService";
 import { authStateService } from "@services/authStateService";
 import { ShopImagePicker } from "@/components/business-owner/ShopImagePicker";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import content from "@/content/boProfile.json";
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value?: string | null }) {
@@ -36,6 +36,7 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value?: 
 }
 
 export default function BusinessOwnerProfile() {
+  const showAlert = useAppAlert();
   const dispatch = useAppDispatch();
   const [editingName, setEditingName] = useState(false);
   const [editFullName, setEditFullName] = useState("");
@@ -84,7 +85,7 @@ export default function BusinessOwnerProfile() {
   const handleSaveName = useCallback(async () => {
     const parts = editFullName.trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) {
-      Alert.alert("Error", "Please enter your name.");
+      showAlert({ title: "Error", message: "Please enter your name.", variant: "warning" });
       return;
     }
     const firstName = parts[0];
@@ -97,7 +98,7 @@ export default function BusinessOwnerProfile() {
       await authStateService.updateUser(updatedUser);
       setEditingName(false);
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to update name.");
+      showAlert({ title: "Error", message: error.message || "Failed to update name.", variant: "error" });
     } finally {
       setSavingName(false);
     }

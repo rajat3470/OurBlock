@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAppSelector } from "@hooks/useRedux";
@@ -7,6 +6,7 @@ import { useAuth } from "@hooks/useAuth";
 import { useBusinessOwner } from "@hooks/useBusinessOwner";
 import { getBusinessStatus } from "@utils/businessStatus";
 import { businessOwnerService } from "@services/businessOwnerService";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import content from "@/content/boProfile.json";
 
 /**
@@ -15,6 +15,7 @@ import content from "@/content/boProfile.json";
  * and logout.
  */
 export const useBusinessOwnerProfile = () => {
+  const showAlert = useAppAlert();
   const { user } = useAppSelector((state) => state.auth);
   const { logoutUser, changePassword } = useAuth();
   const { businessProfile, loadBusinessProfile } = useBusinessOwner();
@@ -61,18 +62,23 @@ export const useBusinessOwnerProfile = () => {
   }, [businessProfile?.isVerified]);
 
   const handleLogout = useCallback(() => {
-    Alert.alert(content.logout.title, content.logout.confirm, [
-      { text: content.logout.cancel, style: "cancel" },
-      {
-        text: content.logout.action,
-        style: "destructive",
-        onPress: async () => {
-          await logoutUser();
-          router.replace("/(auth)/business-owner-login");
+    showAlert({
+      title: content.logout.title,
+      message: content.logout.confirm,
+      variant: "destructive",
+      buttons: [
+        { text: content.logout.cancel, style: "cancel" },
+        {
+          text: content.logout.action,
+          style: "destructive",
+          onPress: async () => {
+            await logoutUser();
+            router.replace("/(auth)/business-owner-login");
+          },
         },
-      },
-    ]);
-  }, [logoutUser]);
+      ],
+    });
+  }, [logoutUser, showAlert]);
 
   const handleSaveSettings = useCallback(async () => {
     setIsSavingSettings(true);
@@ -90,12 +96,13 @@ export const useBusinessOwnerProfile = () => {
         tags,
       });
       await loadBusinessProfile().catch(() => null);
-      Alert.alert(content.alerts.savedTitle, content.alerts.savedMsg);
+      showAlert({ title: content.alerts.savedTitle, message: content.alerts.savedMsg, variant: "success" });
     } catch (err: any) {
-      Alert.alert(
-        content.alerts.errorTitle,
-        err?.response?.data?.error || err?.message || content.alerts.settingsErrorFallback
-      );
+      showAlert({
+        title: content.alerts.errorTitle,
+        message: err?.response?.data?.error || err?.message || content.alerts.settingsErrorFallback,
+        variant: "error",
+      });
     } finally {
       setIsSavingSettings(false);
     }
@@ -106,6 +113,7 @@ export const useBusinessOwnerProfile = () => {
     settingsDeliveryFee,
     settingsTags,
     loadBusinessProfile,
+    showAlert,
   ]);
 
   const handleUpdateShopImage = useCallback(
@@ -116,15 +124,16 @@ export const useBusinessOwnerProfile = () => {
         await businessOwnerService.updateBusinessImage({ imageUrl });
         await loadBusinessProfile().catch(() => null);
       } catch (err: any) {
-        Alert.alert(
-          content.alerts.errorTitle,
-          err?.response?.data?.error || err?.message || "Failed to update shop image"
-        );
+        showAlert({
+          title: content.alerts.errorTitle,
+          message: err?.response?.data?.error || err?.message || "Failed to update shop image",
+          variant: "error",
+        });
       } finally {
         setIsUploadingShopImage(false);
       }
     },
-    [loadBusinessProfile]
+    [loadBusinessProfile, showAlert]
   );
 
   const handleChangePassword = useCallback(async () => {
@@ -142,25 +151,31 @@ export const useBusinessOwnerProfile = () => {
     setIsSaving(true);
     try {
       await changePassword(newPassword);
-      Alert.alert(content.password.successTitle, content.password.successMsg, [
-        {
-          text: content.alerts.ok,
-          onPress: () => {
-            setShowChangePassword(false);
-            setNewPassword("");
-            setConfirmPassword("");
+      showAlert({
+        title: content.password.successTitle,
+        message: content.password.successMsg,
+        variant: "success",
+        buttons: [
+          {
+            text: content.alerts.ok,
+            onPress: () => {
+              setShowChangePassword(false);
+              setNewPassword("");
+              setConfirmPassword("");
+            },
           },
-        },
-      ]);
+        ],
+      });
     } catch (err: any) {
-      Alert.alert(
-        content.alerts.errorTitle,
-        err?.response?.data?.error || err?.message || content.alerts.passwordErrorFallback
-      );
+      showAlert({
+        title: content.alerts.errorTitle,
+        message: err?.response?.data?.error || err?.message || content.alerts.passwordErrorFallback,
+        variant: "error",
+      });
     } finally {
       setIsSaving(false);
     }
-  }, [changePassword, confirmPassword, newPassword]);
+  }, [changePassword, confirmPassword, newPassword, showAlert]);
 
   return {
     user,

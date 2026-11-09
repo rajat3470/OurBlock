@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert } from "react-native";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { userAppService } from "@services/userAppService";
 import { dataCache } from "@services/dataCache";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import { Address } from "@/types";
 import content from "@/content/addresses.json";
 
@@ -13,6 +13,7 @@ import content from "@/content/addresses.json";
  */
 export const useAddresses = () => {
   const toast = useToast();
+  const showAlert = useAppAlert();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,26 +63,31 @@ export const useAddresses = () => {
 
   const handleDelete = useCallback(
     (addressId: string) => {
-      Alert.alert(content.list.deleteConfirm.title, content.list.deleteConfirm.message, [
-        { text: content.list.deleteConfirm.cancel, style: "cancel" },
-        {
-          text: content.list.deleteConfirm.confirm,
-          style: "destructive",
-          onPress: async () => {
-            const prev = addresses;
-            setAddresses((cur) => cur.filter((a) => a.id !== addressId));
-            dataCache.invalidate("addresses");
-            try {
-              await userAppService.deleteAddress(addressId);
-            } catch (error: any) {
-              setAddresses(prev);
-              toast.show(error?.message || content.list.errors.delete, { type: "danger" });
-            }
+      showAlert({
+        title: content.list.deleteConfirm.title,
+        message: content.list.deleteConfirm.message,
+        variant: "destructive",
+        buttons: [
+          { text: content.list.deleteConfirm.cancel, style: "cancel" },
+          {
+            text: content.list.deleteConfirm.confirm,
+            style: "destructive",
+            onPress: async () => {
+              const prev = addresses;
+              setAddresses((cur) => cur.filter((a) => a.id !== addressId));
+              dataCache.invalidate("addresses");
+              try {
+                await userAppService.deleteAddress(addressId);
+              } catch (error: any) {
+                setAddresses(prev);
+                toast.show(error?.message || content.list.errors.delete, { type: "danger" });
+              }
+            },
           },
-        },
-      ]);
+        ],
+      });
     },
-    [addresses, toast]
+    [addresses, showAlert, toast]
   );
 
   const goToAdd = useCallback(() => router.push("/(user)/add-address"), []);

@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
-  Alert,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useToast } from "react-native-toast-notifications";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import {
   deliveryPartnerService,
   invalidateDeliveryQueueCache,
@@ -31,6 +31,7 @@ export default function DeliveryPartnerOrderDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const toast = useToast();
+  const showAlert = useAppAlert();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,20 +94,19 @@ export default function DeliveryPartnerOrderDetail() {
     }
 
     const outstanding = isPaymentOutstanding(order.paymentStatus);
-    Alert.alert(
-      "Complete delivery",
-      outstanding
+    showAlert({
+      title: "Complete delivery",
+      message: outstanding
         ? `Confirm handoff and mark payment collected via ${collectMethod.toUpperCase()}?`
         : "Confirm order handed over to customer?",
-      [
+      variant: "confirm",
+      buttons: [
         { text: "Cancel", style: "cancel" },
         {
           text: "Complete",
           onPress: async () => {
             try {
               setSubmitting(true);
-              // Server persists the data URL to Storage (Admin SDK) — the app
-              // is not signed into Firebase Auth, so client uploads are denied.
               const updated = await deliveryPartnerService.completeDelivery(order.id, {
                 deliveryProofImageUrl: proofDataUrl,
                 ...(outstanding ? { paymentCollectedMethod: collectMethod } : {}),
@@ -125,8 +125,8 @@ export default function DeliveryPartnerOrderDetail() {
             }
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   if (loading || !order) {
