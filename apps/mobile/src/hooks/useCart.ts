@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
-import { Alert } from "react-native";
 import { useToast } from "react-native-toast-notifications";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import { router } from "expo-router";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
 import { updateQuantity, removeItem, clearCart } from "@store/slices/cartSlice";
@@ -17,6 +17,7 @@ const { PLATFORM_FEE: DEFAULT_PLATFORM_FEE, MINIMUM_ORDER: DEFAULT_MINIMUM_ORDER
  */
 export const useCart = () => {
   const toast = useToast();
+  const showAlert = useAppAlert();
   const dispatch = useAppDispatch();
   const cartItems = useAppSelector((state) => state.cart.items);
   const cartBusinessId = useAppSelector((state) => state.cart.businessId);
@@ -44,10 +45,11 @@ export const useCart = () => {
   const handleIncrease = useCallback(
     (productId: string, current: number, max: number) => {
       if (current >= max) {
-        Alert.alert(
-          content.alerts.maxStockTitle,
-          content.alerts.maxStockMessage.replace("{n}", String(max))
-        );
+        showAlert({
+          title: content.alerts.maxStockTitle,
+          message: content.alerts.maxStockMessage.replace("{n}", String(max)),
+          variant: "warning",
+        });
         return;
       }
       dispatch(updateQuantity({ productId, quantity: current + 1 }));
@@ -70,11 +72,16 @@ export const useCart = () => {
   );
 
   const handleClearCart = useCallback(() => {
-    Alert.alert(content.alerts.clearTitle, content.alerts.clearMessage, [
-      { text: content.alerts.cancel, style: "cancel" },
-      { text: content.alerts.clear, style: "destructive", onPress: () => dispatch(clearCart()) },
-    ]);
-  }, [dispatch]);
+    showAlert({
+      title: content.alerts.clearTitle,
+      message: content.alerts.clearMessage,
+      variant: "destructive",
+      buttons: [
+        { text: content.alerts.cancel, style: "cancel" },
+        { text: content.alerts.clear, style: "destructive", onPress: () => { dispatch(clearCart()); } },
+      ],
+    });
+  }, [dispatch, showAlert]);
 
   const goBack = useCallback(() => {
     if (router.canGoBack()) {

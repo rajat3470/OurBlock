@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert } from "react-native";
 import { useBusinessOwner } from "@hooks/useBusinessOwner";
 import { businessOwnerService } from "@services/businessOwnerService";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import content from "@/content/boBankDetails.json";
 
 interface BankDetailsOptions {
@@ -9,6 +9,7 @@ interface BankDetailsOptions {
 }
 
 export const useBusinessOwnerBankDetails = (opts?: BankDetailsOptions) => {
+  const showAlert = useAppAlert();
   const onSuccessRef = useRef(opts?.onSuccess);
   onSuccessRef.current = opts?.onSuccess;
   const { businessProfile, loadBusinessProfile } = useBusinessOwner();
@@ -98,7 +99,11 @@ export const useBusinessOwnerBankDetails = (opts?: BankDetailsOptions) => {
           newStatus === "verified" ? content.status.verified
             : newStatus === "rejected" ? content.status.rejected
               : "Submitted";
-        Alert.alert(title, message);
+        showAlert({
+          title,
+          message,
+          variant: newStatus === "verified" ? "success" : newStatus === "rejected" ? "error" : "info",
+        });
         setAccountNumber("");
         setConfirmAccountNumber("");
         if (newStatus !== "rejected") {
@@ -109,25 +114,26 @@ export const useBusinessOwnerBankDetails = (opts?: BankDetailsOptions) => {
           error?.response?.data?.error ||
           error?.message ||
           content.alerts.submitError;
-        Alert.alert(content.alerts.errorTitle, msg);
+        showAlert({ title: content.alerts.errorTitle, message: msg, variant: "error" });
       } finally {
         setIsSubmitting(false);
       }
     };
 
     if (isVerified) {
-      Alert.alert(
-        content.alerts.resubmitTitle,
-        content.alerts.resubmitMsg,
-        [
+      showAlert({
+        title: content.alerts.resubmitTitle,
+        message: content.alerts.resubmitMsg,
+        variant: "confirm",
+        buttons: [
           { text: content.alerts.resubmitCancel, style: "cancel" },
           { text: content.alerts.resubmitConfirm, onPress: doSubmit },
-        ]
-      );
+        ],
+      });
     } else {
       await doSubmit();
     }
-  }, [validate, accountHolderName, accountNumber, ifscCode, bankName, upiId, isVerified, loadBusinessProfile]);
+  }, [validate, accountHolderName, accountNumber, ifscCode, bankName, upiId, isVerified, loadBusinessProfile, showAlert]);
 
   const clearFieldError = useCallback((field: string) => {
     setFieldErrors((prev) => {

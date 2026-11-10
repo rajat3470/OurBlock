@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { userAppService } from "@services/userAppService";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import content from "@/content/addresses.json";
 
 export type AddressType = "home" | "work" | "other";
@@ -35,6 +35,7 @@ const EMPTY_FORM: AddressFormValues = {
  * address, field updates, validation, saving, and navigation.
  */
 export const useAddressForm = () => {
+  const showAlert = useAppAlert();
   const params = useLocalSearchParams();
   const addressId = params.id as string | undefined;
   const isEdit = !!addressId;
@@ -72,12 +73,12 @@ export const useAddressForm = () => {
         });
       }
     } catch {
-      Alert.alert(content.form.alerts.errorTitle, content.form.alerts.loadError);
+      showAlert({ title: content.form.alerts.errorTitle, message: content.form.alerts.loadError, variant: "error" });
       goBack();
     } finally {
       setLoading(false);
     }
-  }, [addressId, goBack]);
+  }, [addressId, goBack, showAlert]);
 
   useEffect(() => {
     if (isEdit) {
@@ -119,18 +120,18 @@ export const useAddressForm = () => {
     try {
       if (isEdit && addressId) {
         await userAppService.updateAddress(addressId, form);
-        Alert.alert(content.form.alerts.successTitle, content.form.alerts.editSuccess);
+        showAlert({ title: content.form.alerts.successTitle, message: content.form.alerts.editSuccess, variant: "success" });
       } else {
         await userAppService.addAddress(form);
-        Alert.alert(content.form.alerts.successTitle, content.form.alerts.addSuccess);
+        showAlert({ title: content.form.alerts.successTitle, message: content.form.alerts.addSuccess, variant: "success" });
       }
       goBack();
     } catch (error: any) {
-      Alert.alert(content.form.alerts.errorTitle, error?.message || content.form.alerts.loadError);
+      showAlert({ title: content.form.alerts.errorTitle, message: error?.message || content.form.alerts.loadError, variant: "error" });
     } finally {
       setSaving(false);
     }
-  }, [validate, isEdit, addressId, form, goBack]);
+  }, [validate, isEdit, addressId, form, goBack, showAlert]);
 
   return {
     isEdit,

@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert } from "react-native";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
-import { useAppSelector } from "@hooks/useRedux";
+import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
 import { useUserApp } from "@hooks/useUserApp";
 import { useFeatureFlags } from "@hooks/useFeatureFlags";
+import { clearCart } from "@store/slices/cartSlice";
 import { userAppService } from "@services/userAppService";
+import { dataCache } from "@services/dataCache";
 import { paymentService, CardDetails } from "@services/paymentService";
 import { getBusinessStatus } from "@utils/businessStatus";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import { Address } from "@/types";
 import { ORDER_FEES } from "@/constants";
 import content from "@/content/checkout.json";
@@ -23,6 +25,8 @@ export type PaymentTiming = "atOrder" | "atDelivery";
 
 export const useCheckout = () => {
   const toast = useToast();
+  const showAlert = useAppAlert();
+  const dispatch = useAppDispatch();
   const cartItems = useAppSelector((state) => state.cart.items);
   const cartBusinessId = useAppSelector((state) => state.cart.businessId);
   const { placeOrder, isLoading, businesses } = useUserApp();
@@ -76,7 +80,11 @@ export const useCheckout = () => {
   const loadAddresses = useCallback(async () => {
     try {
       setLoadingAddresses(true);
-      const data = await userAppService.getAddresses();
+      const data = await dataCache.get(
+        "addresses",
+        2 * 60 * 1000,
+        () => userAppService.getAddresses(),
+      );
       setAddresses(data);
       const def = data.find((a) => a.isDefault) ?? data[0];
       if (def) setSelectedAddressId(def.id);
@@ -163,10 +171,11 @@ export const useCheckout = () => {
       paymentMethod === "cash" || paymentTiming === "atDelivery"
         ? content.payment.atDelivery
         : content.payment.atOrder;
-    Alert.alert(
-      content.confirm.title,
-      `${content.confirm.totalPrefix} ${finalAmount}\n${content.confirm.paymentPrefix} ${paymentLabel} (${timingLabel})\n\n${content.confirm.question}`,
-      [
+    showAlert({
+      title: content.confirm.title,
+      message: `${content.confirm.totalPrefix} ${finalAmount}\n${content.confirm.paymentPrefix} ${paymentLabel} (${timingLabel})\n\n${content.confirm.question}`,
+      variant: "confirm",
+      buttons: [
         { text: content.confirm.cancel, style: "cancel" },
         {
           text: content.confirm.confirm,
@@ -190,7 +199,6 @@ export const useCheckout = () => {
               }));
 
               if (paymentMethod === "cash") {
-                // COD — direct order creation
                 const effectiveTiming: PaymentTiming = "atDelivery";
                 orderPlacedRef.current = true;
                 await placeOrder({
@@ -233,13 +241,15 @@ export const useCheckout = () => {
                   paymentOrder.environment,
                 );
 
-                // Verify payment with backend
                 const verification = await paymentService.verifyPayment(paymentOrder.cfOrderId);
                 if (verification.paymentStatus === "completed") {
                   orderPlacedRef.current = true;
+                  dispatch(clearCart());
                   toast.show(content.toasts.orderPlaced, { type: "success", duration: 3000 });
                   router.replace("/(user)/orders");
                 } else {
+                  orderPlacedRef.current = true;
+                  dispatch(clearCart());
                   toast.show("Payment is being processed. Check your orders.", { type: "warning" });
                   router.replace("/(user)/orders");
                 }
@@ -250,9 +260,9 @@ export const useCheckout = () => {
             }
           },
         },
-      ]
-    );
-  }, [addresses, appliedCoupon, businesses, cardDetails, cartBusinessId, cartItems, finalAmount, paymentMethod, paymentTiming, placeOrder, selectedAddressId, subTotal, toast, upiId]);
+      ],
+    });
+  }, [addresses, appliedCoupon, businesses, cardDetails, cartBusinessId, cartItems, dispatch, finalAmount, paymentMethod, paymentTiming, placeOrder, selectedAddressId, showAlert, subTotal, toast, upiId]);
 
   const goBack = useCallback(() => {
     if (router.canGoBack()) {

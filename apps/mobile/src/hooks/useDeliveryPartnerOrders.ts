@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AppState, AppStateStatus } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { useAppSelector } from "@hooks/useRedux";
 import { subscribeToOrdersByDeliveryPartner } from "@services/orderSyncService";
@@ -9,6 +8,8 @@ import {
 } from "@services/deliveryPartnerService";
 import { hasPendingWrite } from "@services/pendingWrites";
 import { Order, OrderStatus } from "@/types";
+
+const FOCUS_REFRESH_MIN_INTERVAL_MS = 30_000;
 
 const QUEUE_STATUSES = new Set<OrderStatus | string>([
   OrderStatus.CONFIRMED,
@@ -37,6 +38,7 @@ export function useDeliveryPartnerOrders() {
   const [business, setBusiness] = useState<DeliveryBusiness | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const lastFocusRefreshRef = useRef(0);
 
   const loadProfile = useCallback(async () => {
     try {
@@ -80,21 +82,22 @@ export function useDeliveryPartnerOrders() {
     Promise.all([loadProfile(), loadOrders()]).catch(() => {});
   }, [partnerId, loadProfile, loadOrders]);
 
-  // Silently refresh orders when the tab gains focus
   useFocusEffect(
     useCallback(() => {
-      if (partnerId) loadOrders({ silent: true }).catch(() => {});
+      if (!partnerId) return;
+      const now = Date.now();
+      if (now - lastFocusRefreshRef.current < FOCUS_REFRESH_MIN_INTERVAL_MS) return;
+      lastFocusRefreshRef.current = now;
+      loadOrders({ silent: true }).catch(() => {});
     }, [partnerId, loadOrders])
   );
 
-  // Subscribe to real-time incremental updates via socket
   useEffect(() => {
     if (!partnerId) return;
 
     const unsubscribe = subscribeToOrdersByDeliveryPartner(partnerId, (order) => {
       if (hasPendingWrite(order.id)) return;
       setAllAssigned((prev) => {
-        // Upsert if still assigned to this partner, otherwise remove
         if (order.assignedDeliveryPartnerId === partnerId) {
           const idx = prev.findIndex((o) => o.id === order.id);
           if (idx >= 0) {
@@ -110,18 +113,6 @@ export function useDeliveryPartnerOrders() {
 
     return unsubscribe;
   }, [partnerId]);
-
-  // Refresh profile + orders when app returns to foreground
-  useEffect(() => {
-    const onChange = (state: AppStateStatus) => {
-      if (state === "active" && partnerId) {
-        loadProfile().catch(() => {});
-        loadOrders({ silent: true }).catch(() => {});
-      }
-    };
-    const sub = AppState.addEventListener("change", onChange);
-    return () => sub.remove();
-  }, [partnerId, loadProfile, loadOrders]);
 
   const orders = useMemo(
     () => allAssigned.filter((o) => QUEUE_STATUSES.has(o.status)),

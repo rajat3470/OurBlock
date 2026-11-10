@@ -249,7 +249,8 @@ router.post("/products/:id/approve", async (req, res) => {
       where: { id: req.params.id },
       data: { approvalStatus: "approved", isVerified: true, approvalNote: null, status: "active" },
     });
-    emitBusinessProductsChanged(product.businessId);
+    const biz = await prisma.business.findUnique({ where: { id: product.businessId } });
+    emitBusinessProductsChanged(product.businessId, { product, societyId: biz?.societyId });
     res.json({ success: true, data: product });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -262,7 +263,8 @@ router.post("/products/:id/reject", async (req, res) => {
       where: { id: req.params.id },
       data: { approvalStatus: "rejected", isVerified: false, approvalNote: req.body.note ?? null, status: "inactive" },
     });
-    emitBusinessProductsChanged(product.businessId);
+    const biz = await prisma.business.findUnique({ where: { id: product.businessId } });
+    emitBusinessProductsChanged(product.businessId, { product, societyId: biz?.societyId });
     res.json({ success: true, data: product });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

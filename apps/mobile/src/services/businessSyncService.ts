@@ -1,19 +1,27 @@
-import { Business } from "@/types";
+import { Business, Product } from "@/types";
 import { socketService } from "./socketService";
 
 export type BusinessSyncCallback = (business: Business) => void;
 export type Unsubscribe = () => void;
 
+export interface ProductChangeEvent {
+  product?: Product;
+  deletedProductId?: string;
+}
+
 export function subscribeToBusinessProducts(
   businessId: string,
-  onChange: () => void
+  onChange: (event: ProductChangeEvent) => void,
 ): Unsubscribe {
   const roomKey = `business:${businessId}`;
   socketService.joinRoom(roomKey, "join:business", { businessId });
-  const unsubscribe = socketService.on<{ businessId?: string }>("business:products:changed", (event) => {
-    if (event?.businessId !== businessId) return;
-    onChange();
-  });
+  const unsubscribe = socketService.on<{ businessId?: string; product?: Product; deletedProductId?: string }>(
+    "business:products:changed",
+    (event) => {
+      if (event?.businessId !== businessId) return;
+      onChange({ product: event.product, deletedProductId: event.deletedProductId });
+    },
+  );
   return unsubscribe;
 }
 
@@ -52,7 +60,6 @@ export function subscribeToBusinessesBySociety(
   socketService.joinRoom(roomKey, "join:society", { societyId });
 
   const unsubscribe = socketService.on<Business>("businesses:society:updated", (business) => {
-    console.log("[businessSync] society business update received:", societyId, business.id, "isTakingOrders:", business.isTakingOrders);
     onChange(business);
   });
 

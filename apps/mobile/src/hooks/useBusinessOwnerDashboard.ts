@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "expo-router";
 import { useAppSelector } from "@hooks/useRedux";
 import { useBusinessOwner } from "@hooks/useBusinessOwner";
 import { getBusinessStatus } from "@utils/businessStatus";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import { OrderStatus } from "@/types";
 import content from "@/content/boDashboard.json";
+
+const FOCUS_REFRESH_MIN_INTERVAL_MS = 30_000;
 
 type StatusStyle = { color: string; bg: string; emoji: string; labelKey: keyof typeof content.statusLabels };
 
@@ -43,6 +45,7 @@ export function timeAgo(date: Date | string): string {
 }
 
 export const useBusinessOwnerDashboard = () => {
+  const showAlert = useAppAlert();
   const router = useRouter();
   const { user } = useAppSelector((state) => state.auth);
   const {
@@ -61,6 +64,7 @@ export const useBusinessOwnerDashboard = () => {
   } = useBusinessOwner();
   const [refreshing, setRefreshing] = useState(false);
   const [toggleLoading, setToggleLoading] = useState(false);
+  const lastFocusRefreshRef = useRef(0);
 
   const businessStatus = useMemo(
     () => (businessProfile ? getBusinessStatus(businessProfile) : null),
@@ -91,11 +95,11 @@ export const useBusinessOwnerDashboard = () => {
     loadAll();
   }, [loadAll]);
 
-  // Silently reload orders each time the dashboard tab gains focus so
-  // the counts and recent-orders section stay current even if the socket
-  // was temporarily disconnected.
   useFocusEffect(
     useCallback(() => {
+      const now = Date.now();
+      if (now - lastFocusRefreshRef.current < FOCUS_REFRESH_MIN_INTERVAL_MS) return;
+      lastFocusRefreshRef.current = now;
       loadOrders({ silent: true }).catch(() => {});
     }, [loadOrders])
   );
@@ -118,12 +122,12 @@ export const useBusinessOwnerDashboard = () => {
         const fallback = businessProfile?.isVerified
           ? content.toggleAlert.failVerified
           : content.toggleAlert.failPending;
-        Alert.alert(content.toggleAlert.title, apiMsg || fallback);
+        showAlert({ title: content.toggleAlert.title, message: apiMsg || fallback, variant: "error" });
       } finally {
         setToggleLoading(false);
       }
     },
-    [businessProfile?.isVerified, toggleLoading, toggleTakingOrders]
+    [businessProfile?.isVerified, showAlert, toggleLoading, toggleTakingOrders]
   );
 
   const approvedProducts = products.filter((p) => (p.approvalStatus ?? "pending") === "approved").length;

@@ -76,7 +76,7 @@ const UserSchema = new Schema(
   {
     firstName: { type: String, default: "" },
     lastName: { type: String, default: "" },
-    email: { type: String, unique: true, sparse: true, lowercase: true },
+    email: { type: String, lowercase: true },
     passwordHash: { type: String, default: "" },
     phone: { type: String, required: true, unique: true },
     role: {
@@ -108,6 +108,10 @@ const UserSchema = new Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 UserSchema.index({ societyId: 1, role: 1 });
+UserSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: "string" } } }
+);
 
 const RefreshTokenSchema = new Schema(
   {
@@ -517,8 +521,14 @@ export async function connectDB(uri = process.env.MONGODB_URI): Promise<typeof m
     serverSelectionTimeoutMS: 5000,
   });
 
-  // Build indexes defined in schemas. Safe to run on startup; existing indexes
-  // are skipped and any new ones are created.
+  // Drop the legacy non-partial email_1 unique index so the new partial-filter
+  // index can be created without hitting duplicate-null errors.
+  try {
+    await conn.connection.collection("users").dropIndex("email_1");
+  } catch (_) {
+    // Index may already be gone — ignore.
+  }
+
   if (process.env.SYNC_INDEXES !== "false") {
     await Promise.all(
       Object.values(models).map(async (model) => {

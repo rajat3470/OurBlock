@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import * as ImageManipulator from "expo-image-manipulator";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBusinessOwner } from "@hooks/useBusinessOwner";
@@ -140,6 +140,7 @@ function getApprovalMeta(status: string) {
  * actions.
  */
 export const useBusinessOwnerProducts = () => {
+  const showAlert = useAppAlert();
   const {
     products,
     businessProfile,
@@ -189,6 +190,10 @@ export const useBusinessOwnerProducts = () => {
   );
 
   useEffect(() => {
+    if (products.length > 0) {
+      markRefreshed();
+      return;
+    }
     loadProducts()
       .then(markRefreshed)
       .catch(() => null);
@@ -272,7 +277,7 @@ export const useBusinessOwnerProducts = () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(content.alerts.permissionLibraryTitle, content.alerts.permissionLibraryMsg);
+        showAlert({ title: content.alerts.permissionLibraryTitle, message: content.alerts.permissionLibraryMsg, variant: "warning" });
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -285,13 +290,13 @@ export const useBusinessOwnerProducts = () => {
         const asset = result.assets[0];
         const compressedDataUrl = await compressAssetToDataUrl(asset, "primary");
         if (!compressedDataUrl) {
-          Alert.alert(content.alerts.imageErrorTitle, content.alerts.imageErrorMsg);
+          showAlert({ title: content.alerts.imageErrorTitle, message: content.alerts.imageErrorMsg, variant: "error" });
           return;
         }
         setForm((prev) => ({ ...prev, imageUri: compressedDataUrl }));
       }
     } catch {
-      Alert.alert(content.alerts.errorTitle, content.alerts.genericImageError);
+      showAlert({ title: content.alerts.errorTitle, message: content.alerts.genericImageError, variant: "error" });
     }
   }, []);
 
@@ -299,7 +304,7 @@ export const useBusinessOwnerProducts = () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(content.alerts.permissionCameraTitle, content.alerts.permissionCameraMsg);
+        showAlert({ title: content.alerts.permissionCameraTitle, message: content.alerts.permissionCameraMsg, variant: "warning" });
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -311,29 +316,34 @@ export const useBusinessOwnerProducts = () => {
         const asset = result.assets[0];
         const compressedDataUrl = await compressAssetToDataUrl(asset, "primary");
         if (!compressedDataUrl) {
-          Alert.alert(content.alerts.imageErrorTitle, content.alerts.imageErrorMsg);
+          showAlert({ title: content.alerts.imageErrorTitle, message: content.alerts.imageErrorMsg, variant: "error" });
           return;
         }
         setForm((prev) => ({ ...prev, imageUri: compressedDataUrl }));
       }
     } catch {
-      Alert.alert(content.alerts.errorTitle, content.alerts.genericPhotoError);
+      showAlert({ title: content.alerts.errorTitle, message: content.alerts.genericPhotoError, variant: "error" });
     }
   }, []);
 
   const showImageOptions = useCallback(() => {
-    Alert.alert(content.alerts.imageOptionsTitle, content.alerts.imageOptionsMsg, [
-      { text: content.alerts.camera, onPress: takePhoto },
-      { text: content.alerts.photoLibrary, onPress: pickImage },
-      { text: content.alerts.cancel, style: "cancel" },
-    ]);
+    showAlert({
+      title: content.alerts.imageOptionsTitle,
+      message: content.alerts.imageOptionsMsg,
+      variant: "info",
+      buttons: [
+        { text: content.alerts.camera, onPress: takePhoto },
+        { text: content.alerts.photoLibrary, onPress: pickImage },
+        { text: content.alerts.cancel, style: "cancel" },
+      ],
+    });
   }, [pickImage, takePhoto]);
 
   const pickAdditionalImage = useCallback(async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(content.alerts.permissionLibraryTitle, content.alerts.permissionAdditionalLibraryMsg);
+        showAlert({ title: content.alerts.permissionLibraryTitle, message: content.alerts.permissionAdditionalLibraryMsg, variant: "warning" });
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -346,7 +356,7 @@ export const useBusinessOwnerProducts = () => {
         const asset = result.assets[0];
         const compressedDataUrl = await compressAssetToDataUrl(asset, "additional");
         if (!compressedDataUrl) {
-          Alert.alert(content.alerts.imageErrorTitle, content.alerts.imageErrorMsg);
+          showAlert({ title: content.alerts.imageErrorTitle, message: content.alerts.imageErrorMsg, variant: "error" });
           return;
         }
         setForm((prev) => ({
@@ -355,7 +365,7 @@ export const useBusinessOwnerProducts = () => {
         }));
       }
     } catch {
-      Alert.alert(content.alerts.errorTitle, content.alerts.genericImageError);
+      showAlert({ title: content.alerts.errorTitle, message: content.alerts.genericImageError, variant: "error" });
     }
   }, []);
 
@@ -363,7 +373,7 @@ export const useBusinessOwnerProducts = () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert(content.alerts.permissionCameraTitle, content.alerts.permissionAdditionalCameraMsg);
+        showAlert({ title: content.alerts.permissionCameraTitle, message: content.alerts.permissionAdditionalCameraMsg, variant: "warning" });
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -375,7 +385,7 @@ export const useBusinessOwnerProducts = () => {
         const asset = result.assets[0];
         const compressedDataUrl = await compressAssetToDataUrl(asset, "additional");
         if (!compressedDataUrl) {
-          Alert.alert(content.alerts.imageErrorTitle, content.alerts.imageErrorMsg);
+          showAlert({ title: content.alerts.imageErrorTitle, message: content.alerts.imageErrorMsg, variant: "error" });
           return;
         }
         setForm((prev) => ({
@@ -384,16 +394,21 @@ export const useBusinessOwnerProducts = () => {
         }));
       }
     } catch {
-      Alert.alert(content.alerts.errorTitle, content.alerts.genericPhotoError);
+      showAlert({ title: content.alerts.errorTitle, message: content.alerts.genericPhotoError, variant: "error" });
     }
   }, []);
 
   const showAdditionalImageOptions = useCallback(() => {
-    Alert.alert(content.alerts.additionalImageOptionsTitle, content.alerts.imageOptionsMsg, [
-      { text: content.alerts.camera, onPress: takeAdditionalPhoto },
-      { text: content.alerts.photoLibrary, onPress: pickAdditionalImage },
-      { text: content.alerts.cancel, style: "cancel" },
-    ]);
+    showAlert({
+      title: content.alerts.additionalImageOptionsTitle,
+      message: content.alerts.imageOptionsMsg,
+      variant: "info",
+      buttons: [
+        { text: content.alerts.camera, onPress: takeAdditionalPhoto },
+        { text: content.alerts.photoLibrary, onPress: pickAdditionalImage },
+        { text: content.alerts.cancel, style: "cancel" },
+      ],
+    });
   }, [pickAdditionalImage, takeAdditionalPhoto]);
 
   const removeAdditionalImage = useCallback((index: number) => {
@@ -542,7 +557,7 @@ export const useBusinessOwnerProducts = () => {
         : [...form.additionalImageUris];
       const totalImageChars = getTotalImageChars(imageUrls);
       if (totalImageChars > MAX_TOTAL_IMAGE_CHARS) {
-        Alert.alert(content.alerts.imageTooLargeTitle, content.alerts.imageTooLargeMsg);
+        showAlert({ title: content.alerts.imageTooLargeTitle, message: content.alerts.imageTooLargeMsg, variant: "warning" });
         setIsSubmitting(false);
         return;
       }
@@ -591,7 +606,7 @@ export const useBusinessOwnerProducts = () => {
 
   const handleDelete = useCallback((productId: string | undefined, productName: string) => {
     if (!productId) {
-      Alert.alert(content.alerts.deleteErrorTitle, content.alerts.deleteNoIdMsg);
+      showAlert({ title: content.alerts.deleteErrorTitle, message: content.alerts.deleteNoIdMsg, variant: "error" });
       return;
     }
     setDeleteTarget({ id: productId, name: productName });
@@ -613,7 +628,7 @@ export const useBusinessOwnerProducts = () => {
     try {
       await editProduct(item.id, { status: nextStatus });
     } catch {
-      Alert.alert(content.alerts.errorTitle, content.alerts.toggleStatusFailed);
+      showAlert({ title: content.alerts.errorTitle, message: content.alerts.toggleStatusFailed, variant: "error" });
     }
   }, [editProduct]);
 
@@ -621,7 +636,7 @@ export const useBusinessOwnerProducts = () => {
     try {
       await editProduct(item.id, { availableToday: !item.availableToday });
     } catch {
-      Alert.alert(content.alerts.errorTitle, content.alerts.toggleAvailabilityFailed);
+      showAlert({ title: content.alerts.errorTitle, message: content.alerts.toggleAvailabilityFailed, variant: "error" });
     }
   }, [editProduct]);
 

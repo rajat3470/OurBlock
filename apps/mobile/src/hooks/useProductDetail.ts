@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
@@ -8,6 +7,7 @@ import { userAppService } from "@services/userAppService";
 import { Product } from "@/types";
 import { unitStepLabel, displayQuantity, maxCartSteps, stockBadgeInfo } from "@utils/helpers";
 import { getBusinessStatus } from "@utils/businessStatus";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import content from "@/content/product.json";
 
 function getFirstImageUrl(images?: string[]) {
@@ -20,6 +20,7 @@ function getFirstImageUrl(images?: string[]) {
  */
 export const useProductDetail = () => {
   const toast = useToast();
+  const showAlert = useAppAlert();
   const dispatch = useAppDispatch();
   const { id: productId, businessId: paramBizId } = useLocalSearchParams<{
     id: string;
@@ -40,7 +41,11 @@ export const useProductDetail = () => {
 
     let active = true;
     const localProduct = featuredProducts.find((p) => p.id === productId);
-    if (localProduct) setProduct(localProduct);
+    if (localProduct) {
+      setProduct(localProduct);
+      setIsLoading(false);
+      return;
+    }
 
     const fetchProduct = async () => {
       try {
@@ -48,7 +53,7 @@ export const useProductDetail = () => {
         const latestProduct = await userAppService.getProductById(productId);
         if (active) setProduct(latestProduct);
       } catch {
-        if (active && !localProduct) setProduct(null);
+        if (active) setProduct(null);
       } finally {
         if (active) setIsLoading(false);
       }
@@ -107,22 +112,27 @@ export const useProductDetail = () => {
     if (!product) return;
 
     if (cartBusinessId && cartBusinessId !== product.businessId) {
-      Alert.alert(content.replaceCart.title, content.replaceCart.message, [
-        { text: content.replaceCart.cancel, style: "cancel" },
-        {
-          text: content.replaceCart.confirm,
-          style: "destructive",
-          onPress: () => {
-            dispatch(clearCart());
-            addCurrentProductToCart(product);
+      showAlert({
+        title: content.replaceCart.title,
+        message: content.replaceCart.message,
+        variant: "destructive",
+        buttons: [
+          { text: content.replaceCart.cancel, style: "cancel" },
+          {
+            text: content.replaceCart.confirm,
+            style: "destructive",
+            onPress: () => {
+              dispatch(clearCart());
+              addCurrentProductToCart(product);
+            },
           },
-        },
-      ]);
+        ],
+      });
       return;
     }
 
     addCurrentProductToCart(product);
-  }, [addCurrentProductToCart, cartBusinessId, dispatch, product]);
+  }, [addCurrentProductToCart, cartBusinessId, dispatch, product, showAlert]);
 
   const handleIncrease = useCallback(() => {
     if (!product || !cartItem) return;

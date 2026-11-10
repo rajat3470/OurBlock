@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   View,
   Text,
@@ -12,11 +13,13 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { displayQuantity } from "@utils/helpers";
 import { useCheckout, PAYMENT_METHODS } from "@hooks/useCheckout";
-import { fonts } from "@/constants/theme";
+import { CardDetailsModal } from "@/components/ui/CardDetailsModal";
+import { fonts, brand, colors } from "@/constants/theme";
 import content from "@/content/checkout.json";
 
 export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
+  const [cardModalVisible, setCardModalVisible] = useState(false);
   const {
     cartItems,
     addresses,
@@ -174,63 +177,45 @@ export default function CheckoutScreen() {
 
           {paymentMethod === "card" && (
             <View style={cardFormStyles.container}>
-              <TextInput
-                style={cardFormStyles.input}
-                placeholder="Card Holder Name"
-                placeholderTextColor="#9CA3AF"
-                value={cardDetails.holderName}
-                onChangeText={(t) => setCardDetails((p) => ({ ...p, holderName: t }))}
-                autoCapitalize="words"
-              />
-              <TextInput
-                style={cardFormStyles.input}
-                placeholder="XXXX XXXX XXXX XXXX"
-                placeholderTextColor="#9CA3AF"
-                value={cardDetails.number}
-                onChangeText={(t) => {
-                  const digits = t.replace(/\D/g, "").slice(0, 16);
-                  const formatted = digits.replace(/(.{4})/g, "$1 ").trim();
-                  setCardDetails((p) => ({ ...p, number: formatted }));
+              {isCardValid ? (
+                <TouchableOpacity
+                  style={cardFormStyles.cardSummary}
+                  onPress={() => setCardModalVisible(true)}
+                  activeOpacity={0.7}
+                >
+                  <View style={cardFormStyles.cardSummaryLeft}>
+                    <Ionicons name="card" size={20} color={brand.primary} />
+                    <View>
+                      <Text style={cardFormStyles.cardSummaryNumber}>
+                        •••• •••• •••• {cardDetails.number.replace(/\s/g, "").slice(-4)}
+                      </Text>
+                      <Text style={cardFormStyles.cardSummaryName}>
+                        {cardDetails.holderName} · {cardDetails.expiryMM}/{cardDetails.expiryYY}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={cardFormStyles.editText}>Edit</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={cardFormStyles.addCardBtn}
+                  onPress={() => setCardModalVisible(true)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color={brand.primary} />
+                  <Text style={cardFormStyles.addCardText}>Enter Card Details</Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
+              <CardDetailsModal
+                visible={cardModalVisible}
+                initialValues={cardDetails}
+                onConfirm={(card) => {
+                  setCardDetails(card);
+                  setCardModalVisible(false);
                 }}
-                keyboardType="number-pad"
-                maxLength={19}
+                onCancel={() => setCardModalVisible(false)}
               />
-              <View style={cardFormStyles.row}>
-                <TextInput
-                  style={[cardFormStyles.input, cardFormStyles.half]}
-                  placeholder="MM/YY"
-                  placeholderTextColor="#9CA3AF"
-                  value={
-                    cardDetails.expiryMM
-                      ? cardDetails.expiryYY
-                        ? `${cardDetails.expiryMM}/${cardDetails.expiryYY}`
-                        : cardDetails.expiryMM.length === 2
-                        ? `${cardDetails.expiryMM}/`
-                        : cardDetails.expiryMM
-                      : ""
-                  }
-                  onChangeText={(t) => {
-                    const digits = t.replace(/\D/g, "").slice(0, 4);
-                    setCardDetails((p) => ({
-                      ...p,
-                      expiryMM: digits.slice(0, 2),
-                      expiryYY: digits.slice(2, 4),
-                    }));
-                  }}
-                  keyboardType="number-pad"
-                  maxLength={5}
-                />
-                <TextInput
-                  style={[cardFormStyles.input, cardFormStyles.half]}
-                  placeholder="CVV"
-                  placeholderTextColor="#9CA3AF"
-                  value={cardDetails.cvv}
-                  onChangeText={(t) => setCardDetails((p) => ({ ...p, cvv: t.replace(/\D/g, "").slice(0, 4) }))}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  secureTextEntry
-                />
-              </View>
             </View>
           )}
 
@@ -539,7 +524,7 @@ const styles = StyleSheet.create({
 
 
 const cardFormStyles = StyleSheet.create({
-  container: { marginTop: 12, gap: 10 },
+  container: { marginTop: 12 },
   input: {
     borderWidth: 1.5,
     borderColor: "#E5E7EB",
@@ -552,6 +537,58 @@ const cardFormStyles = StyleSheet.create({
     backgroundColor: "#FAFAFA",
     fontFamily: fonts.semiBold,
   },
-  row: { flexDirection: "row", gap: 10 },
-  half: { flex: 1 },
+  addCardBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: brand.primary,
+    borderStyle: "dashed",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: brand.soft,
+  },
+  addCardText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
+    fontWeight: "600",
+    color: brand.primary,
+  },
+  cardSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1.5,
+    borderColor: brand.primary,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: brand.soft,
+  },
+  cardSummaryLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  cardSummaryNumber: {
+    fontSize: 14,
+    fontFamily: fonts.semiBold,
+    fontWeight: "700",
+    color: "#111827",
+    letterSpacing: 0.5,
+  },
+  cardSummaryName: {
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  editText: {
+    fontSize: 13,
+    fontFamily: fonts.semiBold,
+    fontWeight: "700",
+    color: brand.primary,
+  },
 });

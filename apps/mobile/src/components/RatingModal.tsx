@@ -11,12 +11,12 @@ import {
   Platform,
   ScrollView,
   Image,
-  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { userAppService } from "../services/userAppService";
+import { useAppAlert } from "./ui/AppAlertProvider";
 
 interface Props {
   visible: boolean;
@@ -36,6 +36,7 @@ export default function RatingModal({
   onSubmitted,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const showAlert = useAppAlert();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [photoUris, setPhotoUris] = useState<string[]>([]);
@@ -57,12 +58,12 @@ export default function RatingModal({
 
   async function handleAddPhoto() {
     if (photoUris.length >= 3) {
-      Alert.alert("Max Photos", "You can attach up to 3 photos.");
+      showAlert({ title: "Max Photos", message: "You can attach up to 3 photos.", variant: "warning" });
       return;
     }
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission Required", "Allow photo library access to attach photos.");
+      showAlert({ title: "Permission Required", message: "Allow photo library access to attach photos.", variant: "warning" });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({

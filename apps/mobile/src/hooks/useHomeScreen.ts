@@ -9,6 +9,8 @@ import { Business, Product } from "@/types";
 import { getCategoryEmoji } from "@utils/categoryMetadata";
 import content from "@/content/home.json";
 
+const FOCUS_REFRESH_MIN_INTERVAL_MS = 30_000;
+
 export function categoryEmoji(category: string) {
   return getCategoryEmoji(category);
 }
@@ -68,18 +70,22 @@ export const useHomeScreen = () => {
   }, [entrance]);
 
   const [refreshing, setRefreshing] = useState(false);
+  const lastFocusRefreshRef = useRef(0);
 
   useEffect(() => {
+    if (!user?.societyId) return;
     initializeHome().catch(() => null);
     loadMyOrders().catch(() => null);
-  }, [initializeHome, loadMyOrders]);
+  }, [initializeHome, loadMyOrders, user?.societyId]);
 
-  // Silently refresh business list each time the home tab gains focus so
-  // status changes (e.g. store going live/paused) are reflected promptly.
   useFocusEffect(
     useCallback(() => {
+      if (!user?.societyId) return;
+      const now = Date.now();
+      if (now - lastFocusRefreshRef.current < FOCUS_REFRESH_MIN_INTERVAL_MS) return;
+      lastFocusRefreshRef.current = now;
       refreshBusinesses();
-    }, [refreshBusinesses])
+    }, [refreshBusinesses, user?.societyId])
   );
 
   const onRefresh = useCallback(async () => {
@@ -237,6 +243,7 @@ export const useHomeScreen = () => {
 
   const goToBusinesses = useCallback(() => router.push("/(user)/(tabs)/businesses"), []);
   const goToAddresses = useCallback(() => router.push("/(user)/(tabs)/addresses"), []);
+  const goToChangeSociety = useCallback(() => router.push("/(user)/change-society"), []);
   const goToProfile = useCallback(() => router.push("/(user)/profile"), []);
   const goToCart = useCallback(() => router.push("/(user)/cart"), []);
   const goToBusiness = useCallback((id: string) => {
@@ -280,6 +287,7 @@ export const useHomeScreen = () => {
     minimumOrder: ORDER_FEES.MINIMUM_ORDER,
     goToBusinesses,
     goToAddresses,
+    goToChangeSociety,
     goToProfile,
     goToCart,
     goToBusiness,

@@ -52,8 +52,7 @@ class SocketService {
   private warnedMissingConfig = false;
   /** Event deduplication cache to prevent processing duplicate events */
   private eventCache = new Map<string, EventCacheEntry>();
-  /** Cache TTL in milliseconds */
-  private readonly CACHE_TTL = 500;
+  private readonly CACHE_TTL = 5_000;
   /** Batch timer for debouncing rapid updates */
   private batchTimer: ReturnType<typeof setTimeout> | null = null;
   /** Batched updates to process */
@@ -103,15 +102,12 @@ class SocketService {
     const socket = io(SOCKET_URL, {
       path: SOCKET_PATH,
       auth: { token },
-      // Prefer WebSocket but fall back to HTTP polling when a reverse proxy
-      // (nginx, Cloudflare, etc.) blocks the WebSocket upgrade handshake.
       transports: ["websocket", "polling"],
       reconnection: true,
-      reconnectionAttempts: 15,
-      reconnectionDelay: 500,
-      reconnectionDelayMax: 10_000,
-      timeout: 8_000,
-      forceNew: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1_000,
+      reconnectionDelayMax: 30_000,
+      timeout: 10_000,
     });
 
     this.socket = socket;

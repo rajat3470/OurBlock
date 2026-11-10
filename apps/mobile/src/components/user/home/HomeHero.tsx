@@ -12,8 +12,8 @@ interface HomeHeroProps {
   minimumOrder: number;
   searchQuery: string;
   setSearchQuery: (value: string) => void;
-  goToAddresses: () => void;
   goToProfile: () => void;
+  onChangeSociety: () => void;
   topRowH: number;
   setTopRowH: (height: number) => void;
   infoRowH: number;
@@ -31,8 +31,8 @@ export function HomeHero({
   minimumOrder,
   searchQuery,
   setSearchQuery,
-  goToAddresses,
   goToProfile,
+  onChangeSociety,
   topRowH,
   setTopRowH,
   infoRowH,
@@ -59,7 +59,7 @@ export function HomeHero({
             <TouchableOpacity
               style={styles.heroLocationRow}
               activeOpacity={0.8}
-              onPress={goToAddresses}
+              onPress={onChangeSociety}
             >
               <Ionicons name="location" size={16} color={brand.primary} />
               <Text style={styles.heroLocation} numberOfLines={1}>

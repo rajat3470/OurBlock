@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { societySchema } from "../shared/validation";
 import { cascadeDeleteSociety } from "../services/cascadeDelete";
+import { Society as SocietyModel, Business } from "../models";
 
 const router = Router();
 
@@ -9,19 +10,55 @@ router.get("/", async (req, res) => {
   try {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 20;
+    const cityFilter = typeof req.query.city === "string" ? req.query.city : undefined;
 
-    const [societies, businesses] = await Promise.all([
-      prisma.society.findMany({ orderBy: { createdAt: "desc" }, take: limit, skip: (page - 1) * limit }),
-      prisma.business.findMany({ select: { societyId: true } }),
+    const where: any = { status: "active" };
+    if (cityFilter) where.city = cityFilter;
+
+    const [societies, businessCounts] = await Promise.all([
+      prisma.society.findMany({ where, orderBy: { createdAt: "desc" }, take: limit, skip: (page - 1) * limit }),
+      Business.aggregate([
+        { $facet: {
+          total: [
+            { $group: { _id: "$societyId", count: { $sum: 1 } } },
+          ],
+          active: [
+            { $match: { status: "active", isVerified: true } },
+            { $group: { _id: "$societyId", count: { $sum: 1 } } },
+          ],
+        }},
+      ]),
     ]);
 
-    const businessCountMap: Record<string, number> = {};
-    businesses.forEach((b) => {
-      businessCountMap[b.societyId] = (businessCountMap[b.societyId] ?? 0) + 1;
-    });
+    const totalMap: Record<string, number> = {};
+    const activeMap: Record<string, number> = {};
+    for (const row of businessCounts[0].total) totalMap[row._id] = row.count;
+    for (const row of businessCounts[0].active) activeMap[row._id] = row.count;
 
-    const data = societies.map((s) => ({ ...s, totalBusinesses: businessCountMap[s.id] ?? 0 }));
+    const data = societies.map((s) => ({
+      ...s,
+      totalBusinesses: totalMap[s.id] ?? 0,
+      activeBusinesses: activeMap[s.id] ?? 0,
+    }));
     res.json({ success: true, data, pagination: { page, limit, total: data.length } });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get("/areas", async (_req, res) => {
+  try {
+    const areas = await SocietyModel.aggregate([
+      { $match: { status: "active" } },
+      { $group: {
+        _id: "$city",
+        state: { $first: "$state" },
+        societyCount: { $sum: 1 },
+      }},
+      { $sort: { societyCount: -1, _id: 1 } },
+    ]);
+    const data = areas.map((a) => ({ city: a._id, state: a.state, societyCount: a.societyCount }));
+    res.json({ success: true, data });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

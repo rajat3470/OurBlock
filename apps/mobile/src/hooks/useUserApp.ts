@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "./useRedux";
 import {
   setLoading,
@@ -20,15 +20,14 @@ export const useUserApp = () => {
   const dispatch = useAppDispatch();
   const state = useAppSelector((store) => store.userApp);
   const authUserSocietyId = useAppSelector((store) => store.auth.user?.societyId);
+  const selectedSocietyIdRef = useRef(state.selectedSocietyId);
+  selectedSocietyIdRef.current = state.selectedSocietyId;
 
   const loadSocieties = useCallback(async () => {
     dispatch(setLoading(true));
     try {
       const response = await userAppService.getSocieties();
       dispatch(setSocieties(response.data));
-      if (!state.selectedSocietyId && response.data.length > 0) {
-        dispatch(setSelectedSocietyId(response.data[0].id));
-      }
       return response.data;
     } catch (err: unknown) {
       const message =
@@ -38,7 +37,7 @@ export const useUserApp = () => {
     } finally {
       dispatch(setLoading(false));
     }
-  }, [dispatch, state.selectedSocietyId]);
+  }, [dispatch]);
 
   const selectSociety = useCallback(
     async (societyId: string) => {
@@ -110,18 +109,11 @@ export const useUserApp = () => {
   );
 
   const initializeHome = useCallback(async () => {
-    const societies = await loadSocieties();
-    const preferredSocietyId =
-      authUserSocietyId ?? state.selectedSocietyId ?? societies?.[0]?.id;
-
-    if (authUserSocietyId && authUserSocietyId !== state.selectedSocietyId) {
-      dispatch(setSelectedSocietyId(authUserSocietyId));
-    }
-
-    if (preferredSocietyId) {
-      await selectSociety(preferredSocietyId);
-    }
-  }, [authUserSocietyId, dispatch, loadSocieties, selectSociety, state.selectedSocietyId]);
+    await loadSocieties();
+    if (!authUserSocietyId) return;
+    dispatch(setSelectedSocietyId(authUserSocietyId));
+    await selectSociety(authUserSocietyId);
+  }, [authUserSocietyId, dispatch, loadSocieties, selectSociety]);
 
   const placeOrder = useCallback(
     async (payload: CreateOrderPayload) => {
@@ -159,7 +151,7 @@ export const useUserApp = () => {
 
   /** Lightweight refresh — re-fetches only business list for the selected society. */
   const refreshBusinesses = useCallback(async () => {
-    const societyId = state.selectedSocietyId;
+    const societyId = selectedSocietyIdRef.current;
     if (!societyId) return;
     try {
       const businesses = await userAppService.getBusinessesBySociety(societyId);
@@ -167,7 +159,7 @@ export const useUserApp = () => {
     } catch {
       /* silent — data stays as-is */
     }
-  }, [dispatch, state.selectedSocietyId]);
+  }, [dispatch]);
 
   return {
     ...state,

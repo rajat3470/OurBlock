@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomUUID } from "crypto";
 
 const s3 = new S3Client({
@@ -59,4 +60,24 @@ export async function resolveImageUpload(
   );
 
   return `${PUBLIC_BASE_URL}/${objectKey}`;
+}
+
+export async function createPresignedUploadUrl(
+  pathPrefix: string,
+  contentType: string = "image/jpeg",
+  expiresInSeconds: number = 300,
+): Promise<{ uploadUrl: string; publicUrl: string; objectKey: string }> {
+  const ext = contentType.includes("png") ? "png" : "jpg";
+  const objectKey = `${pathPrefix}/${randomUUID()}.${ext}`;
+
+  const command = new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: objectKey,
+    ContentType: contentType,
+  });
+
+  const uploadUrl = await getSignedUrl(s3, command, { expiresIn: expiresInSeconds });
+  const publicUrl = `${PUBLIC_BASE_URL}/${objectKey}`;
+
+  return { uploadUrl, publicUrl, objectKey };
 }

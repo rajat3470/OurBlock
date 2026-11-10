@@ -67,7 +67,7 @@ export default function UserOTPLoginScreen() {
       if (response?.user?.societyId) {
         router.replace("/(user)/home");
       } else {
-        router.replace("/(auth)/user-society-select");
+        router.replace("/(user)/change-society");
       }
     } catch (error: any) {
       toast.show(error.message || "Verification failed", { type: "danger" });

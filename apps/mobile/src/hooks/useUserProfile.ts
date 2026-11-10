@@ -1,21 +1,15 @@
 import { useCallback, useState } from "react";
-import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { authStateService } from "@services/authStateService";
 import { userAppService } from "@services/userAppService";
-import { featureFlagsService } from "@services/featureFlagsService";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
 import { useAuth } from "@hooks/useAuth";
 import { useFeatureFlags } from "@hooks/useFeatureFlags";
 import { setUser } from "@store/slices/authSlice";
-import {
-  setFeatureFlagsError,
-  setFlags,
-  setLocalOverride,
-  setRefreshing,
-} from "@store/slices/featureFlagsSlice";
+import { setLocalOverride } from "@store/slices/featureFlagsSlice";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import type { FeatureFlags } from "@/constants/featureFlags";
 import content from "@/content/profile.json";
 
@@ -26,6 +20,7 @@ import content from "@/content/profile.json";
 export const useUserProfile = () => {
   const dispatch = useAppDispatch();
   const toast = useToast();
+  const showAlert = useAppAlert();
   const { user } = useAppSelector((state) => state.auth);
   const featureFlags = useFeatureFlags();
   const { logoutUser } = useAuth();
@@ -34,19 +29,8 @@ export const useUserProfile = () => {
   const [devDrawerVisible, setDevDrawerVisible] = useState(false);
 
   const handleRefreshFeatureFlags = useCallback(async () => {
-    dispatch(setRefreshing(true));
-    try {
-      const snapshot = await featureFlagsService.refresh();
-      dispatch(setFlags(snapshot));
-      dispatch(setFeatureFlagsError(null));
-      toast.show(content.toasts.flagsRefreshed, { type: "success" });
-    } catch (error: any) {
-      dispatch(setFeatureFlagsError(error?.message || content.toasts.flagsRefreshError));
-      toast.show(error?.message || content.toasts.flagsRefreshError, { type: "danger" });
-    } finally {
-      dispatch(setRefreshing(false));
-    }
-  }, [dispatch, toast]);
+    toast.show("Feature flags are managed via backend defaults", { type: "normal" });
+  }, [toast]);
 
   const handlePickProfilePhoto = useCallback(async () => {
     if (!user?.id) return;
@@ -84,21 +68,23 @@ export const useUserProfile = () => {
   }, [dispatch, toast, user?.id]);
 
   const handleLogout = useCallback(() => {
-    Alert.alert(content.logout.title, content.logout.message, [
-      { text: content.logout.cancel, style: "cancel" },
-      {
-        text: content.logout.confirm,
-        style: "destructive",
-        onPress: () => {
-          // Navigate first, then clean up — prevents double-navigation race
-          // that crashes on iOS when RoleGate's <Redirect> and router.replace
-          // both fire simultaneously after logout() is dispatched.
-          router.replace("/(auth)/user-login");
-          logoutUser();
+    showAlert({
+      title: content.logout.title,
+      message: content.logout.message,
+      variant: "destructive",
+      buttons: [
+        { text: content.logout.cancel, style: "cancel" },
+        {
+          text: content.logout.confirm,
+          style: "destructive",
+          onPress: () => {
+            router.replace("/(auth)/user-login");
+            logoutUser();
+          },
         },
-      },
-    ]);
-  }, [logoutUser]);
+      ],
+    });
+  }, [logoutUser, showAlert]);
 
   const toggleFlag = useCallback(
     (key: keyof FeatureFlags, value: boolean) => {

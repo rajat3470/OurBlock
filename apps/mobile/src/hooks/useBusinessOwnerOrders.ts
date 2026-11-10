@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Vibration } from "react-native";
+import { Vibration } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useBusinessOwner } from "@hooks/useBusinessOwner";
 import {
@@ -7,6 +7,7 @@ import {
   effectiveOrderStatus,
   toMillis,
 } from "@utils/orderAcceptance";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import { Order, OrderStatus } from "@/types";
 import content from "@/content/boOrders.json";
 import { businessOwnerService } from "@services/businessOwnerService";
@@ -85,6 +86,7 @@ export function timeAgo(date: unknown): string {
 }
 
 export const useBusinessOwnerOrders = () => {
+  const showAlert = useAppAlert();
   const { orders, isLoading, changeOrderStatus, rejectOrder, assignDeliveryPartner } =
     useBusinessOwner();
   const { rejectOrderId } = useLocalSearchParams<{ rejectOrderId?: string }>();
@@ -170,13 +172,13 @@ export const useBusinessOwnerOrders = () => {
         const all = await businessOwnerService.getDeliveryPartners();
         setPartnerOptions(all.filter((p) => p.status === "active"));
       } catch {
-        Alert.alert(content.alerts.errorTitle, content.alerts.advanceFail);
+        showAlert({ title: content.alerts.errorTitle, message: content.alerts.advanceFail, variant: "error" });
         setPartnerPicker(null);
       } finally {
         setPartnerPickerLoading(false);
       }
     },
-    []
+    [showAlert]
   );
 
   const closePartnerPicker = useCallback(() => {
@@ -202,15 +204,15 @@ export const useBusinessOwnerOrders = () => {
         }
       } catch (err: any) {
         if (err?.response?.data?.code === "DELIVERY_PARTNER_REQUIRED") {
-          Alert.alert(content.alerts.partnerRequiredTitle, content.alerts.partnerRequiredMsg);
+          showAlert({ title: content.alerts.partnerRequiredTitle, message: content.alerts.partnerRequiredMsg, variant: "warning" });
         } else {
-          Alert.alert(content.alerts.errorTitle, content.alerts.advanceFail);
+          showAlert({ title: content.alerts.errorTitle, message: content.alerts.advanceFail, variant: "error" });
         }
       } finally {
         setAdvancing(null);
       }
     },
-    [partnerPicker, closePartnerPicker, changeOrderStatus, assignDeliveryPartner]
+    [partnerPicker, closePartnerPicker, changeOrderStatus, assignDeliveryPartner, showAlert]
   );
 
   const handleAdvance = useCallback(
@@ -229,15 +231,15 @@ export const useBusinessOwnerOrders = () => {
         await changeOrderStatus(order.id, next);
       } catch (err: any) {
         if (err?.response?.data?.code === "DELIVERY_PARTNER_REQUIRED") {
-          Alert.alert(content.alerts.partnerRequiredTitle, content.alerts.partnerRequiredMsg);
+          showAlert({ title: content.alerts.partnerRequiredTitle, message: content.alerts.partnerRequiredMsg, variant: "warning" });
         } else {
-          Alert.alert(content.alerts.errorTitle, content.alerts.advanceFail);
+          showAlert({ title: content.alerts.errorTitle, message: content.alerts.advanceFail, variant: "error" });
         }
       } finally {
         setAdvancing(null);
       }
     },
-    [changeOrderStatus, openPartnerPicker]
+    [changeOrderStatus, openPartnerPicker, showAlert]
   );
 
   /** Repair orders that were sent out without an assignment (older API). */
@@ -275,15 +277,15 @@ export const useBusinessOwnerOrders = () => {
         const httpStatus = (err as any)?.response?.status;
         if (code === "ACCEPTANCE_WINDOW_EXPIRED" || code === "ORDER_NOT_PENDING" || httpStatus === 409) {
           markExpired(order.id);
-          Alert.alert(content.alerts.expiredTitle, content.alerts.expiredMsg);
+          showAlert({ title: content.alerts.expiredTitle, message: content.alerts.expiredMsg, variant: "warning" });
         } else {
-          Alert.alert(content.alerts.errorTitle, content.alerts.acceptFail);
+          showAlert({ title: content.alerts.errorTitle, message: content.alerts.acceptFail, variant: "error" });
         }
       } finally {
         setAdvancing(null);
       }
     },
-    [changeOrderStatus, markExpired]
+    [changeOrderStatus, markExpired, showAlert]
   );
 
   const openRejectModal = useCallback((order: Order) => {
@@ -302,7 +304,7 @@ export const useBusinessOwnerOrders = () => {
   const handleReject = useCallback(async () => {
     if (!rejectModal) return;
     if (!rejectReason.trim()) {
-      Alert.alert(content.rejectModal.reasonRequiredTitle, content.rejectModal.reasonRequiredMsg);
+      showAlert({ title: content.rejectModal.reasonRequiredTitle, message: content.rejectModal.reasonRequiredMsg, variant: "warning" });
       return;
     }
     setRejecting(true);
@@ -311,11 +313,11 @@ export const useBusinessOwnerOrders = () => {
       setRejectModal(null);
       setRejectReason("");
     } catch {
-      Alert.alert(content.alerts.errorTitle, content.alerts.rejectFail);
+      showAlert({ title: content.alerts.errorTitle, message: content.alerts.rejectFail, variant: "error" });
     } finally {
       setRejecting(false);
     }
-  }, [rejectModal, rejectReason, rejectOrder]);
+  }, [rejectModal, rejectReason, rejectOrder, showAlert]);
 
   const goToOrderDetail = useCallback((orderId: string) => {
     router.push(`/(business-owner)/order-detail?orderId=${orderId}`);

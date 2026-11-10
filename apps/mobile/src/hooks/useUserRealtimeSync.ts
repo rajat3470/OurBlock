@@ -1,5 +1,4 @@
-import { useEffect } from "react";
-import { AppState } from "react-native";
+import { useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
 import { subscribeToBusinessesBySociety } from "@services/businessSyncService";
 import { subscribeToOrdersByUser } from "@services/orderSyncService";
@@ -8,57 +7,36 @@ import { hasPendingWrite } from "@services/pendingWrites";
 import { socketService } from "@services/socketService";
 import { userAppService } from "@services/userAppService";
 
-function fetchBusinesses(societyId: string, dispatch: ReturnType<typeof useAppDispatch>) {
-  userAppService
-    .getBusinessesBySociety(societyId)
-    .then((businesses) => {
-      console.log("[realtimeSync] fetched businesses:", businesses.length);
-      dispatch(setBusinesses(businesses));
-    })
-    .catch((err) => {
-      console.warn("[realtimeSync] fetchBusinesses failed:", err?.message);
-    });
-}
+const REFRESH_MIN_INTERVAL_MS = 30_000;
 
 export function useUserRealtimeSync() {
   const dispatch = useAppDispatch();
   const userId = useAppSelector((s) => s.auth.user?.id);
   const selectedSocietyId = useAppSelector((s) => s.userApp.selectedSocietyId);
+  const lastBusinessFetchRef = useRef(0);
 
   // ── Socket real-time subscription ─────────────────────────────────────
   useEffect(() => {
     if (!selectedSocietyId) return;
-    console.log("[realtimeSync] subscribing to society:", selectedSocietyId);
     return subscribeToBusinessesBySociety(selectedSocietyId, (business) => {
-      if (hasPendingWrite(business.id)) {
-        console.log("[realtimeSync] skipping (pending write):", business.id);
-        return;
-      }
-      console.log("[realtimeSync] dispatching upsertBusiness:", business.id, "isTakingOrders:", business.isTakingOrders);
+      if (hasPendingWrite(business.id)) return;
       dispatch(upsertBusiness(business));
     });
   }, [selectedSocietyId, dispatch]);
 
-  // ── Re-fetch on socket (re)connect ────────────────────────────────────
+  // ── Re-fetch on socket (re)connect — with stale guard ────────────────
   useEffect(() => {
     if (!selectedSocietyId) return;
     const unsubscribe = socketService.on("connect", () => {
-      console.log("[realtimeSync] socket connected, re-fetching businesses");
-      fetchBusinesses(selectedSocietyId, dispatch);
+      const now = Date.now();
+      if (now - lastBusinessFetchRef.current < REFRESH_MIN_INTERVAL_MS) return;
+      lastBusinessFetchRef.current = now;
+      userAppService
+        .getBusinessesBySociety(selectedSocietyId)
+        .then((businesses) => dispatch(setBusinesses(businesses)))
+        .catch(() => {});
     });
     return unsubscribe;
-  }, [selectedSocietyId, dispatch]);
-
-  // ── Refresh when app returns from background ──────────────────────────
-  useEffect(() => {
-    if (!selectedSocietyId) return;
-    const sub = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active") {
-        console.log("[realtimeSync] app foregrounded, re-fetching businesses");
-        fetchBusinesses(selectedSocietyId, dispatch);
-      }
-    });
-    return () => sub.remove();
   }, [selectedSocietyId, dispatch]);
 
   // ── Order subscription ────────────────────────────────────────────────
@@ -68,4 +46,7 @@ export function useUserRealtimeSync() {
       dispatch(upsertOrder(order));
     });
   }, [userId, dispatch]);
+
+  /** Expose the ref so other hooks can mark a fetch as recent. */
+  return { lastBusinessFetchRef };
 }

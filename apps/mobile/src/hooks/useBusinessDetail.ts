@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, SectionList } from "react-native";
+import { SectionList } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { useAppDispatch, useAppSelector } from "@hooks/useRedux";
@@ -14,6 +14,7 @@ import { unitStepLabel, displayQuantity, maxCartSteps } from "@utils/helpers";
 import { getBusinessStatus } from "@utils/businessStatus";
 import { categorySupportsDietary } from "@utils/categoryMetadata";
 import { ORDER_FEES } from "@/constants";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import content from "@/content/business.json";
 
 export type DietFilter = "all" | "veg" | "nonveg" | "bestseller";
@@ -46,6 +47,7 @@ export function groupAttributes(attributes?: ProductAttribute[]) {
  */
 export const useBusinessDetail = () => {
   const toast = useToast();
+  const showAlert = useAppAlert();
   const dispatch = useAppDispatch();
   const { id: businessId, highlightProductId } = useLocalSearchParams<{
     id: string;
@@ -237,21 +239,26 @@ export const useBusinessDetail = () => {
       setCustomizeProduct(null);
     };
     if (cartBusinessId && cartBusinessId !== product.businessId) {
-      Alert.alert(content.replaceCart.title, content.replaceCart.message, [
-        { text: content.replaceCart.cancel, style: "cancel" },
-        {
-          text: content.replaceCart.confirm,
-          style: "destructive",
-          onPress: () => {
-            dispatch(clearCart());
-            run();
+      showAlert({
+        title: content.replaceCart.title,
+        message: content.replaceCart.message,
+        variant: "destructive",
+        buttons: [
+          { text: content.replaceCart.cancel, style: "cancel" },
+          {
+            text: content.replaceCart.confirm,
+            style: "destructive",
+            onPress: () => {
+              dispatch(clearCart());
+              run();
+            },
           },
-        },
-      ]);
+        ],
+      });
       return;
     }
     run();
-  }, [business, cartBusinessId, customizeProduct, customizeQty, dispatch, selectedOptions, toast, isOrderable]);
+  }, [business, cartBusinessId, customizeProduct, customizeQty, dispatch, selectedOptions, showAlert, toast, isOrderable]);
 
   const addProductToCart = useCallback(
     (product: Product) => {
@@ -285,22 +292,27 @@ export const useBusinessDetail = () => {
   const handleAddPress = useCallback(
     (product: Product) => {
       if (cartBusinessId && cartBusinessId !== product.businessId) {
-        Alert.alert(content.replaceCart.title, content.replaceCart.message, [
-          { text: content.replaceCart.cancel, style: "cancel" },
-          {
-            text: content.replaceCart.confirm,
-            style: "destructive",
-            onPress: () => {
-              dispatch(clearCart());
-              addProductToCart(product);
+        showAlert({
+          title: content.replaceCart.title,
+          message: content.replaceCart.message,
+          variant: "destructive",
+          buttons: [
+            { text: content.replaceCart.cancel, style: "cancel" },
+            {
+              text: content.replaceCart.confirm,
+              style: "destructive",
+              onPress: () => {
+                dispatch(clearCart());
+                addProductToCart(product);
+              },
             },
-          },
-        ]);
+          ],
+        });
         return;
       }
       addProductToCart(product);
     },
-    [addProductToCart, cartBusinessId, dispatch]
+    [addProductToCart, cartBusinessId, dispatch, showAlert]
   );
 
   const decreaseQty = useCallback(

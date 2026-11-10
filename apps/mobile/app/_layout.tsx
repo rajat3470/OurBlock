@@ -13,14 +13,13 @@ import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import * as SplashScreen from "expo-splash-screen";
 import { store } from "../src/store/index";
+import { AppAlertProvider } from "../src/components/ui/AppAlertProvider";
 import { useAppDispatch, useAppSelector } from "../src/hooks/useRedux";
 import { logout, setAuth, setHydrated, setTokens } from "../src/store/slices/authSlice";
 import { authStateService } from "../src/services/authStateService";
 import { authService } from "../src/services/authService";
 import { apiClient } from "../src/services/apiClient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { featureFlagsService } from "../src/services/featureFlagsService";
-import { setFeatureFlagsError, setFlags, setRefreshing } from "../src/store/slices/featureFlagsSlice";
 import { initializeMobileAds } from "../src/services/adService";
 import { OneSignalService } from "../src/services/oneSignalService";
 import {
@@ -139,40 +138,6 @@ function AuthBootstrap({ children }: { children: React.ReactNode }) {
     adsSdkInitialized.current = true;
     initializeMobileAds().catch(() => { /* non-blocking — app works without ads */ });
   }, [adsEnabled]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const syncFlags = async (refresh = false) => {
-      dispatch(setRefreshing(true));
-      try {
-        const snapshot = refresh
-          ? await featureFlagsService.refresh()
-          : await featureFlagsService.initialize();
-        if (!mounted) return;
-        dispatch(setFlags(snapshot));
-        dispatch(setFeatureFlagsError(null));
-      } catch (error: any) {
-        if (!mounted) return;
-        dispatch(setFeatureFlagsError(error?.message || "Failed to sync feature flags"));
-      } finally {
-        if (mounted) dispatch(setRefreshing(false));
-      }
-    };
-
-    syncFlags(false);
-
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
-        syncFlags(true);
-      }
-    });
-
-    return () => {
-      mounted = false;
-      sub.remove();
-    };
-  }, [dispatch]);
 
   // Keep Redux in sync when tokens rotate or the refresh token is rejected.
   useEffect(() => {
@@ -365,7 +330,9 @@ function RootLayout() {
       <AuthBootstrap>
         <SafeAreaProvider>
           <ToastProviderWithSafeArea>
-            <Stack screenOptions={{ headerShown: false }} />
+            <AppAlertProvider>
+              <Stack screenOptions={{ headerShown: false }} />
+            </AppAlertProvider>
           </ToastProviderWithSafeArea>
         </SafeAreaProvider>
       </AuthBootstrap>

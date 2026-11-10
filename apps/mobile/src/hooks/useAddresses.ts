@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert } from "react-native";
 import { router } from "expo-router";
 import { useToast } from "react-native-toast-notifications";
 import { userAppService } from "@services/userAppService";
+import { dataCache } from "@services/dataCache";
+import { useAppAlert } from "@/components/ui/AppAlertProvider";
 import { Address } from "@/types";
 import content from "@/content/addresses.json";
 
@@ -12,13 +13,19 @@ import content from "@/content/addresses.json";
  */
 export const useAddresses = () => {
   const toast = useToast();
+  const showAlert = useAppAlert();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchAddresses = useCallback(async () => {
+  const fetchAddresses = useCallback(async (skipCache = false) => {
     try {
-      const data = await userAppService.getAddresses();
+      if (skipCache) dataCache.invalidate("addresses");
+      const data = await dataCache.get(
+        "addresses",
+        2 * 60 * 1000,
+        () => userAppService.getAddresses(),
+      );
       setAddresses(data);
     } catch (error: any) {
       toast.show(error?.message || content.list.errors.load, { type: "danger" });
@@ -34,40 +41,53 @@ export const useAddresses = () => {
 
   const handleRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchAddresses();
+    fetchAddresses(true);
   }, [fetchAddresses]);
 
   const handleSetDefault = useCallback(
     async (addressId: string) => {
+      const prev = addresses;
+      setAddresses((cur) =>
+        cur.map((a) => ({ ...a, isDefault: a.id === addressId })),
+      );
+      dataCache.invalidate("addresses");
       try {
         await userAppService.setDefaultAddress(addressId);
-        fetchAddresses();
       } catch (error: any) {
+        setAddresses(prev);
         toast.show(error?.message || content.list.errors.setDefault, { type: "danger" });
       }
     },
-    [fetchAddresses, toast]
+    [addresses, toast]
   );
 
   const handleDelete = useCallback(
     (addressId: string) => {
-      Alert.alert(content.list.deleteConfirm.title, content.list.deleteConfirm.message, [
-        { text: content.list.deleteConfirm.cancel, style: "cancel" },
-        {
-          text: content.list.deleteConfirm.confirm,
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await userAppService.deleteAddress(addressId);
-              fetchAddresses();
-            } catch (error: any) {
-              toast.show(error?.message || content.list.errors.delete, { type: "danger" });
-            }
+      showAlert({
+        title: content.list.deleteConfirm.title,
+        message: content.list.deleteConfirm.message,
+        variant: "destructive",
+        buttons: [
+          { text: content.list.deleteConfirm.cancel, style: "cancel" },
+          {
+            text: content.list.deleteConfirm.confirm,
+            style: "destructive",
+            onPress: async () => {
+              const prev = addresses;
+              setAddresses((cur) => cur.filter((a) => a.id !== addressId));
+              dataCache.invalidate("addresses");
+              try {
+                await userAppService.deleteAddress(addressId);
+              } catch (error: any) {
+                setAddresses(prev);
+                toast.show(error?.message || content.list.errors.delete, { type: "danger" });
+              }
+            },
           },
-        },
-      ]);
+        ],
+      });
     },
-    [fetchAddresses, toast]
+    [addresses, showAlert, toast]
   );
 
   const goToAdd = useCallback(() => router.push("/(user)/add-address"), []);
