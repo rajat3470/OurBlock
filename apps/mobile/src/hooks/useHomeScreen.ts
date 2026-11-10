@@ -73,17 +73,19 @@ export const useHomeScreen = () => {
   const lastFocusRefreshRef = useRef(0);
 
   useEffect(() => {
+    if (!user?.societyId) return;
     initializeHome().catch(() => null);
     loadMyOrders().catch(() => null);
-  }, [initializeHome, loadMyOrders]);
+  }, [initializeHome, loadMyOrders, user?.societyId]);
 
   useFocusEffect(
     useCallback(() => {
+      if (!user?.societyId) return;
       const now = Date.now();
       if (now - lastFocusRefreshRef.current < FOCUS_REFRESH_MIN_INTERVAL_MS) return;
       lastFocusRefreshRef.current = now;
       refreshBusinesses();
-    }, [refreshBusinesses])
+    }, [refreshBusinesses, user?.societyId])
   );
 
   const onRefresh = useCallback(async () => {

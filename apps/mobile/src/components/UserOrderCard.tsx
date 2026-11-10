@@ -76,13 +76,13 @@ export default function UserOrderCard({
   return (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => onPress(order.id)}
+      onPress={() => onPress(order.id ?? (order as any)._id)}
       activeOpacity={0.97}
     >
       {/* Top row */}
       <View style={styles.rowTop}>
         <View>
-          <Text style={styles.orderId}>#{order.id.slice(0, 8).toUpperCase()}</Text>
+          <Text style={styles.orderId}>#{(order.id ?? (order as any)._id ?? "").slice(0, 8).toUpperCase()}</Text>
           <Text style={styles.businessName}>{(order as any).businessName ?? content.card.defaultShop}</Text>
         </View>
         <View style={styles.rightCol}>

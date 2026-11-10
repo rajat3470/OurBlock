@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -50,6 +50,7 @@ export default function ChangeSocietyScreen() {
   const [selectedSociety, setSelectedSociety] = useState<(Society & { activeBusinesses?: number }) | null>(null);
   const [browsingAll, setBrowsingAll] = useState(false);
   const [allSocieties, setAllSocieties] = useState<(Society & { activeBusinesses?: number })[]>([]);
+  const loadedAreasRef = useRef(false);
 
   const isFirstTime = !user?.societyId;
 
@@ -71,6 +72,8 @@ export default function ChangeSocietyScreen() {
   }, []);
 
   useEffect(() => {
+    if (loadedAreasRef.current) return;
+    loadedAreasRef.current = true;
     loadAreas();
   }, [loadAreas]);
 
